@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 """Book Social Media Automation - Main Entry Point.
 
 Reads your book files, generates platform-specific posts for Instagram,

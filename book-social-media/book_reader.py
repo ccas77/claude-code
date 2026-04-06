@@ -4,6 +4,8 @@ Supports: .txt, .md, .pdf, .epub
 Extracts: chapters, key passages, quotes, themes, and character descriptions.
 """
 
+from __future__ import annotations
+
 import re
 from pathlib import Path
 from dataclasses import dataclass, field

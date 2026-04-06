@@ -4,6 +4,8 @@ Creates tailored content for Instagram, Facebook, TikTok, and Pinterest,
 each optimized for the platform's audience, format, and best practices.
 """
 
+from __future__ import annotations
+
 import json
 import re
 from dataclasses import dataclass

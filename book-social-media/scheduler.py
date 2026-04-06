@@ -5,6 +5,8 @@ of posts on a configurable schedule. Can also be run as a one-shot
 via the CLI.
 """
 
+from __future__ import annotations
+
 import datetime
 import time
 

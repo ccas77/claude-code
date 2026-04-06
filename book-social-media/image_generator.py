@@ -4,6 +4,8 @@ Creates quote cards, gradient backgrounds, and styled text overlays
 with the book's branding colors. No external image API required.
 """
 
+from __future__ import annotations
+
 import math
 import random
 import textwrap
