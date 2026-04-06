@@ -144,20 +144,20 @@ Setup:
 
     args = parser.parse_args()
 
-    # Validate config (skip for preview which is more forgiving)
-    if not args.preview:
+    # Validate config (skip for preview, dry-run, and generate-only — these don't publish)
+    skip_validation = args.preview or args.dry_run or args.schedule_dry or args.generate_only
+    if skip_validation:
+        # Only need Claude API key for content generation
+        if not args.preview and not Config.ANTHROPIC_API_KEY:
+            print("Error: ANTHROPIC_API_KEY is required")
+            sys.exit(1)
+    else:
         try:
             active = Config.validate()
             print(f"Active platforms: {', '.join(active.keys())}")
         except ValueError as e:
-            if args.generate_only:
-                # Generate-only just needs Claude API key
-                if not Config.ANTHROPIC_API_KEY:
-                    print(f"Error: {e}")
-                    sys.exit(1)
-            else:
-                print(f"Error: {e}")
-                sys.exit(1)
+            print(f"Error: {e}")
+            sys.exit(1)
 
     commands = {
         "preview": cmd_preview,
