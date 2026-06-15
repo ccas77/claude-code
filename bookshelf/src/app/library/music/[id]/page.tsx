@@ -259,45 +259,8 @@ export default function MusicEditPage({
           />
         </label>
 
-        <label className="flex items-start gap-2">
-          <input
-            type="checkbox"
-            checked={draftAnyGenre}
-            onChange={(e) => setDraftAnyGenre(e.target.checked)}
-            className="mt-1"
-          />
-          <span className="text-sm">
-            <span className="font-medium">Any genre</span>
-            <span className="block text-xs text-stone-500">
-              Trending/neutral clips that work over books in any genre.
-            </span>
-          </span>
-        </label>
-
-        {!draftAnyGenre && (
-          <div>
-            <span className="text-sm font-medium">Genres</span>
-            <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
-              {genres.map((g) => (
-                <label key={g.id} className="flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={draftGenres.includes(g.id)}
-                    onChange={(e) => toggleGenre(g.id, e.target.checked)}
-                  />
-                  {g.name}
-                </label>
-              ))}
-            </div>
-          </div>
-        )}
-
         <div>
-          <span className="text-sm font-medium">Specific books</span>
-          <p className="text-xs text-stone-500">
-            If any books are picked, this clip is used only for those books. Leave
-            empty to let it play across genre or any-genre matches as usual.
-          </p>
+          <span className="text-sm font-medium">Which book(s) is this for?</span>
           <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
             {books.map((b) => (
               <label key={b.id} className="flex items-center gap-2 text-sm">
@@ -314,6 +277,49 @@ export default function MusicEditPage({
             )}
           </div>
         </div>
+
+        <details className="border-t border-stone-200 pt-3">
+          <summary className="cursor-pointer text-xs font-medium text-stone-600">
+            Advanced: use across a genre instead
+          </summary>
+          <p className="mt-2 text-xs text-stone-500">
+            Skip this if you picked specific books above. Use it for trending or
+            generic tracks that should play across a whole genre.
+          </p>
+
+          <label className="mt-3 flex items-start gap-2">
+            <input
+              type="checkbox"
+              checked={draftAnyGenre}
+              onChange={(e) => setDraftAnyGenre(e.target.checked)}
+              className="mt-1"
+            />
+            <span className="text-sm">
+              <span className="font-medium">Any genre</span>
+              <span className="block text-xs text-stone-500">
+                Trending/neutral clips that work over books in any genre.
+              </span>
+            </span>
+          </label>
+
+          {!draftAnyGenre && (
+            <div className="mt-3">
+              <span className="text-sm font-medium">Genres</span>
+              <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
+                {genres.map((g) => (
+                  <label key={g.id} className="flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={draftGenres.includes(g.id)}
+                      onChange={(e) => toggleGenre(g.id, e.target.checked)}
+                    />
+                    {g.name}
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
+        </details>
       </div>
 
       <div className="space-y-3">
