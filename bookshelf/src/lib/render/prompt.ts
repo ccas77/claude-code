@@ -44,32 +44,32 @@ export function assembleImagePrompt({
 
   const identity =
     kind === 'set'
-      ? `BOOK IDENTITY (non-negotiable): The reference image shows a set of books (a duet, trilogy, or series). Every single book visible in the reference must appear in the output, all of them together. Reproduce each cover's art, title, and author identically. Do not omit any book from the set, do not invent additional books, do not redesign covers, do not substitute generic stand-ins. A reader must be able to match every rendered book to the reference one-for-one.`
-      : `BOOK IDENTITY (non-negotiable): The book in the reference image is the exact book to render. Reproduce its cover art, title, and author identically. Do not invent a different book, redesign the cover, simplify it, or substitute a generic stand-in. The book in the output must be visually the same book a reader could pick up off a shelf and match to the reference.`;
+      ? `RULE 1, ABOVE EVERYTHING ELSE: The reference image shows a set of books. Every single book in the reference must appear in your output. Each cover's art, title, and author must match the reference one-for-one. Pixel-copy what you see. Do not omit any book. Do not invent extra books. Do not redesign, simplify, recolor, or restyle any cover. Do not substitute generic stand-ins. If you cannot read part of a cover, copy it as you see it; do not guess. A reader pulling these books off a shelf must match them to the reference exactly.`
+      : `RULE 1, ABOVE EVERYTHING ELSE: The book in the reference image is the exact book to render. Its cover art, title, and author must match the reference one-for-one. Pixel-copy what you see. Do not redesign, simplify, recolor, restyle, or invent a different cover. Do not substitute a generic stand-in. If you cannot read part of the cover, copy it as you see it; do not guess. A reader pulling this book off a shelf must match it to the reference exactly.`;
 
   const composition =
     kind === 'set'
-      ? `COMPOSITION: The books sit together as a set just below the center of the frame, all covers fully visible (stacked, fanned, lined up, or arranged so each one reads clearly), with a clear, uncluttered area above for caption text to sit cleanly.`
-      : `COMPOSITION: The book sits just below the center of the frame, with a clear, uncluttered area above it for caption text to sit cleanly.`;
+      ? `Composition: the books sit together as a set, just below frame center, all covers fully visible (stacked, fanned, or lined up). Top of the frame is clear for caption overlay.`
+      : `Composition: the book sits just below frame center. Top of the frame is clear for caption overlay.`;
 
   const label =
     kind === 'set'
-      ? `Set label (do not render the title text): ${bookTitle}`
-      : `Book label (do not render the title text): ${bookTitle}`;
+      ? `Reference label (do not bake into the image): ${bookTitle}`
+      : `Reference label (do not bake into the image): ${bookTitle}`;
 
-  return `Generate one photographic still. Build the scene strictly from the design rules below. Do not introduce any element these rules do not call for. Do not invent settings, props, or environments.
+  return `${identity}
 
-DESIGN RULES (drives every visual choice in this image):
+Now, with that exact book / set rendered faithfully, build the scene around it using the rules below.
+
+Style:
 ${recipe}
-
-${identity}
 
 ${composition}
 
-Selected props to include in the scene:
+Props to include:
 ${accessoryList}${variation}
 
-Output: a single photographic still. No text overlays. No captions baked into the image.
+Output: one photograph. No text overlays. No captions baked into the image. Cover fidelity beats every other instruction here: if any part of this prompt would force you to alter the cover, ignore that part and keep the cover faithful to the reference.
 
 ${label}`;
 }
