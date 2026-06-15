@@ -9,6 +9,7 @@ export const dynamic = 'force-dynamic';
 
 const PatchSchema = z.object({
   title: z.string().min(1).max(280).optional(),
+  kind: z.enum(['single', 'set']).optional(),
   genreId: z.string().uuid().nullable().optional(),
   accessories: z.array(z.string().min(1).max(120)).max(40).optional(),
 });
@@ -47,6 +48,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       .update(schema.books)
       .set({
         ...(input.title !== undefined ? { title: input.title } : {}),
+        ...(input.kind !== undefined ? { kind: input.kind } : {}),
         ...(input.genreId !== undefined ? { genreId: input.genreId } : {}),
         ...(input.accessories !== undefined ? { accessories: input.accessories } : {}),
         updatedAt: new Date(),

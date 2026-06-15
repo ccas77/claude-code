@@ -3,27 +3,24 @@ import { db, schema } from '../db/client';
 import { env } from '../config';
 import { assembleImagePrompt } from './prompt';
 import { generateBookImage } from './image';
-import { animateImage } from './animate';
-import { compositeFinalVideo } from './composite';
+import { verifyCoverMatch } from './cover-check';
+import { assembleVideoWithFfmpeg } from './ffmpeg';
 import type { ProviderUsage } from '../db/schema';
 
+const MAX_IMAGE_ATTEMPTS = 3;
+
 /**
- * Render orchestrator. Given a card id, walks:
+ * Render orchestrator.
  *
- *   prompt assembly -> image gen -> img2vid -> composite -> final video
+ *   prompt -> image gen -> ffmpeg (motion + audio + captions) -> final mp4
  *
- * Updates the card to 'preparing' on entry, 'ready' on success (with the
- * final video URL stored), 'failed' on any throw. Records which provider
- * was used at each step on card.providersUsed.
- *
- * DRY_RUN short-circuits the external calls and writes a placeholder
- * URL so the rest of the pipeline (scheduling, posting) can be exercised
- * without spending on AI APIs.
+ * Image gen runs against the configured provider (OpenAI gpt-image-1 or
+ * Higgsfield when wired). The final video assembly is pure ffmpeg via
+ * ffmpeg-static, running in this function. No Replicate, no per-second
+ * hosted-compute fees.
  */
 
 type RunArgs = { cardId: string; jobId: string };
-
-const PLACEHOLDER_VIDEO_URL = 'https://www.w3.org/2010/05/sintel/trailer.mp4';
 
 export async function runRender({ cardId, jobId }: RunArgs): Promise<void> {
   const card = await db.query.cards.findFirst({ where: eq(schema.cards.id, cardId) });
@@ -48,32 +45,6 @@ export async function runRender({ cardId, jobId }: RunArgs): Promise<void> {
     .update(schema.cards)
     .set({ status: 'preparing', updatedAt: new Date() })
     .where(eq(schema.cards.id, cardId));
-
-  if (env().DRY_RUN) {
-    const providers: ProviderUsage[] = [
-      { step: 'image', provider: 'dry-run', fallback: false },
-      { step: 'video', provider: 'dry-run', fallback: false },
-    ];
-    await db
-      .update(schema.cards)
-      .set({
-        status: 'ready',
-        videoBlobUrl: PLACEHOLDER_VIDEO_URL,
-        videoBlobPathname: 'placeholder',
-        providersUsed: providers,
-        updatedAt: new Date(),
-      })
-      .where(eq(schema.cards.id, cardId));
-    await db.insert(schema.eventLog).values({
-      ownerId: card.ownerId,
-      cardId,
-      stage: 'render.dry_run',
-      level: 'info',
-      message: '[dry-run] render skipped, placeholder video saved',
-      payload: { jobId },
-    });
-    return;
-  }
 
   const providers: ProviderUsage[] = [];
 
@@ -107,56 +78,96 @@ export async function runRender({ cardId, jobId }: RunArgs): Promise<void> {
     // 1. Prompt
     const prompt = assembleImagePrompt({
       bookTitle: book.title,
+      kind: book.kind ?? 'single',
       accessories: book.accessories ?? [],
       styleRecipe: genre?.styleRecipe ?? null,
       variationSeed: cardId.slice(0, 8),
     });
 
-    // 2. Image gen with fallback chain
+    // 2. Image gen with cover-match verification loop. Each attempt runs
+    //    the configured image-provider chain (primary, optional fallback)
+    //    then a Gemini Flash check confirms the generated image still
+    //    features the actual book cover. If the check fails (hallucinated
+    //    or drifted cover) we regenerate, up to MAX_IMAGE_ATTEMPTS, before
+    //    failing the card. ffmpeg never runs on a rejected image.
+    const coverUrl = bookImages[0].blobUrl;
     const imageChain = [env().IMAGE_PROVIDER_PRIMARY, env().IMAGE_PROVIDER_FALLBACK]
       .filter(Boolean) as string[];
     let image: Awaited<ReturnType<typeof generateBookImage>> | null = null;
     let imageErr: unknown = null;
-    for (let i = 0; i < imageChain.length; i++) {
-      try {
-        image = await generateBookImage({
-          prompt,
-          referenceImageUrls: bookImages.map((b) => b.blobUrl),
-          ownerId: card.ownerId,
-          provider: imageChain[i],
-        });
-        if (i > 0) image.fallback = true;
-        imageErr = null;
-        break;
-      } catch (e) {
-        imageErr = e;
-        if (classifyError(e) === 'permanent') break;
+
+    for (let attempt = 0; attempt < MAX_IMAGE_ATTEMPTS; attempt++) {
+      let candidate: Awaited<ReturnType<typeof generateBookImage>> | null = null;
+      for (let i = 0; i < imageChain.length; i++) {
+        try {
+          candidate = await generateBookImage({
+            prompt,
+            referenceImageUrls: bookImages.map((b) => b.blobUrl),
+            ownerId: card.ownerId,
+            provider: imageChain[i],
+          });
+          if (i > 0) candidate.fallback = true;
+          imageErr = null;
+          break;
+        } catch (e) {
+          imageErr = e;
+          if (classifyError(e) === 'permanent') break;
+        }
       }
+      if (!candidate) break;
+
+      const check = await verifyCoverMatch(
+        coverUrl,
+        candidate.url,
+        book.kind ?? 'single',
+      ).catch(() => ({
+        ok: true,
+        reason: 'verifier unavailable; accepting candidate',
+      }));
+
+      if (check.ok) {
+        image = candidate;
+        providers.push({
+          step: 'image',
+          provider: candidate.provider,
+          fallback: candidate.fallback || attempt > 0,
+        });
+        providers.push({ step: 'cover-check', provider: 'gemini-flash', fallback: false });
+        break;
+      }
+
+      await db.insert(schema.eventLog).values({
+        ownerId: card.ownerId,
+        cardId,
+        stage: 'cover-check.reject',
+        level: 'warn',
+        message: `attempt ${attempt + 1}/${MAX_IMAGE_ATTEMPTS} rejected: ${check.reason}`,
+        payload: { jobId, attempt, candidateUrl: candidate.url },
+      });
     }
-    if (!image) throw imageErr instanceof Error ? imageErr : new Error('image generation failed');
-    providers.push({ step: 'image', provider: image.provider, fallback: image.fallback });
 
-    // 3. Animate
-    const animated = await animateImage({
+    if (!image) {
+      if (imageErr) throw imageErr;
+      throw new Error(
+        `cover verification failed after ${MAX_IMAGE_ATTEMPTS} attempts; image gen kept hallucinating`,
+      );
+    }
+
+    // 3. ffmpeg assembly: still + audio + caption SRT -> finished mp4
+    const final = await assembleVideoWithFfmpeg({
       imageUrl: image.url,
-      ownerId: card.ownerId,
-    });
-    providers.push({ step: 'video', provider: animated.provider, fallback: animated.fallback });
-
-    // 4. Composite (audio + captions)
-    const finalVideo = await compositeFinalVideo({
-      silentVideoUrl: animated.url,
       audioUrl: music.blobUrl,
       captionWords: caption?.words ?? [],
       ownerId: card.ownerId,
     });
+    providers.push({ step: 'video', provider: final.provider, fallback: false });
 
     await db
       .update(schema.cards)
       .set({
         status: 'ready',
-        videoBlobUrl: finalVideo.url,
-        videoBlobPathname: finalVideo.pathname,
+        videoBlobUrl: final.url,
+        videoBlobPathname: final.pathname,
         providersUsed: providers,
         updatedAt: new Date(),
       })
@@ -167,7 +178,7 @@ export async function runRender({ cardId, jobId }: RunArgs): Promise<void> {
       cardId,
       stage: 'render.success',
       level: 'info',
-      message: `card rendered, video ready`,
+      message: 'card rendered, video ready',
       payload: { jobId, providers },
     });
   } catch (err) {

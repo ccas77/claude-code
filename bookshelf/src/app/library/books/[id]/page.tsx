@@ -3,12 +3,14 @@
 import { useRouter } from 'next/navigation';
 import { use, useEffect, useState } from 'react';
 import Image from 'next/image';
-import { uploadFile } from '@/lib/upload';
+import { uploadFile, UploadResult } from '@/lib/upload';
 import { UnsavedBar } from '@/components/UnsavedBar';
+import { UrlsPaste } from '@/components/UrlsPaste';
 
 type Book = {
   id: string;
   title: string;
+  kind: 'single' | 'set';
   genreId: string | null;
   accessories: string[];
 };
@@ -34,6 +36,7 @@ export default function BookEditPage({
   const [images, setImages] = useState<BookImage[]>([]);
   const [genres, setGenres] = useState<GenreOption[]>([]);
   const [draftTitle, setDraftTitle] = useState('');
+  const [draftKind, setDraftKind] = useState<'single' | 'set'>('single');
   const [draftGenreId, setDraftGenreId] = useState('');
   const [draftAccessoriesText, setDraftAccessoriesText] = useState('');
   const [saving, setSaving] = useState(false);
@@ -54,6 +57,7 @@ export default function BookEditPage({
     setServer(data.book);
     setImages(data.images);
     setDraftTitle(data.book.title);
+    setDraftKind(data.book.kind ?? 'single');
     setDraftGenreId(data.book.genreId ?? '');
     setDraftAccessoriesText((data.book.accessories ?? []).join('\n'));
     if (genreRes.ok) {
@@ -75,6 +79,7 @@ export default function BookEditPage({
   const dirty =
     server !== null &&
     (draftTitle !== server.title ||
+      draftKind !== (server.kind ?? 'single') ||
       draftGenreId !== (server.genreId ?? '') ||
       accessoriesDraftList.join('|') !== (server.accessories ?? []).join('|'));
 
@@ -87,6 +92,7 @@ export default function BookEditPage({
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
           title: draftTitle,
+          kind: draftKind,
           genreId: draftGenreId || null,
           accessories: accessoriesDraftList,
         }),
@@ -103,8 +109,22 @@ export default function BookEditPage({
   const discard = () => {
     if (!server) return;
     setDraftTitle(server.title);
+    setDraftKind(server.kind ?? 'single');
     setDraftGenreId(server.genreId ?? '');
     setDraftAccessoriesText((server.accessories ?? []).join('\n'));
+  };
+
+  const attachImages = async (uploaded: UploadResult[]) => {
+    if (!uploaded.length) return;
+    const res = await fetch(`/api/books/${id}/images`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        images: uploaded.map((u) => ({ ...u, kind: 'angle' as const })),
+      }),
+    });
+    if (!res.ok) throw new Error((await res.json()).error ?? 'Failed');
+    await load();
   };
 
   const addImages = async (list: FileList | null) => {
@@ -115,15 +135,7 @@ export default function BookEditPage({
       const uploaded = await Promise.all(
         Array.from(list).map((f) => uploadFile(f, 'library/books')),
       );
-      const res = await fetch(`/api/books/${id}/images`, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
-          images: uploaded.map((u) => ({ ...u, kind: 'angle' as const })),
-        }),
-      });
-      if (!res.ok) throw new Error((await res.json()).error ?? 'Failed');
-      await load();
+      await attachImages(uploaded);
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -171,6 +183,32 @@ export default function BookEditPage({
           />
         </label>
 
+        <fieldset className="block">
+          <legend className="text-sm font-medium">Type</legend>
+          <div className="mt-2 flex gap-4 text-sm">
+            <label className="inline-flex items-center gap-2">
+              <input
+                type="radio"
+                name="kind"
+                value="single"
+                checked={draftKind === 'single'}
+                onChange={() => setDraftKind('single')}
+              />
+              Single book
+            </label>
+            <label className="inline-flex items-center gap-2">
+              <input
+                type="radio"
+                name="kind"
+                value="set"
+                checked={draftKind === 'set'}
+                onChange={() => setDraftKind('set')}
+              />
+              Set (trilogy, duet, etc.)
+            </label>
+          </div>
+        </fieldset>
+
         <label className="block">
           <span className="text-sm font-medium">Genre</span>
           <select
@@ -205,7 +243,7 @@ export default function BookEditPage({
         <div className="flex items-center justify-between">
           <span className="text-sm font-medium">Images ({images.length})</span>
           <label className="cursor-pointer rounded-md border border-stone-300 px-3 py-1.5 text-sm hover:bg-stone-50">
-            {uploading ? 'Uploading...' : 'Add images'}
+            {uploading ? 'Uploading...' : 'Add files'}
             <input
               type="file"
               multiple
@@ -215,6 +253,18 @@ export default function BookEditPage({
               disabled={uploading}
             />
           </label>
+        </div>
+        <div className="mt-3">
+          <UrlsPaste
+            category="library/books"
+            onUploaded={async (u) => {
+              try {
+                await attachImages(u);
+              } catch (e) {
+                setError((e as Error).message);
+              }
+            }}
+          />
         </div>
         {images.length > 0 && (
           <ul className="mt-3 grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-6">

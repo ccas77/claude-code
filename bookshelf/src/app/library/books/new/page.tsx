@@ -3,15 +3,18 @@
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { uploadFile, UploadResult } from '@/lib/upload';
+import { UrlsPaste } from '@/components/UrlsPaste';
 
 type GenreOption = { id: string; name: string };
 
 export default function NewBookPage() {
   const router = useRouter();
   const [title, setTitle] = useState('');
+  const [kind, setKind] = useState<'single' | 'set'>('single');
   const [genreId, setGenreId] = useState<string>('');
   const [accessoriesText, setAccessoriesText] = useState('');
   const [files, setFiles] = useState<File[]>([]);
+  const [pastedImages, setPastedImages] = useState<UploadResult[]>([]);
   const [genres, setGenres] = useState<GenreOption[]>([]);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -26,18 +29,24 @@ export default function NewBookPage() {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    if (!title.trim()) {
+      setError('Title is required.');
+      return;
+    }
     setUploading(true);
     try {
-      let images: (UploadResult & { kind: 'cover' | 'angle' | 'photo' })[] = [];
+      const combined: UploadResult[] = [...pastedImages];
       if (files.length) {
         const uploaded = await Promise.all(
           files.map((f) => uploadFile(f, 'library/books')),
         );
-        images = uploaded.map((u, i) => ({
+        combined.push(...uploaded);
+      }
+      const images: (UploadResult & { kind: 'cover' | 'angle' | 'photo' })[] =
+        combined.map((u, i) => ({
           ...u,
           kind: i === 0 ? ('cover' as const) : ('angle' as const),
         }));
-      }
       const accessories = accessoriesText
         .split(/[\n,]+/)
         .map((s) => s.trim())
@@ -48,6 +57,7 @@ export default function NewBookPage() {
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
           title,
+          kind,
           genreId: genreId || null,
           accessories,
           images,
@@ -69,6 +79,9 @@ export default function NewBookPage() {
       <form onSubmit={submit} className="mt-6 max-w-2xl space-y-5">
         <label className="block">
           <span className="text-sm font-medium">Title</span>
+          <p className="text-xs text-stone-500">
+            For a set, use the series name (e.g. "The Crimson Trilogy").
+          </p>
           <input
             type="text"
             value={title}
@@ -77,6 +90,35 @@ export default function NewBookPage() {
             className="mt-1 block w-full rounded-md border border-stone-300 bg-white px-3 py-2 text-sm focus:border-stone-500 focus:outline-none"
           />
         </label>
+
+        <fieldset className="block">
+          <legend className="text-sm font-medium">Type</legend>
+          <p className="text-xs text-stone-500">
+            A set renders all covers from the reference photo together.
+          </p>
+          <div className="mt-2 flex gap-4 text-sm">
+            <label className="inline-flex items-center gap-2">
+              <input
+                type="radio"
+                name="kind"
+                value="single"
+                checked={kind === 'single'}
+                onChange={() => setKind('single')}
+              />
+              Single book
+            </label>
+            <label className="inline-flex items-center gap-2">
+              <input
+                type="radio"
+                name="kind"
+                value="set"
+                checked={kind === 'set'}
+                onChange={() => setKind('set')}
+              />
+              Set (trilogy, duet, etc.)
+            </label>
+          </div>
+        </fieldset>
 
         <label className="block">
           <span className="text-sm font-medium">Genre</span>
@@ -125,6 +167,17 @@ export default function NewBookPage() {
           {files.length > 0 && (
             <p className="mt-1 text-xs text-stone-600">{files.length} file(s) ready</p>
           )}
+          <div className="mt-3">
+            <UrlsPaste
+              category="library/books"
+              onUploaded={(u) => setPastedImages((prev) => [...prev, ...u])}
+            />
+            {pastedImages.length > 0 && (
+              <p className="mt-1 text-xs text-stone-600">
+                {pastedImages.length} URL(s) fetched and ready
+              </p>
+            )}
+          </div>
         </div>
 
         {error && <p className="text-sm text-red-600">{error}</p>}
@@ -132,7 +185,7 @@ export default function NewBookPage() {
         <div className="flex gap-2 pt-2">
           <button
             type="submit"
-            disabled={uploading || !title}
+            disabled={uploading}
             className="rounded-md bg-stone-900 px-4 py-2 text-sm font-medium text-white hover:bg-stone-800 disabled:opacity-50"
           >
             {uploading ? 'Uploading...' : 'Create book'}

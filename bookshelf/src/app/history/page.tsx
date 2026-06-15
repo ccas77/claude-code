@@ -39,7 +39,6 @@ export default async function History() {
           </Link>
           <nav className="flex gap-4 text-sm">
             <Link href="/library" className="hover:underline">Library</Link>
-            <Link href="/board" className="hover:underline">Board</Link>
             <Link href="/history" className="font-medium underline">History</Link>
           </nav>
         </div>
@@ -66,7 +65,9 @@ export default async function History() {
                       <div className="font-medium">{r.bookTitle ?? 'deleted book'}</div>
                       <div className="mt-0.5 text-xs text-stone-500">
                         {r.platform} · {r.accountHandle} ·{' '}
-                        {new Date(r.postTime).toLocaleString()}
+                        {new Date(r.postTime).toLocaleString('en-GB', {
+                          timeZone: 'Europe/London',
+                        })}
                       </div>
                     </div>
                     {r.postUrl && (
@@ -87,7 +88,10 @@ export default async function History() {
                     <Stat label="shares" n={s.shares} />
                     {s.refreshedAt && (
                       <span className="text-stone-400">
-                        refreshed {new Date(s.refreshedAt).toLocaleString()}
+                        refreshed{' '}
+                        {new Date(s.refreshedAt).toLocaleString('en-GB', {
+                          timeZone: 'Europe/London',
+                        })}
                       </span>
                     )}
                   </div>

@@ -8,6 +8,27 @@
       "when": 1781423243971,
       "tag": "0000_initial",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1781516992254,
+      "tag": "0001_automation",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1781517604272,
+      "tag": "0002_mcp_tokens",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1813555200000,
+      "tag": "0003_books_kind",
+      "breakpoints": true
     }
   ]
 }

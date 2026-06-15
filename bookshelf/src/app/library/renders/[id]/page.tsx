@@ -15,6 +15,10 @@ type Card = {
 
 const TERMINAL: Card['status'][] = ['ready', 'failed', 'posted'];
 
+function isVideoUrl(url: string): boolean {
+  return /\.(mp4|mov|webm|m4v)(?:\?|$)/i.test(url);
+}
+
 export default function RenderDetailPage({
   params,
 }: {
@@ -81,7 +85,7 @@ export default function RenderDetailPage({
           <span>{card.status}</span>
         </div>
         <div className="mt-2 text-xs text-stone-500">
-          Updated {new Date(card.updatedAt).toLocaleString()}
+          Updated {new Date(card.updatedAt).toLocaleString('en-GB', { timeZone: 'Europe/London' })}
         </div>
         {!TERMINAL.includes(card.status) && (
           <p className="mt-2 text-xs text-stone-500">
@@ -92,7 +96,35 @@ export default function RenderDetailPage({
       </div>
 
       {card.status === 'ready' && card.videoBlobUrl && (
-        <video controls src={card.videoBlobUrl} className="w-full rounded-lg border border-stone-200 bg-black" />
+        <div>
+          <div className="mx-auto max-w-xs">
+            {isVideoUrl(card.videoBlobUrl) ? (
+              <video
+                controls
+                playsInline
+                preload="metadata"
+                src={card.videoBlobUrl}
+                className="w-full rounded-lg border border-stone-200 bg-black"
+              />
+            ) : (
+              <img
+                src={card.videoBlobUrl}
+                alt="rendered still"
+                className="w-full rounded-lg border border-stone-200"
+              />
+            )}
+          </div>
+          <div className="mt-2 text-center text-xs text-stone-500">
+            <a
+              href={card.videoBlobUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="underline"
+            >
+              Open in new tab
+            </a>
+          </div>
+        </div>
       )}
 
       {card.errorInfo && (

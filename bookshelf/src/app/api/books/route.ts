@@ -14,6 +14,7 @@ const ImageInput = z.object({
 
 const CreateSchema = z.object({
   title: z.string().min(1).max(280),
+  kind: z.enum(['single', 'set']).optional(),
   genreId: z.string().uuid().nullable().optional(),
   accessories: z.array(z.string().min(1).max(120)).max(40).optional(),
   images: z.array(ImageInput).optional(),
@@ -44,6 +45,7 @@ export async function POST(req: NextRequest) {
       .values({
         ownerId,
         title: input.title,
+        kind: input.kind ?? 'single',
         genreId: input.genreId ?? null,
         accessories: input.accessories ?? [],
       })

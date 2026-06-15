@@ -92,6 +92,7 @@ export const books = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
     title: text('title').notNull(),
+    kind: text('kind').$type<'single' | 'set'>().notNull().default('single'),
     genreId: uuid('genre_id').references(() => genres.id, { onDelete: 'set null' }),
     accessories: jsonb('accessories').$type<string[]>().notNull().default([]),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
@@ -174,7 +175,7 @@ export const captions = pgTable(
 // =============================================================================
 
 export type ProviderUsage = {
-  step: 'image' | 'video' | 'transcription' | 'post' | 'recipe';
+  step: 'image' | 'cover-check' | 'video' | 'transcription' | 'post' | 'recipe';
   provider: string;
   fallback: boolean;
 };
@@ -226,6 +227,85 @@ export const cards = pgTable(
 
 // =============================================================================
 // Audit / event log (history for diagnosis, separate from card state)
+// =============================================================================
+
+// =============================================================================
+// MCP tokens (OAuth 2.1 + DCR storage, one row per provider)
+// =============================================================================
+
+export const mcpTokens = pgTable('mcp_tokens', {
+  provider: text('provider').primaryKey(), // 'higgsfield', etc.
+  clientId: text('client_id').notNull(),
+  clientSecretEnc: text('client_secret_enc'),
+  accessTokenEnc: text('access_token_enc').notNull(),
+  refreshTokenEnc: text('refresh_token_enc'),
+  expiresAt: timestamp('expires_at', { withTimezone: true }),
+  scopes: text('scopes').array().notNull().default([]),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
+// =============================================================================
+// Automation configs (per social account)
+// =============================================================================
+
+export type IntervalWindow = {
+  start: string; // "18:00" - HH:MM in Europe/London local time
+  end: string;   // "23:00" - HH:MM in Europe/London local time
+  posts: number; // how many posts to fire during this window
+};
+
+export const automationConfigs = pgTable(
+  'automation_configs',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    ownerId: uuid('owner_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    platform: text('platform').notNull(), // tiktok, instagram, etc.
+    postBridgeAccountId: integer('post_bridge_account_id').notNull(),
+    username: text('username').notNull(),
+    enabled: boolean('enabled').notNull().default(false),
+    intervals: jsonb('intervals').$type<IntervalWindow[]>().notNull().default([]),
+    bookPointer: integer('book_pointer').notNull().default(0),
+    musicPointer: integer('music_pointer').notNull().default(0),
+    lastPostedAt: timestamp('last_posted_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [
+    index('automation_owner_idx').on(t.ownerId),
+    index('automation_enabled_idx').on(t.enabled),
+  ],
+);
+
+export const automationBookSelections = pgTable(
+  'automation_book_selections',
+  {
+    configId: uuid('config_id')
+      .notNull()
+      .references(() => automationConfigs.id, { onDelete: 'cascade' }),
+    bookId: uuid('book_id')
+      .notNull()
+      .references(() => books.id, { onDelete: 'cascade' }),
+    position: integer('position').notNull().default(0),
+  },
+  (t) => [primaryKey({ columns: [t.configId, t.bookId] })],
+);
+
+export const automationMusicSelections = pgTable(
+  'automation_music_selections',
+  {
+    configId: uuid('config_id')
+      .notNull()
+      .references(() => automationConfigs.id, { onDelete: 'cascade' }),
+    musicClipId: uuid('music_clip_id')
+      .notNull()
+      .references(() => musicClips.id, { onDelete: 'cascade' }),
+    position: integer('position').notNull().default(0),
+  },
+  (t) => [primaryKey({ columns: [t.configId, t.musicClipId] })],
+);
+
 // =============================================================================
 
 export const eventLog = pgTable(
