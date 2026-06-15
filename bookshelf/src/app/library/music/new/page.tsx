@@ -212,8 +212,53 @@ export default function NewMusicPage() {
             Applies to {files.length > 1 ? `all ${files.length} clips in this batch` : 'this clip'}
           </p>
 
-          <div className="mt-3">
-            <span className="text-sm font-medium">Which book(s) is this for?</span>
+          <label className="mt-3 flex items-start gap-2">
+            <input
+              type="checkbox"
+              checked={anyGenre}
+              onChange={(e) => setAnyGenre(e.target.checked)}
+              className="mt-1"
+            />
+            <span className="text-sm">
+              <span className="font-medium">Any genre</span>
+              <span className="block text-xs text-stone-500">
+                Trending/neutral clips that work over books in any genre.
+              </span>
+            </span>
+          </label>
+
+          {!anyGenre && (
+            <div className="mt-3">
+              <span className="text-sm font-medium">Genres</span>
+              <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
+                {genres.map((g) => (
+                  <label key={g.id} className="flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={genreIds.includes(g.id)}
+                      onChange={(e) => toggleGenre(g.id, e.target.checked)}
+                    />
+                    {g.name}
+                  </label>
+                ))}
+                {genres.length === 0 && (
+                  <p className="text-xs text-stone-500">
+                    No genres yet. Add some under Genres first.
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+
+          <details className="mt-4 border-t border-stone-200 pt-3">
+            <summary className="cursor-pointer text-xs font-medium text-stone-600">
+              Advanced: pin to specific book(s) instead
+            </summary>
+            <p className="mt-2 text-xs text-stone-500">
+              Use this for signature tracks tied to one book. If any are picked,
+              the clip plays only for those books and the genre tags above are
+              ignored.
+            </p>
             <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
               {books.map((b) => (
                 <label key={b.id} className="flex items-center gap-2 text-sm">
@@ -229,54 +274,6 @@ export default function NewMusicPage() {
                 <p className="text-xs text-stone-500">No books yet.</p>
               )}
             </div>
-          </div>
-
-          <details className="mt-4 border-t border-stone-200 pt-3">
-            <summary className="cursor-pointer text-xs font-medium text-stone-600">
-              Advanced: use across a genre instead
-            </summary>
-            <p className="mt-2 text-xs text-stone-500">
-              Skip this if you picked specific books above. Use it for trending or
-              generic tracks that should play across a whole genre.
-            </p>
-
-            <label className="mt-2 flex items-start gap-2">
-              <input
-                type="checkbox"
-                checked={anyGenre}
-                onChange={(e) => setAnyGenre(e.target.checked)}
-                className="mt-1"
-              />
-              <span className="text-sm">
-                <span className="font-medium">Any genre</span>
-                <span className="block text-xs text-stone-500">
-                  Trending/neutral clips that work over books in any genre.
-                </span>
-              </span>
-            </label>
-
-            {!anyGenre && (
-              <div className="mt-3">
-                <span className="text-sm font-medium">Genres</span>
-                <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
-                  {genres.map((g) => (
-                    <label key={g.id} className="flex items-center gap-2 text-sm">
-                      <input
-                        type="checkbox"
-                        checked={genreIds.includes(g.id)}
-                        onChange={(e) => toggleGenre(g.id, e.target.checked)}
-                      />
-                      {g.name}
-                    </label>
-                  ))}
-                  {genres.length === 0 && (
-                    <p className="text-xs text-stone-500">
-                      No genres yet. Add some under Genres first.
-                    </p>
-                  )}
-                </div>
-              </div>
-            )}
           </details>
         </div>
 
