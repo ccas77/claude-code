@@ -19,6 +19,39 @@ type Caption = {
   reviewed: boolean;
 } | null;
 type GenreOption = { id: string; name: string };
+type BookOption = { id: string; title: string };
+
+/**
+ * When the user edits the caption text, redistribute the existing per-word
+ * timestamps across the new tokens. If the count matches, keep 1:1. If it
+ * differs, spread the new tokens evenly across the original duration so
+ * captions still line up roughly with the audio.
+ */
+function retokenizeWithTimestamps(
+  newText: string,
+  existing: CaptionWord[],
+): CaptionWord[] {
+  const tokens = newText.split(/\s+/).filter(Boolean);
+  if (tokens.length === 0 || existing.length === 0) {
+    return tokens.map((text, i) => ({ text, start: i * 0.5, end: i * 0.5 + 0.4 }));
+  }
+  if (tokens.length === existing.length) {
+    return tokens.map((text, i) => ({
+      text,
+      start: existing[i].start,
+      end: existing[i].end,
+    }));
+  }
+  const firstStart = existing[0].start;
+  const lastEnd = existing[existing.length - 1].end;
+  const span = Math.max(0.1, lastEnd - firstStart);
+  const step = span / tokens.length;
+  return tokens.map((text, i) => ({
+    text,
+    start: firstStart + step * i,
+    end: firstStart + step * (i + 1),
+  }));
+}
 
 export default function MusicEditPage({
   params,
@@ -30,12 +63,15 @@ export default function MusicEditPage({
 
   const [server, setServer] = useState<MusicClip | null>(null);
   const [serverGenres, setServerGenres] = useState<string[]>([]);
+  const [serverBooks, setServerBooks] = useState<string[]>([]);
   const [caption, setCaption] = useState<Caption>(null);
   const [genres, setGenres] = useState<GenreOption[]>([]);
+  const [books, setBooks] = useState<BookOption[]>([]);
 
   const [draftName, setDraftName] = useState('');
   const [draftAnyGenre, setDraftAnyGenre] = useState(false);
   const [draftGenres, setDraftGenres] = useState<string[]>([]);
+  const [draftBooks, setDraftBooks] = useState<string[]>([]);
   const [draftFullText, setDraftFullText] = useState('');
   const [draftReviewed, setDraftReviewed] = useState(false);
 
@@ -45,9 +81,10 @@ export default function MusicEditPage({
   const [error, setError] = useState<string | null>(null);
 
   const load = async () => {
-    const [clipRes, genreRes] = await Promise.all([
+    const [clipRes, genreRes, bookRes] = await Promise.all([
       fetch(`/api/music/${id}`),
       fetch('/api/genres'),
+      fetch('/api/books'),
     ]);
     if (!clipRes.ok) {
       setError('Failed to load');
@@ -56,15 +93,26 @@ export default function MusicEditPage({
     const data = await clipRes.json();
     setServer(data.musicClip);
     setServerGenres(data.genreIds ?? []);
+    setServerBooks(data.bookIds ?? []);
     setCaption(data.caption);
     setDraftName(data.musicClip.name);
     setDraftAnyGenre(data.musicClip.anyGenre);
     setDraftGenres(data.genreIds ?? []);
+    setDraftBooks(data.bookIds ?? []);
     setDraftFullText(data.caption?.fullText ?? '');
     setDraftReviewed(data.caption?.reviewed ?? false);
     if (genreRes.ok) {
       const g = await genreRes.json();
       setGenres(g.genres ?? []);
+    }
+    if (bookRes.ok) {
+      const b = await bookRes.json();
+      setBooks(
+        (b.books ?? []).map((row: { id: string; title: string }) => ({
+          id: row.id,
+          title: row.title,
+        })),
+      );
     }
   };
 
@@ -77,7 +125,8 @@ export default function MusicEditPage({
     server !== null &&
     (draftName !== server.name ||
       draftAnyGenre !== server.anyGenre ||
-      [...draftGenres].sort().join('|') !== [...serverGenres].sort().join('|'));
+      [...draftGenres].sort().join('|') !== [...serverGenres].sort().join('|') ||
+      [...draftBooks].sort().join('|') !== [...serverBooks].sort().join('|'));
 
   const captionDirty =
     server !== null &&
@@ -98,16 +147,22 @@ export default function MusicEditPage({
             name: draftName,
             anyGenre: draftAnyGenre,
             genreIds: draftAnyGenre ? [] : draftGenres,
+            bookIds: draftBooks,
           }),
         });
         if (!res.ok) throw new Error((await res.json()).error ?? 'Failed');
       }
       if (captionDirty) {
+        const newWords = retokenizeWithTimestamps(
+          draftFullText,
+          caption?.words ?? [],
+        );
         const res = await fetch(`/api/music/${id}/caption`, {
           method: 'PATCH',
           headers: { 'content-type': 'application/json' },
           body: JSON.stringify({
             fullText: draftFullText,
+            words: newWords,
             reviewed: draftReviewed,
           }),
         });
@@ -126,6 +181,7 @@ export default function MusicEditPage({
     setDraftName(server.name);
     setDraftAnyGenre(server.anyGenre);
     setDraftGenres(serverGenres);
+    setDraftBooks(serverBooks);
     setDraftFullText(caption?.fullText ?? '');
     setDraftReviewed(caption?.reviewed ?? false);
   };
@@ -134,10 +190,11 @@ export default function MusicEditPage({
     setDraftGenres((prev) => (checked ? [...prev, gid] : prev.filter((g) => g !== gid)));
   };
 
+  const toggleBook = (bid: string, checked: boolean) => {
+    setDraftBooks((prev) => (checked ? [...prev, bid] : prev.filter((b) => b !== bid)));
+  };
+
   const retranscribe = async () => {
-    if (!confirm('Re-run transcription? This re-uses Demucs + Whisper if DRY_RUN is off.')) {
-      return;
-    }
     setRetranscribing(true);
     try {
       const res = await fetch(`/api/music/${id}/transcribe`, { method: 'POST' });
@@ -170,14 +227,23 @@ export default function MusicEditPage({
             {caption?.reviewed ? ' (reviewed)' : ''}
           </p>
         </div>
-        <button
-          type="button"
-          onClick={deleteClip}
-          disabled={deleting}
-          className="rounded-md border border-red-200 px-3 py-1.5 text-sm text-red-700 hover:bg-red-50 disabled:opacity-50"
-        >
-          Delete
-        </button>
+        <div className="flex items-center gap-2">
+          <a
+            href="/library/music/new"
+            className="inline-flex items-center gap-1 rounded-md bg-stone-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-stone-800"
+          >
+            <span aria-hidden className="text-base leading-none">+</span>
+            Upload another
+          </a>
+          <button
+            type="button"
+            onClick={deleteClip}
+            disabled={deleting}
+            className="rounded-md border border-red-200 px-3 py-1.5 text-sm text-red-700 hover:bg-red-50 disabled:opacity-50"
+          >
+            Delete
+          </button>
+        </div>
       </div>
 
       <audio controls src={server.blobUrl} className="w-full" />
@@ -225,6 +291,29 @@ export default function MusicEditPage({
             </div>
           </div>
         )}
+
+        <div>
+          <span className="text-sm font-medium">Specific books</span>
+          <p className="text-xs text-stone-500">
+            If any books are picked, this clip is used only for those books. Leave
+            empty to let it play across genre or any-genre matches as usual.
+          </p>
+          <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
+            {books.map((b) => (
+              <label key={b.id} className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={draftBooks.includes(b.id)}
+                  onChange={(e) => toggleBook(b.id, e.target.checked)}
+                />
+                <span className="truncate">{b.title}</span>
+              </label>
+            ))}
+            {books.length === 0 && (
+              <p className="text-xs text-stone-500">No books yet.</p>
+            )}
+          </div>
+        </div>
       </div>
 
       <div className="space-y-3">

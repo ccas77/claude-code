@@ -89,7 +89,7 @@ async function maybeFireOne(
   const book = await db.query.books.findFirst({ where: eq(schema.books.id, bookId) });
   if (!book) return false;
 
-  const musicId = await pickMusic(cfg, book.genreId);
+  const musicId = await pickMusic(cfg, book.id, book.genreId);
   if (!musicId) return false;
 
   // Spread the day's posts evenly across the window: schedule each Nth post
@@ -168,6 +168,7 @@ function currentWindow(intervals: IntervalWindow[], minutesOfDay: number): Inter
 
 async function pickMusic(
   cfg: typeof schema.automationConfigs.$inferSelect,
+  bookId: string,
   bookGenreId: string | null,
 ): Promise<string | null> {
   // First: clips selected for this config
@@ -182,7 +183,7 @@ async function pickMusic(
 
   const selectedIds = selected.map((s) => s.musicClipId);
 
-  // Filter to genre-matching or any-genre clips
+  // Filter to genre-matching, book-specific, or any-genre clips
   const candidatesQuery: SQL[] = [
     inArray(schema.musicClips.id, selectedIds),
     eq(schema.musicClips.ownerId, cfg.ownerId),
@@ -195,6 +196,12 @@ async function pickMusic(
     .from(schema.musicClips)
     .where(and(...candidatesQuery));
 
+  const bookLinks = await db
+    .select({ musicClipId: schema.musicClipBooks.musicClipId })
+    .from(schema.musicClipBooks)
+    .where(eq(schema.musicClipBooks.bookId, bookId));
+  const bookSpecificIds = new Set(bookLinks.map((g) => g.musicClipId));
+
   const genres = bookGenreId
     ? await db
         .select({
@@ -205,9 +212,19 @@ async function pickMusic(
     : [];
   const sameGenreIds = new Set(genres.map((g) => g.musicClipId));
 
+  // Priority: clips assigned to this exact book win. Otherwise fall back to
+  // genre match, then any-genre, then anything selected for the config.
+  const bookSpecific = clips.filter((c) => bookSpecificIds.has(c.id));
   const sameGenre = clips.filter((c) => sameGenreIds.has(c.id));
   const anyGenre = clips.filter((c) => c.anyGenre);
-  const pool = sameGenre.length > 0 ? sameGenre : anyGenre.length > 0 ? anyGenre : clips;
+  const pool =
+    bookSpecific.length > 0
+      ? bookSpecific
+      : sameGenre.length > 0
+        ? sameGenre
+        : anyGenre.length > 0
+          ? anyGenre
+          : clips;
   if (pool.length === 0) return null;
 
   // Round-robin: use musicPointer as a deterministic position into the pool.

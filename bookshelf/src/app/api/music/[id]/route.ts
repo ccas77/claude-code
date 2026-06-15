@@ -11,6 +11,7 @@ const PatchSchema = z.object({
   name: z.string().min(1).max(200).optional(),
   anyGenre: z.boolean().optional(),
   genreIds: z.array(z.string().uuid()).optional(),
+  bookIds: z.array(z.string().uuid()).optional(),
 });
 
 async function loadOwned(id: string) {
@@ -26,16 +27,21 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   try {
     const { id } = await params;
     const clip = await loadOwned(id);
-    const [links, caption] = await Promise.all([
+    const [genreLinks, bookLinks, caption] = await Promise.all([
       db
         .select({ genreId: schema.musicClipGenres.genreId })
         .from(schema.musicClipGenres)
         .where(eq(schema.musicClipGenres.musicClipId, id)),
+      db
+        .select({ bookId: schema.musicClipBooks.bookId })
+        .from(schema.musicClipBooks)
+        .where(eq(schema.musicClipBooks.musicClipId, id)),
       db.query.captions.findFirst({ where: eq(schema.captions.musicClipId, id) }),
     ]);
     return NextResponse.json({
       musicClip: clip,
-      genreIds: links.map((l) => l.genreId),
+      genreIds: genreLinks.map((l) => l.genreId),
+      bookIds: bookLinks.map((l) => l.bookId),
       caption: caption ?? null,
     });
   } catch (e) {
@@ -69,6 +75,17 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         await db
           .insert(schema.musicClipGenres)
           .values(input.genreIds.map((genreId) => ({ musicClipId: id, genreId })));
+      }
+    }
+
+    if (input.bookIds !== undefined) {
+      await db
+        .delete(schema.musicClipBooks)
+        .where(eq(schema.musicClipBooks.musicClipId, id));
+      if (input.bookIds.length) {
+        await db
+          .insert(schema.musicClipBooks)
+          .values(input.bookIds.map((bookId) => ({ musicClipId: id, bookId })));
       }
     }
 

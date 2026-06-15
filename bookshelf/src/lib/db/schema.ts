@@ -152,6 +152,19 @@ export const musicClipGenres = pgTable(
   (t) => [primaryKey({ columns: [t.musicClipId, t.genreId] })],
 );
 
+export const musicClipBooks = pgTable(
+  'music_clip_books',
+  {
+    musicClipId: uuid('music_clip_id')
+      .notNull()
+      .references(() => musicClips.id, { onDelete: 'cascade' }),
+    bookId: uuid('book_id')
+      .notNull()
+      .references(() => books.id, { onDelete: 'cascade' }),
+  },
+  (t) => [primaryKey({ columns: [t.musicClipId, t.bookId] })],
+);
+
 export type CaptionWord = { text: string; start: number; end: number };
 
 export const captions = pgTable(
