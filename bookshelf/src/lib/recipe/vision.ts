@@ -11,7 +11,7 @@ import { env } from '../config';
 
 const MODELS = {
   claude: 'anthropic/claude-sonnet-4-6',
-  gemini: 'google/gemini-2.5-pro',
+  gemini: 'google/gemini-2.5-flash',
 } as const;
 
 type Provider = keyof typeof MODELS;

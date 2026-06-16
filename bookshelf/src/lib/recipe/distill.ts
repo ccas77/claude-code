@@ -1,6 +1,5 @@
 import { eq } from 'drizzle-orm';
 import { db, schema } from '../db/client';
-import { env } from '../config';
 import { visionAnalyze } from './vision';
 import { RECIPE_PROMPT } from './prompt';
 
@@ -52,38 +51,22 @@ export async function runRecipeDistillation({ genreId, jobId }: RunArgs): Promis
     return;
   }
 
-  if (env().DRY_RUN) {
-    await db
-      .update(schema.genres)
-      .set({
-        styleRecipe:
-          genre.styleRecipe ??
-          `[dry-run] recipe not yet distilled for ${genre.name}. Add a vision provider key and turn DRY_RUN off to populate.`,
-        recipeStatus: 'done',
-        updatedAt: new Date(),
-      })
-      .where(eq(schema.genres.id, genreId));
-
-    await db.insert(schema.eventLog).values({
-      ownerId: genre.ownerId,
-      stage: 'recipe.dry_run',
-      level: 'info',
-      message: `[dry-run] recipe distillation skipped for ${genre.name}`,
-      payload: { jobId, genreId, refCount: refs.length },
-    });
-    return;
-  }
-
+  // Distillation always runs - Gemini through the Vercel AI Gateway
+  // authenticates via OIDC, so no provider key is needed at runtime. Cost is
+  // tiny per genre. If the call fails, the error lands on the genre.
   await db
     .update(schema.genres)
     .set({ recipeStatus: 'processing', updatedAt: new Date() })
     .where(eq(schema.genres.id, genreId));
 
   try {
-    const recipe = await visionAnalyze(
+    const raw = await visionAnalyze(
       RECIPE_PROMPT,
       refs.map((r) => r.blobUrl),
     );
+    // Belt-and-braces: the prompt forbids em/en dashes but models slip them
+    // in occasionally. Replace with a regular hyphen.
+    const recipe = raw.replace(/[\u2013\u2014]/g, '-');
 
     await db
       .update(schema.genres)
@@ -101,7 +84,11 @@ export async function runRecipeDistillation({ genreId, jobId }: RunArgs): Promis
     const message = err instanceof Error ? err.message : 'Unknown error';
     await db
       .update(schema.genres)
-      .set({ recipeStatus: 'failed', updatedAt: new Date() })
+      .set({
+        recipeStatus: 'failed',
+        styleRecipe: `[Recipe distillation failed]\n\n${message}\n\nFix the underlying issue then click "Re-distill from images".`,
+        updatedAt: new Date(),
+      })
       .where(eq(schema.genres.id, genreId));
 
     await db.insert(schema.eventLog).values({

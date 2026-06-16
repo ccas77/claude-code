@@ -54,11 +54,21 @@ const ALLOWED_CONTENT_TYPES = [
   'image/webp',
   'image/gif',
   'audio/mpeg',
+  'audio/mp3',
   'audio/mp4',
+  'audio/m4a',
+  'audio/x-m4a',
+  'audio/aac',
+  'audio/x-aac',
   'audio/wav',
   'audio/x-wav',
+  'audio/wave',
+  'audio/vnd.wave',
   'audio/ogg',
+  'audio/vorbis',
   'audio/webm',
+  'audio/flac',
+  'audio/x-flac',
 ];
 
 function pickPrefix(payload: string | null): string {

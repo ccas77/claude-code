@@ -1,19 +1,17 @@
 import { eq } from 'drizzle-orm';
 import { db, schema } from '../db/client';
-import { env } from '../config';
 import { separateVocals } from './demucs';
 import { transcribeWithWhisper } from './whisper';
 
 /**
  * End-to-end transcription job.
  *
- * Demucs isolates vocals, Whisper transcribes them with word timestamps,
- * captions are persisted against the music clip and the status flag flips
- * to 'done'. Done once per clip; the result is reused forever.
+ * If REPLICATE_API_TOKEN is set, Demucs isolates the vocal stem first.
+ * Otherwise Whisper transcribes the original audio (still works, just less
+ * tolerant of loud music). Whisper then produces word-level timestamps.
  *
- * DRY_RUN skips all external calls and leaves an empty caption row + an
- * event-log breadcrumb, so the rest of the pipeline can be exercised
- * without spending on APIs.
+ * Failures land on caption.fullText with a [Transcription failed] prefix
+ * so they are visible on the music edit page instead of silent.
  */
 
 type RunArgs = { musicClipId: string; jobId: string };
@@ -33,35 +31,17 @@ export async function runTranscription({ musicClipId, jobId }: RunArgs): Promise
     return;
   }
 
-  if (env().DRY_RUN) {
-    await db
-      .update(schema.musicClips)
-      .set({ transcriptionStatus: 'done', updatedAt: new Date() })
-      .where(eq(schema.musicClips.id, musicClipId));
-
-    await db
-      .insert(schema.captions)
-      .values({ musicClipId, fullText: '', words: [], reviewed: false })
-      .onConflictDoNothing();
-
-    await db.insert(schema.eventLog).values({
-      ownerId: clip.ownerId,
-      stage: 'transcribe.dry_run',
-      level: 'info',
-      message: `[dry-run] transcription skipped for ${clip.name}`,
-      payload: { jobId, musicClipId },
-    });
-    return;
-  }
-
   await db
     .update(schema.musicClips)
     .set({ transcriptionStatus: 'processing', updatedAt: new Date() })
     .where(eq(schema.musicClips.id, musicClipId));
 
   try {
-    const vocalsUrl = await separateVocals(clip.blobUrl);
-    const { fullText, words } = await transcribeWithWhisper(vocalsUrl);
+    const audioForWhisper = process.env.REPLICATE_API_TOKEN
+      ? await separateVocals(clip.blobUrl)
+      : clip.blobUrl;
+
+    const { fullText, words } = await transcribeWithWhisper(audioForWhisper);
 
     await db
       .insert(schema.captions)
@@ -89,6 +69,25 @@ export async function runTranscription({ musicClipId, jobId }: RunArgs): Promise
       .update(schema.musicClips)
       .set({ transcriptionStatus: 'failed', updatedAt: new Date() })
       .where(eq(schema.musicClips.id, musicClipId));
+
+    // Write the error message into the caption so it's visible on the
+    // music edit page instead of leaving captions empty + status=failed.
+    await db
+      .insert(schema.captions)
+      .values({
+        musicClipId,
+        fullText: `[Transcription failed]\n\n${message}\n\nFix the underlying issue then click "Re-transcribe".`,
+        words: [],
+        reviewed: false,
+      })
+      .onConflictDoUpdate({
+        target: schema.captions.musicClipId,
+        set: {
+          fullText: `[Transcription failed]\n\n${message}\n\nFix the underlying issue then click "Re-transcribe".`,
+          words: [],
+          updatedAt: new Date(),
+        },
+      });
 
     await db.insert(schema.eventLog).values({
       ownerId: clip.ownerId,

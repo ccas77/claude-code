@@ -1,9 +1,11 @@
 import { eq } from 'drizzle-orm';
 import { db, schema } from '../db/client';
 import { env } from '../config';
+import { getOwnerEmail } from '../owner';
 import {
   uploadVideo,
   createPost,
+  getPostBridgeKeyForEmail,
   type PostBridgePlatform,
 } from './postbridge';
 import type { ProviderUsage } from '../db/schema';
@@ -79,10 +81,12 @@ export async function runPost({ cardId, jobId }: RunArgs): Promise<void> {
   try {
     const caption = await buildCaption(card);
     const accountId = await resolveAccountId(card);
+    const ownerEmail = await getOwnerEmail(card.ownerId);
+    const apiKey = getPostBridgeKeyForEmail(ownerEmail);
 
-    const mediaId = await uploadVideo(card.videoBlobUrl, `card-${cardId}.mp4`);
+    const mediaId = await uploadVideo(apiKey, card.videoBlobUrl, `card-${cardId}.mp4`);
 
-    const published = await createPost({
+    const published = await createPost(apiKey, {
       caption,
       mediaIds: [mediaId],
       accountIds: [accountId],

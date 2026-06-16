@@ -56,6 +56,22 @@ async function maybeFireOne(
   const window = currentWindow(cfg.intervals, minutesOfDayLondon);
   if (!window) return false;
 
+  // Per-owner daily cap: refuse to fire if today already produced N cards for
+  // this owner (sum across all their automation configs). Keeps any one user
+  // from burning the shared OpenAI/Gemini/Higgsfield budget.
+  const dayStartLondonUtc = londonHHMMToUtc('00:00', london);
+  const todayCount = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(schema.cards)
+    .where(
+      and(
+        eq(schema.cards.ownerId, cfg.ownerId),
+        sql`${schema.cards.createdAt} >= ${dayStartLondonUtc}`,
+      ),
+    );
+  const cap = cfg.dailyRenderCap ?? 20;
+  if (todayCount[0]?.count >= cap) return false;
+
   // Window bounds for today expressed as real UTC Dates (the wall-clock
   // window in London converted to instant-in-time UTC).
   const windowStart = londonHHMMToUtc(window.start, london);

@@ -1,8 +1,7 @@
-import { getOwnerId } from './owner';
+import { getOwnerId, UnauthorizedError } from './owner';
 
 /**
- * All CRUD goes through getOwnerId() to scope queries. Single-user today;
- * multi-tenant tomorrow without touching call sites.
+ * All CRUD goes through getOwnerId() to scope queries to the signed-in user.
  */
 
 export { getOwnerId };
@@ -27,6 +26,7 @@ export async function assertOwns<T extends { ownerId: string | null }>(
 }
 
 export function mapError(err: unknown): { status: number; body: object } {
+  if (err instanceof UnauthorizedError) return { status: 401, body: { error: err.message } };
   if (err instanceof NotFoundError) return { status: 404, body: { error: err.message } };
   if (err instanceof ForbiddenError) return { status: 403, body: { error: err.message } };
   const message = err instanceof Error ? err.message : 'Unknown error';

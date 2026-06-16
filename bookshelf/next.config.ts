@@ -7,6 +7,10 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "*.blob.vercel-storage.com" },
     ],
   },
+  serverExternalPackages: ["@ffmpeg-installer/ffmpeg"],
+  outputFileTracingIncludes: {
+    "/api/**/*": ["./src/lib/render/font.ttf"],
+  },
 };
 
 export default nextConfig;

@@ -288,6 +288,7 @@ export const automationConfigs = pgTable(
     intervals: jsonb('intervals').$type<IntervalWindow[]>().notNull().default([]),
     bookPointer: integer('book_pointer').notNull().default(0),
     musicPointer: integer('music_pointer').notNull().default(0),
+    dailyRenderCap: integer('daily_render_cap').notNull().default(20),
     lastPostedAt: timestamp('last_posted_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),

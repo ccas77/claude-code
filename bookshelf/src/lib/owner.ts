@@ -1,34 +1,46 @@
 import { eq } from 'drizzle-orm';
 import { db, schema } from './db/client';
-import { env } from './config';
+import { auth } from '../auth';
 
 /**
- * Single-user mode: there is exactly one owner today, identified by OWNER_EMAIL.
- * Every row in the system gets that owner's id stamped on it.
+ * Session-based owner resolution. Reads the signed-in Google email from the
+ * Auth.js JWT, upserts a `users` row by email, returns that row's id.
  *
- * Multi-user later is a flip - the owner_id column already exists. Swap this
- * function for a session/auth lookup and nothing else has to change.
+ * Cron endpoints and admin handlers run without a session and must call
+ * getOwnerIdForEmail directly with the owner email they're operating on
+ * (resolved from the card row's stamped owner_id).
  */
-let cachedOwnerId: string | null = null;
+
+export class UnauthorizedError extends Error {
+  constructor(msg = 'Not signed in') {
+    super(msg);
+  }
+}
 
 export async function getOwnerId(): Promise<string> {
-  if (cachedOwnerId) return cachedOwnerId;
+  const session = await auth();
+  const email = session?.user?.email?.toLowerCase();
+  if (!email) throw new UnauthorizedError();
+  return getOwnerIdForEmail(email);
+}
 
-  const ownerEmail = env().OWNER_EMAIL;
+export async function getOwnerIdForEmail(email: string): Promise<string> {
+  const normalized = email.toLowerCase();
   const existing = await db.query.users.findFirst({
-    where: eq(schema.users.email, ownerEmail),
+    where: eq(schema.users.email, normalized),
   });
-
-  if (existing) {
-    cachedOwnerId = existing.id;
-    return existing.id;
-  }
+  if (existing) return existing.id;
 
   const [created] = await db
     .insert(schema.users)
-    .values({ email: ownerEmail })
+    .values({ email: normalized })
     .returning({ id: schema.users.id });
-
-  cachedOwnerId = created.id;
   return created.id;
+}
+
+export async function getOwnerEmail(ownerId: string): Promise<string | null> {
+  const row = await db.query.users.findFirst({
+    where: eq(schema.users.id, ownerId),
+  });
+  return row?.email ?? null;
 }

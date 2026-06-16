@@ -38,10 +38,6 @@ export default async function History() {
           <Link href="/" className="font-semibold tracking-tight">
             Bookshelf
           </Link>
-          <nav className="flex gap-4 text-sm">
-            <Link href="/library" className="hover:underline">Library</Link>
-            <Link href="/history" className="font-medium underline">History</Link>
-          </nav>
         </div>
       </header>
 

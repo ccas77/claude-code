@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { ReactNode } from 'react';
+import { HiggsfieldConnect } from '@/components/HiggsfieldConnect';
 
 export default function LibraryLayout({ children }: { children: ReactNode }) {
   return (
@@ -9,7 +10,7 @@ export default function LibraryLayout({ children }: { children: ReactNode }) {
           <Link href="/" className="font-semibold tracking-tight">
             Bookshelf
           </Link>
-          <nav className="flex gap-4 text-sm">
+          <nav className="flex flex-1 items-center gap-4 text-sm">
             <Link href="/library/genres" className="hover:underline">
               Genres
             </Link>
@@ -22,15 +23,13 @@ export default function LibraryLayout({ children }: { children: ReactNode }) {
             <Link href="/library/renders" className="hover:underline">
               Renders
             </Link>
-            <Link href="/library/schedule" className="hover:underline">
-              Schedule
-            </Link>
-            <Link href="/board" className="hover:underline">
-              Board
+            <Link href="/library/automation" className="hover:underline">
+              Automation
             </Link>
             <Link href="/history" className="hover:underline">
               History
             </Link>
+            <HiggsfieldConnect />
           </nav>
         </div>
       </header>

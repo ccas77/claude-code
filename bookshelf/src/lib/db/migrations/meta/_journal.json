@@ -43,6 +43,13 @@
       "when": 1813728000000,
       "tag": "0005_caption_sources",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1813814400000,
+      "tag": "0006_daily_render_cap",
+      "breakpoints": true
     }
   ]
 }

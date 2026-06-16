@@ -36,14 +36,26 @@ export type PostStats = {
   shares?: number;
 };
 
-function requireKey(): string {
-  const key = process.env.POSTBRIDGE_API_KEY;
-  if (!key) {
-    throw new Error(
-      'POSTBRIDGE_API_KEY not set. Add it to your Vercel project env vars.',
-    );
+/**
+ * Pick the right Post Bridge API key for a user. Cordelia (the primary owner)
+ * uses POSTBRIDGE_API_KEY; anyone else uses POSTBRIDGE_API_KEY_SHARED. The
+ * email match is case-insensitive.
+ */
+export function getPostBridgeKeyForEmail(email: string | null | undefined): string {
+  const primary = (process.env.OWNER_EMAIL_PRIMARY ?? '').toLowerCase();
+  const owner = (email ?? '').toLowerCase();
+  if (primary && owner && owner === primary) {
+    const key = process.env.POSTBRIDGE_API_KEY;
+    if (!key) {
+      throw new Error('POSTBRIDGE_API_KEY not set (primary owner key).');
+    }
+    return key;
   }
-  return key;
+  const shared = process.env.POSTBRIDGE_API_KEY_SHARED;
+  if (!shared) {
+    throw new Error('POSTBRIDGE_API_KEY_SHARED not set (friends key).');
+  }
+  return shared;
 }
 
 async function fetchWithRetry(
@@ -60,12 +72,15 @@ async function fetchWithRetry(
   return res;
 }
 
-async function pb<T>(path: string, init: RequestInit = {}): Promise<T> {
-  const token = requireKey();
+async function pb<T>(
+  path: string,
+  apiKey: string,
+  init: RequestInit = {},
+): Promise<T> {
   const res = await fetchWithRetry(`${PB_BASE}${path}`, {
     ...init,
     headers: {
-      Authorization: `Bearer ${token}`,
+      Authorization: `Bearer ${apiKey}`,
       'Content-Type': 'application/json',
       ...(init.headers ?? {}),
     },
@@ -81,15 +96,17 @@ async function pb<T>(path: string, init: RequestInit = {}): Promise<T> {
 // ---- Accounts ---------------------------------------------------------------
 
 export async function listAccounts(
+  apiKey: string,
   platform: PostBridgePlatform,
 ): Promise<PostBridgeAccount[]> {
   const res = await pb<{ data?: { id: number; username: string }[] }>(
     `/v1/social-accounts?platform=${platform}&limit=100`,
+    apiKey,
   );
   return (res.data ?? []).map((a) => ({ ...a, platform }));
 }
 
-export async function listAllAccounts(): Promise<PostBridgeAccount[]> {
+export async function listAllAccounts(apiKey: string): Promise<PostBridgeAccount[]> {
   const platforms: PostBridgePlatform[] = [
     'tiktok',
     'instagram',
@@ -102,7 +119,7 @@ export async function listAllAccounts(): Promise<PostBridgeAccount[]> {
     'bluesky',
   ];
   const results = await Promise.all(
-    platforms.map((p) => listAccounts(p).catch(() => [] as PostBridgeAccount[])),
+    platforms.map((p) => listAccounts(apiKey, p).catch(() => [] as PostBridgeAccount[])),
   );
   return results.flat().sort((a, b) => {
     const byPlatform = a.platform.localeCompare(b.platform);
@@ -114,6 +131,7 @@ export async function listAllAccounts(): Promise<PostBridgeAccount[]> {
 // ---- Media upload (2-step) --------------------------------------------------
 
 export async function uploadVideo(
+  apiKey: string,
   videoUrl: string,
   fileName = 'render.mp4',
 ): Promise<string> {
@@ -125,6 +143,7 @@ export async function uploadVideo(
 
   const upload = await pb<{ upload_url: string; media_id: string }>(
     '/v1/media/create-upload-url',
+    apiKey,
     {
       method: 'POST',
       body: JSON.stringify({
@@ -162,7 +181,10 @@ export type PublishedPost = {
   id: string;
 };
 
-export async function createPost(args: CreatePostArgs): Promise<PublishedPost> {
+export async function createPost(
+  apiKey: string,
+  args: CreatePostArgs,
+): Promise<PublishedPost> {
   const platformConfig: Record<string, Record<string, unknown>> = {};
   if (args.platform === 'tiktok') {
     platformConfig.tiktok = { draft: false, is_aigc: true };
@@ -178,10 +200,14 @@ export async function createPost(args: CreatePostArgs): Promise<PublishedPost> {
   };
   if (args.scheduledAt) body.scheduled_at = args.scheduledAt;
 
-  const res = await pb<{ id?: string; data?: { id?: string } }>('/v1/posts', {
-    method: 'POST',
-    body: JSON.stringify(body),
-  });
+  const res = await pb<{ id?: string; data?: { id?: string } }>(
+    '/v1/posts',
+    apiKey,
+    {
+      method: 'POST',
+      body: JSON.stringify(body),
+    },
+  );
   const id = res.id ?? res.data?.id;
   if (!id) throw new Error('post-bridge created post but returned no id');
   return { id };
@@ -201,8 +227,11 @@ export type PostResult = {
   };
 };
 
-export async function getPostResults(): Promise<PostResult[]> {
-  const res = await pb<{ data?: PostResult[] }>(`/v1/post-results?limit=100`);
+export async function getPostResults(apiKey: string): Promise<PostResult[]> {
+  const res = await pb<{ data?: PostResult[] }>(
+    `/v1/post-results?limit=100`,
+    apiKey,
+  );
   return res.data ?? [];
 }
 

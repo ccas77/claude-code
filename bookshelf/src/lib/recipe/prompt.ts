@@ -20,4 +20,6 @@ Output a single coherent recipe, in plain prose, covering:
 - overall mood and atmosphere
 - what is conspicuously absent
 
-Be specific and observational. Avoid genre labels and brand names. Describe what you see, not what you assume. The recipe should be reusable across many different subjects, not tied to any one scene.`;
+Be specific and observational. Avoid genre labels and brand names. Describe what you see, not what you assume. The recipe should be reusable across many different subjects, not tied to any one scene.
+
+Do not use em dashes or en dashes in your output. Use hyphens, commas, parentheses, or separate sentences instead.`;

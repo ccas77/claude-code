@@ -3,7 +3,6 @@ import { z } from 'zod';
 const EnvSchema = z.object({
   DATABASE_URL: z.string().min(1, 'DATABASE_URL is required - see .env.example'),
   BLOB_READ_WRITE_TOKEN: z.string().optional(),
-  OWNER_EMAIL: z.string().email(),
   DRY_RUN: z
     .string()
     .default('true')
@@ -17,8 +16,8 @@ const EnvSchema = z.object({
   GEMINI_API_KEY: z.string().optional(),
   ANTHROPIC_API_KEY: z.string().optional(),
 
-  IMAGE_PROVIDER_PRIMARY: z.enum(['higgsfield', 'gemini']).default('higgsfield'),
-  IMAGE_PROVIDER_FALLBACK: z.enum(['higgsfield', 'gemini', '']).default('gemini'),
+  IMAGE_PROVIDER_PRIMARY: z.enum(['gemini', 'higgsfield']).default('gemini'),
+  IMAGE_PROVIDER_FALLBACK: z.enum(['gemini', 'higgsfield', '']).default(''),
   HIGGSFIELD_API_KEY: z.string().optional(),
 
   VIDEO_PROVIDER_PRIMARY: z.string().default('higgsfield'),
