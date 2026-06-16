@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 type Friend = {
   id: string;
@@ -18,13 +18,14 @@ type Account = {
 export default function AssignmentsPage() {
   const [friends, setFriends] = useState<Friend[] | null>(null);
   const [accounts, setAccounts] = useState<Account[]>([]);
-  const [drafts, setDrafts] = useState<Record<string, Set<number>>>({});
-  const [serverSets, setServerSets] = useState<Record<string, Set<number>>>({});
-  const [savingId, setSavingId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string>('');
+  const [draft, setDraft] = useState<Set<number>>(new Set());
+  const [serverSet, setServerSet] = useState<Set<number>>(new Set());
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [forbidden, setForbidden] = useState(false);
 
-  const load = async () => {
+  const load = async (preserveSelectedId?: string) => {
     const res = await fetch('/api/admin/assignments');
     if (res.status === 403) {
       setForbidden(true);
@@ -37,55 +38,72 @@ export default function AssignmentsPage() {
     const data = await res.json();
     setFriends(data.friends);
     setAccounts(data.accounts);
-    const next: Record<string, Set<number>> = {};
-    for (const f of data.friends as Friend[]) {
-      next[f.id] = new Set(f.assignedAccountIds);
+    const keep = preserveSelectedId ?? selectedId;
+    if (keep) {
+      const f = (data.friends as Friend[]).find((x) => x.id === keep);
+      if (f) {
+        setSelectedId(f.id);
+        setDraft(new Set(f.assignedAccountIds));
+        setServerSet(new Set(f.assignedAccountIds));
+        return;
+      }
     }
-    setDrafts(next);
-    setServerSets(
-      Object.fromEntries(Object.entries(next).map(([k, v]) => [k, new Set(v)])),
-    );
+    setSelectedId('');
+    setDraft(new Set());
+    setServerSet(new Set());
   };
 
   useEffect(() => {
     load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const toggle = (ownerId: string, accountId: number) => {
-    setDrafts((prev) => {
-      const cur = new Set(prev[ownerId] ?? []);
-      if (cur.has(accountId)) cur.delete(accountId);
-      else cur.add(accountId);
-      return { ...prev, [ownerId]: cur };
+  const onPick = (id: string) => {
+    if (!friends) return;
+    const f = friends.find((x) => x.id === id);
+    setSelectedId(id);
+    setDraft(new Set(f?.assignedAccountIds ?? []));
+    setServerSet(new Set(f?.assignedAccountIds ?? []));
+  };
+
+  const toggle = (accountId: number) => {
+    setDraft((prev) => {
+      const next = new Set(prev);
+      if (next.has(accountId)) next.delete(accountId);
+      else next.add(accountId);
+      return next;
     });
   };
 
-  const save = async (ownerId: string) => {
-    setSavingId(ownerId);
+  const dirty = useMemo(() => {
+    if (draft.size !== serverSet.size) return true;
+    for (const id of draft) if (!serverSet.has(id)) return true;
+    return false;
+  }, [draft, serverSet]);
+
+  const save = async () => {
+    if (!selectedId) return;
+    setSaving(true);
     setError(null);
     try {
-      const accountIds = Array.from(drafts[ownerId] ?? []);
       const res = await fetch('/api/admin/assignments', {
         method: 'PATCH',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ ownerId, accountIds }),
+        body: JSON.stringify({
+          ownerId: selectedId,
+          accountIds: Array.from(draft),
+        }),
       });
       if (!res.ok) throw new Error((await res.json()).error ?? 'Failed');
-      await load();
+      await load(selectedId);
     } catch (e) {
       setError((e as Error).message);
     } finally {
-      setSavingId(null);
+      setSaving(false);
     }
   };
 
-  const isDirty = (ownerId: string): boolean => {
-    const a = drafts[ownerId] ?? new Set<number>();
-    const b = serverSets[ownerId] ?? new Set<number>();
-    if (a.size !== b.size) return true;
-    for (const id of a) if (!b.has(id)) return true;
-    return false;
-  };
+  const selectedFriend = friends?.find((f) => f.id === selectedId) ?? null;
 
   if (forbidden) {
     return (
@@ -97,12 +115,12 @@ export default function AssignmentsPage() {
   if (friends === null) return <p className="text-sm text-stone-600">Loading...</p>;
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Account assignments</h1>
         <p className="mt-1 text-sm text-stone-600">
-          Tick the Post Bridge accounts each friend is allowed to publish to.
-          They only see what you give them; your own accounts stay hidden.
+          Pick a friend, tick the Post Bridge accounts they can publish to. They
+          only see what you give them; your own accounts stay hidden.
         </p>
       </div>
 
@@ -114,57 +132,86 @@ export default function AssignmentsPage() {
         </div>
       )}
 
-      {friends.length === 0 ? (
-        <p className="text-sm text-stone-600">
-          No friends have signed in yet. They appear here after their first Google
-          login.
-        </p>
-      ) : (
-        <ul className="space-y-4">
+      <label className="block max-w-md">
+        <span className="text-sm font-medium">Friend</span>
+        <select
+          value={selectedId}
+          onChange={(e) => onPick(e.target.value)}
+          className="mt-1 block w-full rounded-md border border-stone-300 bg-white px-3 py-2 text-sm focus:border-stone-500 focus:outline-none"
+        >
+          <option value="">
+            {friends.length === 0
+              ? 'No friends signed in yet'
+              : 'Pick a friend...'}
+          </option>
           {friends.map((f) => (
-            <li
-              key={f.id}
-              className="rounded-lg border border-stone-200 bg-white p-4 space-y-3"
-            >
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="font-medium">{f.name ?? f.email}</div>
-                  {f.name && (
-                    <div className="text-xs text-stone-500">{f.email}</div>
-                  )}
-                </div>
-                <button
-                  type="button"
-                  onClick={() => save(f.id)}
-                  disabled={!isDirty(f.id) || savingId === f.id}
-                  className="rounded-md bg-stone-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-stone-800 disabled:opacity-40"
-                >
-                  {savingId === f.id ? 'Saving...' : 'Save'}
-                </button>
-              </div>
-              {accounts.length > 0 && (
-                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 md:grid-cols-3">
-                  {accounts.map((a) => {
-                    const checked = drafts[f.id]?.has(a.id) ?? false;
-                    return (
-                      <label key={a.id} className="flex items-center gap-2 text-sm">
-                        <input
-                          type="checkbox"
-                          checked={checked}
-                          onChange={() => toggle(f.id, a.id)}
-                        />
-                        <span className="truncate">
-                          <span className="font-medium">{a.platform}</span>{' '}
-                          <span className="text-stone-600">@{a.username}</span>
-                        </span>
-                      </label>
-                    );
-                  })}
-                </div>
-              )}
-            </li>
+            <option key={f.id} value={f.id}>
+              {f.name ? `${f.name} (${f.email})` : f.email}
+              {f.assignedAccountIds.length
+                ? ` - ${f.assignedAccountIds.length} assigned`
+                : ''}
+            </option>
           ))}
-        </ul>
+        </select>
+      </label>
+
+      {selectedFriend && (
+        <div className="rounded-lg border border-stone-200 bg-white p-4 space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="font-medium">
+                {selectedFriend.name ?? selectedFriend.email}
+              </div>
+              {selectedFriend.name && (
+                <div className="text-xs text-stone-500">{selectedFriend.email}</div>
+              )}
+            </div>
+            <span className="text-xs text-stone-500">
+              {draft.size} of {accounts.length} ticked
+            </span>
+          </div>
+
+          {accounts.length > 0 && (
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 md:grid-cols-3">
+              {accounts.map((a) => {
+                const checked = draft.has(a.id);
+                return (
+                  <label key={a.id} className="flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={() => toggle(a.id)}
+                    />
+                    <span className="truncate">
+                      <span className="font-medium">{a.platform}</span>{' '}
+                      <span className="text-stone-600">@{a.username}</span>
+                    </span>
+                  </label>
+                );
+              })}
+            </div>
+          )}
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={save}
+              disabled={!dirty || saving}
+              className="rounded-md bg-stone-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-stone-800 disabled:opacity-40"
+            >
+              {saving ? 'Saving...' : 'Save'}
+            </button>
+            {dirty && (
+              <button
+                type="button"
+                onClick={() => setDraft(new Set(serverSet))}
+                className="rounded-md border border-stone-300 px-3 py-1.5 text-sm hover:bg-stone-50"
+              >
+                Discard
+              </button>
+            )}
+          </div>
+        </div>
       )}
 
       {error && <p className="text-sm text-red-700">{error}</p>}
