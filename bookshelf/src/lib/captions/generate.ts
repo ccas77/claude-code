@@ -41,17 +41,24 @@ export async function generateCaption(inputs: CaptionInputs): Promise<string> {
 
   const prompt = `Write one BookTok-style caption for a video about this book.
 
-Rules:
-- 2 to 4 short lines. No paragraphs.
-- Hook in line 1. Make a reader stop scrolling.
+Format:
+- One paragraph for the hook. It can be a single short line or a few sentences in flowing prose, whatever the source material calls for. Do not break the hook into multiple lines with hard returns.
+- Blank line.
+- Exactly 5 hashtags on the last line, separated by single spaces.
+
+Voice rules:
+- Hook should make a reader stop scrolling.
 - Match the tone implied by the source material below. Do not impose a tone the source does not suggest.
 - Do not restate the audio line if it is already going to play over the video.
 - Do not use the book title verbatim more than once.
 - No emojis unless the source material uses them.
 - No em dashes.
-- End with the hashtags on the last line, all on one line, separated by single spaces.
-- If "Must-include hashtags" are listed, all of them must appear. Add up to 4 more hashtags that fit the vibe.
-- Return only the caption text. No commentary, no quotes, no labels.
+
+Hashtag rules:
+- If "Must-include hashtags" are listed, all of them must appear, in order, in the final 5. If there are more than 5 must-include hashtags, use the first 5 only.
+- If there are fewer than 5 must-include hashtags, fill the rest with tasteful, on-vibe hashtags so the total is exactly 5.
+
+Return only the caption text. No commentary, no quotes, no labels.
 
 Source material:
 ${sourceLines.join('\n\n')}`;
