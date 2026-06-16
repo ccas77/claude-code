@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { and, eq } from 'drizzle-orm';
 import { db, schema } from '@/lib/db/client';
 import { assertOwns, getOwnerId, mapError } from '@/lib/ownership';
+import { env } from '@/lib/config';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,7 +14,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
       where: and(eq(schema.cards.id, id), eq(schema.cards.ownerId, ownerId)),
     });
     await assertOwns(card ?? null);
-    return NextResponse.json({ card });
+    return NextResponse.json({ card, dryRun: env().DRY_RUN });
   } catch (e) {
     const { status, body } = mapError(e);
     return NextResponse.json(body, { status });

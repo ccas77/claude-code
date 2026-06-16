@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { and, desc, eq, ne } from 'drizzle-orm';
+import { and, desc, eq, ne, sql } from 'drizzle-orm';
 import { db, schema } from '@/lib/db/client';
 import { getOwnerId } from '@/lib/owner';
 
@@ -25,6 +25,7 @@ export default async function History() {
         eq(schema.cards.ownerId, ownerId),
         eq(schema.cards.status, 'posted'),
         ne(schema.cards.platform, 'preview'),
+        sql`NOT (${schema.cards.providersUsed} @> '[{"step":"post","provider":"dry-run"}]'::jsonb)`,
       ),
     )
     .orderBy(desc(schema.cards.postTime))

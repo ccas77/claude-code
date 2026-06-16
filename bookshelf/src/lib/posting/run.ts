@@ -60,7 +60,7 @@ export async function runPost({ cardId, jobId }: RunArgs): Promise<void> {
       .update(schema.cards)
       .set({
         status: 'posted',
-        postUrl: 'https://example.invalid/dry-run',
+        postUrl: null,
         providersUsed: providers,
         updatedAt: new Date(),
       })

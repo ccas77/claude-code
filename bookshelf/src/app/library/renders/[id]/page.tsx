@@ -91,6 +91,7 @@ export default function RenderDetailPage({
   const { id } = use(params);
   const router = useRouter();
   const [card, setCard] = useState<Card | null>(null);
+  const [dryRun, setDryRun] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -112,6 +113,7 @@ export default function RenderDetailPage({
       const data = await res.json();
       if (!cancelled) {
         setCard(data.card);
+        setDryRun(Boolean(data.dryRun));
         if (data.card?.caption && !caption) setCaption(data.card.caption);
       }
       return data.card as Card;
@@ -282,6 +284,14 @@ export default function RenderDetailPage({
             <h2 className="text-sm font-semibold">Publish</h2>
             <span className="text-xs text-stone-500">London time</span>
           </div>
+
+          {dryRun && (
+            <div className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+              <span className="font-medium">Dry-run mode is ON.</span> Publishing
+              here will mark the card as posted but won't actually send it to
+              Post Bridge. Set DRY_RUN to false in Vercel env to go live.
+            </div>
+          )}
 
           <div>
             <div className="flex items-center justify-between">
