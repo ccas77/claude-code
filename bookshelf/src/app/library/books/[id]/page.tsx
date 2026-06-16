@@ -13,6 +13,11 @@ type Book = {
   kind: 'single' | 'set';
   genreId: string | null;
   accessories: string[];
+  description: string | null;
+  reviewDump: string | null;
+  tropes: string[];
+  vibeNotes: string | null;
+  hashtags: string[];
 };
 
 type BookImage = {
@@ -39,6 +44,11 @@ export default function BookEditPage({
   const [draftKind, setDraftKind] = useState<'single' | 'set'>('single');
   const [draftGenreId, setDraftGenreId] = useState('');
   const [draftAccessoriesText, setDraftAccessoriesText] = useState('');
+  const [draftDescription, setDraftDescription] = useState('');
+  const [draftReviewDump, setDraftReviewDump] = useState('');
+  const [draftTropesText, setDraftTropesText] = useState('');
+  const [draftVibeNotes, setDraftVibeNotes] = useState('');
+  const [draftHashtagsText, setDraftHashtagsText] = useState('');
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -60,6 +70,11 @@ export default function BookEditPage({
     setDraftKind(data.book.kind ?? 'single');
     setDraftGenreId(data.book.genreId ?? '');
     setDraftAccessoriesText((data.book.accessories ?? []).join('\n'));
+    setDraftDescription(data.book.description ?? '');
+    setDraftReviewDump(data.book.reviewDump ?? '');
+    setDraftTropesText((data.book.tropes ?? []).join('\n'));
+    setDraftVibeNotes(data.book.vibeNotes ?? '');
+    setDraftHashtagsText((data.book.hashtags ?? []).join('\n'));
     if (genreRes.ok) {
       const g = await genreRes.json();
       setGenres(g.genres ?? []);
@@ -75,13 +90,26 @@ export default function BookEditPage({
     .split(/[\n,]+/)
     .map((s) => s.trim())
     .filter(Boolean);
+  const tropesDraftList = draftTropesText
+    .split(/[\n,]+/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const hashtagsDraftList = draftHashtagsText
+    .split(/[\n,\s]+/)
+    .map((s) => s.trim().replace(/^#+/, ''))
+    .filter(Boolean);
 
   const dirty =
     server !== null &&
     (draftTitle !== server.title ||
       draftKind !== (server.kind ?? 'single') ||
       draftGenreId !== (server.genreId ?? '') ||
-      accessoriesDraftList.join('|') !== (server.accessories ?? []).join('|'));
+      accessoriesDraftList.join('|') !== (server.accessories ?? []).join('|') ||
+      draftDescription !== (server.description ?? '') ||
+      draftReviewDump !== (server.reviewDump ?? '') ||
+      tropesDraftList.join('|') !== (server.tropes ?? []).join('|') ||
+      draftVibeNotes !== (server.vibeNotes ?? '') ||
+      hashtagsDraftList.join('|') !== (server.hashtags ?? []).join('|'));
 
   const save = async () => {
     setSaving(true);
@@ -95,6 +123,11 @@ export default function BookEditPage({
           kind: draftKind,
           genreId: draftGenreId || null,
           accessories: accessoriesDraftList,
+          description: draftDescription.trim() ? draftDescription : null,
+          reviewDump: draftReviewDump.trim() ? draftReviewDump : null,
+          tropes: tropesDraftList,
+          vibeNotes: draftVibeNotes.trim() ? draftVibeNotes : null,
+          hashtags: hashtagsDraftList,
         }),
       });
       if (!res.ok) throw new Error((await res.json()).error ?? 'Failed');
@@ -112,6 +145,11 @@ export default function BookEditPage({
     setDraftKind(server.kind ?? 'single');
     setDraftGenreId(server.genreId ?? '');
     setDraftAccessoriesText((server.accessories ?? []).join('\n'));
+    setDraftDescription(server.description ?? '');
+    setDraftReviewDump(server.reviewDump ?? '');
+    setDraftTropesText((server.tropes ?? []).join('\n'));
+    setDraftVibeNotes(server.vibeNotes ?? '');
+    setDraftHashtagsText((server.hashtags ?? []).join('\n'));
   };
 
   const attachImages = async (uploaded: UploadResult[]) => {
@@ -234,6 +272,85 @@ export default function BookEditPage({
             value={draftAccessoriesText}
             onChange={(e) => setDraftAccessoriesText(e.target.value)}
             rows={4}
+            className="mt-1 block w-full rounded-md border border-stone-300 bg-white px-3 py-2 text-sm focus:border-stone-500 focus:outline-none"
+          />
+        </label>
+      </div>
+
+      <div className="space-y-5 rounded-lg border border-stone-200 bg-white p-4">
+        <div>
+          <h2 className="text-sm font-semibold">Caption sources</h2>
+          <p className="mt-1 text-xs text-stone-500">
+            The AI riffs on whatever you paste here to write captions per video.
+            All fields optional. Leave blank if you'd rather write captions by hand.
+          </p>
+        </div>
+
+        <label className="block">
+          <span className="text-sm font-medium">Description / blurb</span>
+          <textarea
+            value={draftDescription}
+            onChange={(e) => setDraftDescription(e.target.value)}
+            rows={5}
+            placeholder="Paste the back-of-book blurb."
+            className="mt-1 block w-full rounded-md border border-stone-300 bg-white px-3 py-2 text-sm focus:border-stone-500 focus:outline-none"
+          />
+        </label>
+
+        <label className="block">
+          <span className="text-sm font-medium">Review dump</span>
+          <p className="text-xs text-stone-500">
+            Paste reader reactions and review quotes. One per line is ideal but a
+            block of text is fine.
+          </p>
+          <textarea
+            value={draftReviewDump}
+            onChange={(e) => setDraftReviewDump(e.target.value)}
+            rows={6}
+            placeholder={'"Couldn\'t put it down."\n"That ending wrecked me."\nPaste as many as you have.'}
+            className="mt-1 block w-full rounded-md border border-stone-300 bg-white px-3 py-2 text-sm focus:border-stone-500 focus:outline-none"
+          />
+        </label>
+
+        <label className="block">
+          <span className="text-sm font-medium">Tropes</span>
+          <p className="text-xs text-stone-500">
+            One per line or comma-separated. The AI uses these to land the hook.
+          </p>
+          <textarea
+            value={draftTropesText}
+            onChange={(e) => setDraftTropesText(e.target.value)}
+            rows={3}
+            placeholder={'enemies to lovers\nslow burn\ndual POV'}
+            className="mt-1 block w-full rounded-md border border-stone-300 bg-white px-3 py-2 text-sm focus:border-stone-500 focus:outline-none"
+          />
+        </label>
+
+        <label className="block">
+          <span className="text-sm font-medium">Vibe notes</span>
+          <p className="text-xs text-stone-500">
+            Free-form hook angles you want it to lean into. Anything you'd tell a
+            friend who's writing the caption for you.
+          </p>
+          <textarea
+            value={draftVibeNotes}
+            onChange={(e) => setDraftVibeNotes(e.target.value)}
+            rows={4}
+            className="mt-1 block w-full rounded-md border border-stone-300 bg-white px-3 py-2 text-sm focus:border-stone-500 focus:outline-none"
+          />
+        </label>
+
+        <label className="block">
+          <span className="text-sm font-medium">Must-include hashtags</span>
+          <p className="text-xs text-stone-500">
+            One per line. Hash sign optional. Genre default hashtags merge in
+            automatically.
+          </p>
+          <textarea
+            value={draftHashtagsText}
+            onChange={(e) => setDraftHashtagsText(e.target.value)}
+            rows={3}
+            placeholder={'booktok\nbookrecs'}
             className="mt-1 block w-full rounded-md border border-stone-300 bg-white px-3 py-2 text-sm focus:border-stone-500 focus:outline-none"
           />
         </label>

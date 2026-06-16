@@ -1,15 +1,21 @@
 import { eq } from 'drizzle-orm';
 import { db, schema } from '../db/client';
 import { env } from '../config';
-import { publishToPlatform, type PostBridgePlatform } from './postbridge';
+import {
+  uploadVideo,
+  createPost,
+  type PostBridgePlatform,
+} from './postbridge';
 import type { ProviderUsage } from '../db/schema';
 
 /**
- * Post-on-time handler. Pulls the Ready card, hands the finished video to
- * post-bridge, marks the card Posted with the live URL.
+ * Post-on-time handler. Card status must be 'ready' with a video URL.
+ * The handler uploads the video to post-bridge (2-step) and creates the post
+ * against the stored account id.
  *
- * DRY_RUN skips the API call and writes a placeholder URL so the rest of
- * the system can be exercised without spending.
+ * The post-bridge account id is read from card.providersUsed (where the
+ * auto-scheduler stamps it on creation) or, as a fallback, looked up by
+ * username from the existing account handle.
  */
 
 type RunArgs = { cardId: string; jobId: string };
@@ -34,7 +40,7 @@ export async function runPost({ cardId, jobId }: RunArgs): Promise<void> {
       cardId,
       stage: 'post.skip',
       level: 'info',
-      message: `card not ready (status=${card.status}), skipping`,
+      message: `card not ready (status=${card.status})`,
       payload: { jobId },
     });
     return;
@@ -43,7 +49,7 @@ export async function runPost({ cardId, jobId }: RunArgs): Promise<void> {
     await fail(card, jobId, 'card has no video', 'permanent');
     return;
   }
-  if (card.platform === 'preview') return; // safety net
+  if (card.platform === 'preview') return;
 
   if (env().DRY_RUN) {
     const providers: ProviderUsage[] = [
@@ -72,11 +78,15 @@ export async function runPost({ cardId, jobId }: RunArgs): Promise<void> {
 
   try {
     const caption = await buildCaption(card);
-    const published = await publishToPlatform({
-      platform: card.platform as PostBridgePlatform,
-      accountHandle: card.accountHandle,
-      videoUrl: card.videoBlobUrl,
+    const accountId = await resolveAccountId(card);
+
+    const mediaId = await uploadVideo(card.videoBlobUrl, `card-${cardId}.mp4`);
+
+    const published = await createPost({
       caption,
+      mediaIds: [mediaId],
+      accountIds: [accountId],
+      platform: card.platform as PostBridgePlatform,
     });
 
     const providers: ProviderUsage[] = [
@@ -88,7 +98,7 @@ export async function runPost({ cardId, jobId }: RunArgs): Promise<void> {
       .update(schema.cards)
       .set({
         status: 'posted',
-        postUrl: published.url,
+        postUrl: null, // platform url resolves async via refreshStats
         providersUsed: providers,
         updatedAt: new Date(),
       })
@@ -100,13 +110,28 @@ export async function runPost({ cardId, jobId }: RunArgs): Promise<void> {
       stage: 'post.success',
       level: 'info',
       message: `posted to ${card.platform}/${card.accountHandle}`,
-      payload: { jobId, postBridgeId: published.id, url: published.url },
+      payload: { jobId, postBridgeId: published.id },
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
     await fail(card, jobId, message, classify(err));
     throw err;
   }
+}
+
+async function resolveAccountId(
+  card: typeof schema.cards.$inferSelect,
+): Promise<number> {
+  // The auto-scheduler stamps the post-bridge account id on providersUsed.
+  const providers = (card.providersUsed ?? []) as ProviderUsage[];
+  const stamped = providers.find((p) => p.step === 'post' && p.provider.startsWith('account:'));
+  if (stamped) {
+    const id = Number(stamped.provider.slice('account:'.length));
+    if (Number.isFinite(id)) return id;
+  }
+  throw new Error(
+    'card has no post-bridge account id; only auto-scheduled cards are postable',
+  );
 }
 
 function classify(err: unknown): 'temporary' | 'resource' | 'permanent' {
@@ -151,11 +176,10 @@ async function fail(
 }
 
 async function buildCaption(card: typeof schema.cards.$inferSelect): Promise<string> {
+  if (card.caption && card.caption.trim()) return card.caption;
   if (!card.bookId) return '';
   const book = await db.query.books.findFirst({
     where: eq(schema.books.id, card.bookId),
   });
-  if (!book) return '';
-  // Minimal caption: book title. The user can extend per-platform later.
-  return book.title;
+  return book?.title ?? '';
 }

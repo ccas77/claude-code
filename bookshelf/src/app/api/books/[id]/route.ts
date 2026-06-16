@@ -12,6 +12,11 @@ const PatchSchema = z.object({
   kind: z.enum(['single', 'set']).optional(),
   genreId: z.string().uuid().nullable().optional(),
   accessories: z.array(z.string().min(1).max(120)).max(40).optional(),
+  description: z.string().max(5000).nullable().optional(),
+  reviewDump: z.string().max(20000).nullable().optional(),
+  tropes: z.array(z.string().min(1).max(120)).max(40).optional(),
+  vibeNotes: z.string().max(5000).nullable().optional(),
+  hashtags: z.array(z.string().min(1).max(80)).max(40).optional(),
 });
 
 async function loadOwned(id: string) {
@@ -51,6 +56,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         ...(input.kind !== undefined ? { kind: input.kind } : {}),
         ...(input.genreId !== undefined ? { genreId: input.genreId } : {}),
         ...(input.accessories !== undefined ? { accessories: input.accessories } : {}),
+        ...(input.description !== undefined ? { description: input.description } : {}),
+        ...(input.reviewDump !== undefined ? { reviewDump: input.reviewDump } : {}),
+        ...(input.tropes !== undefined ? { tropes: input.tropes } : {}),
+        ...(input.vibeNotes !== undefined ? { vibeNotes: input.vibeNotes } : {}),
+        ...(input.hashtags !== undefined ? { hashtags: input.hashtags } : {}),
         updatedAt: new Date(),
       })
       .where(eq(schema.books.id, id))

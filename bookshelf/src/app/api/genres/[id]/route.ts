@@ -10,6 +10,7 @@ export const dynamic = 'force-dynamic';
 const PatchSchema = z.object({
   name: z.string().min(1).max(120).optional(),
   styleRecipe: z.string().nullable().optional(),
+  defaultHashtags: z.array(z.string().min(1).max(80)).max(40).optional(),
 });
 
 async function loadOwned(id: string) {
@@ -47,6 +48,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       .set({
         ...(input.name !== undefined ? { name: input.name } : {}),
         ...(input.styleRecipe !== undefined ? { styleRecipe: input.styleRecipe } : {}),
+        ...(input.defaultHashtags !== undefined ? { defaultHashtags: input.defaultHashtags } : {}),
         updatedAt: new Date(),
       })
       .where(eq(schema.genres.id, id))

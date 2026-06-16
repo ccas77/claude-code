@@ -39,8 +39,8 @@ export default async function RendersList() {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Renders</h1>
           <p className="mt-1 text-sm text-stone-600">
-            Test renders that exercise the full pipeline without posting. Real
-            scheduling lives in Stage 6.
+            Render a video first, then choose Post now or Schedule for later from
+            its detail page.
           </p>
         </div>
         <Link

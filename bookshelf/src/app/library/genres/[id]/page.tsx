@@ -3,14 +3,16 @@
 import { useRouter } from 'next/navigation';
 import { use, useEffect, useState } from 'react';
 import Image from 'next/image';
-import { uploadFile } from '@/lib/upload';
+import { uploadFile, UploadResult } from '@/lib/upload';
 import { UnsavedBar } from '@/components/UnsavedBar';
+import { UrlsPaste } from '@/components/UrlsPaste';
 
 type Genre = {
   id: string;
   name: string;
   styleRecipe: string | null;
   recipeStatus: string;
+  defaultHashtags: string[];
 };
 
 type Ref = { id: string; blobUrl: string; blobPathname: string };
@@ -27,6 +29,7 @@ export default function GenreEditPage({
   const [refs, setRefs] = useState<Ref[]>([]);
   const [draftName, setDraftName] = useState('');
   const [draftRecipe, setDraftRecipe] = useState('');
+  const [draftHashtagsText, setDraftHashtagsText] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -44,6 +47,7 @@ export default function GenreEditPage({
     setRefs(data.referenceImages);
     setDraftName(data.genre.name);
     setDraftRecipe(data.genre.styleRecipe ?? '');
+    setDraftHashtagsText((data.genre.defaultHashtags ?? []).join('\n'));
   };
 
   useEffect(() => {
@@ -51,9 +55,16 @@ export default function GenreEditPage({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
+  const hashtagsDraftList = draftHashtagsText
+    .split(/[\n,\s]+/)
+    .map((s) => s.trim().replace(/^#+/, ''))
+    .filter(Boolean);
+
   const dirty =
     server !== null &&
-    (draftName !== server.name || draftRecipe !== (server.styleRecipe ?? ''));
+    (draftName !== server.name ||
+      draftRecipe !== (server.styleRecipe ?? '') ||
+      hashtagsDraftList.join('|') !== (server.defaultHashtags ?? []).join('|'));
 
   const save = async () => {
     setSaving(true);
@@ -65,6 +76,7 @@ export default function GenreEditPage({
         body: JSON.stringify({
           name: draftName,
           styleRecipe: draftRecipe.trim() ? draftRecipe : null,
+          defaultHashtags: hashtagsDraftList,
         }),
       });
       if (!res.ok) throw new Error((await res.json()).error ?? 'Failed');
@@ -80,6 +92,18 @@ export default function GenreEditPage({
     if (!server) return;
     setDraftName(server.name);
     setDraftRecipe(server.styleRecipe ?? '');
+    setDraftHashtagsText((server.defaultHashtags ?? []).join('\n'));
+  };
+
+  const attachImages = async (images: UploadResult[]) => {
+    if (!images.length) return;
+    const res = await fetch(`/api/genres/${id}/reference-images`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ images }),
+    });
+    if (!res.ok) throw new Error((await res.json()).error ?? 'Failed');
+    await load();
   };
 
   const addImages = async (list: FileList | null) => {
@@ -90,13 +114,7 @@ export default function GenreEditPage({
       const uploaded = await Promise.all(
         Array.from(list).map((f) => uploadFile(f, 'library/genres')),
       );
-      const res = await fetch(`/api/genres/${id}/reference-images`, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ images: uploaded }),
-      });
-      if (!res.ok) throw new Error((await res.json()).error ?? 'Failed');
-      await load();
+      await attachImages(uploaded);
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -112,9 +130,6 @@ export default function GenreEditPage({
   };
 
   const redistill = async () => {
-    if (!confirm('Re-distill the style recipe from the reference images? Uses the vision provider if DRY_RUN is off.')) {
-      return;
-    }
     setDistilling(true);
     setError(null);
     try {
@@ -192,13 +207,28 @@ export default function GenreEditPage({
             className="mt-1 block w-full rounded-md border border-stone-300 bg-white px-3 py-2 font-mono text-xs focus:border-stone-500 focus:outline-none"
           />
         </div>
+
+        <label className="block">
+          <span className="text-sm font-medium">Default hashtags</span>
+          <p className="text-xs text-stone-500">
+            One per line, hash optional. These merge into every caption for books
+            in this genre, alongside any book-specific hashtags.
+          </p>
+          <textarea
+            value={draftHashtagsText}
+            onChange={(e) => setDraftHashtagsText(e.target.value)}
+            rows={4}
+            placeholder={'booktok\nbookrecs'}
+            className="mt-1 block w-full rounded-md border border-stone-300 bg-white px-3 py-2 text-sm focus:border-stone-500 focus:outline-none"
+          />
+        </label>
       </div>
 
       <div>
         <div className="flex items-center justify-between">
           <span className="text-sm font-medium">Reference images ({refs.length})</span>
           <label className="cursor-pointer rounded-md border border-stone-300 px-3 py-1.5 text-sm hover:bg-stone-50">
-            {uploading ? 'Uploading...' : 'Add images'}
+            {uploading ? 'Uploading...' : 'Add files'}
             <input
               type="file"
               multiple
@@ -208,6 +238,18 @@ export default function GenreEditPage({
               disabled={uploading}
             />
           </label>
+        </div>
+        <div className="mt-3">
+          <UrlsPaste
+            category="library/genres"
+            onUploaded={async (u) => {
+              try {
+                await attachImages(u);
+              } catch (e) {
+                setError((e as Error).message);
+              }
+            }}
+          />
         </div>
         {refs.length > 0 && (
           <ul className="mt-3 grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-6">

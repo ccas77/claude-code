@@ -3,6 +3,7 @@ import { db, schema } from '../db/client';
 import type { IntervalWindow, ProviderUsage } from '../db/schema';
 import { enqueue, JOB_NAMES } from '../queue';
 import { londonHHMMToUtc, londonNow, parseHourMinute } from '../time/london';
+import { generateCaption } from '../captions/generate';
 
 /**
  * Auto-scheduler. Fires on every minute. For each enabled automation config:
@@ -99,6 +100,34 @@ async function maybeFireOne(
   const offset = window.posts > 0 ? Math.round((slot + 0.5) * windowMs / window.posts) : 0;
   const postTime = new Date(windowStart.getTime() + offset);
 
+  // Riff a caption from the book's saved source material. Best-effort: if the
+  // generator fails (no AI Gateway, network blip), fall back to the book title
+  // so runPost still has something usable.
+  const genre = book.genreId
+    ? await db.query.genres.findFirst({ where: eq(schema.genres.id, book.genreId) })
+    : null;
+  const audioCaption = await db.query.captions.findFirst({
+    where: eq(schema.captions.musicClipId, musicId),
+  });
+  const tagPool = Array.from(
+    new Set([...(book.hashtags ?? []), ...(genre?.defaultHashtags ?? [])]),
+  );
+  let caption: string;
+  try {
+    caption = await generateCaption({
+      bookTitle: book.title,
+      isSet: book.kind === 'set',
+      description: book.description,
+      reviewDump: book.reviewDump,
+      tropes: book.tropes ?? [],
+      vibeNotes: book.vibeNotes,
+      audioCaption: audioCaption?.fullText ?? null,
+      hashtags: tagPool,
+    });
+  } catch {
+    caption = book.title;
+  }
+
   // Stamp the post-bridge account id on providersUsed so runPost can resolve it.
   const providers: ProviderUsage[] = [
     { step: 'post', provider: `account:${cfg.postBridgeAccountId}`, fallback: false },
@@ -114,6 +143,7 @@ async function maybeFireOne(
       accountHandle: cfg.username,
       bookId,
       musicClipId: musicId,
+      caption,
       providersUsed: providers,
     })
     .returning();
