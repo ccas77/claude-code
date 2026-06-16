@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { eq } from 'drizzle-orm';
 import { db, schema } from '@/lib/db/client';
 import { getOwnerId } from '@/lib/owner';
+import { HowThisWorks } from '@/components/HowThisWorks';
 export const dynamic = 'force-dynamic';
 
 const PLATFORM_LABEL: Record<string, string> = {
@@ -63,6 +64,22 @@ export default async function AutomationOverview() {
         >
           Connect an account
         </Link>
+      </div>
+
+      <div className="mt-4">
+        <HowThisWorks>
+          <p>
+            Automation makes videos and posts them for you on a schedule. Set it up once and walk away.
+          </p>
+          <ol className="list-decimal pl-5 space-y-1">
+            <li>Click <strong>Connect an account</strong> and pick the social media account this automation will post to.</li>
+            <li>Open the account&apos;s settings and set posting windows in London time (e.g. 7-9am, 4 posts; 6-9pm, 5 posts). The app spreads posts evenly across each window.</li>
+            <li>Tick which books and music clips it&apos;s allowed to use. The app rotates through them.</li>
+            <li>Switch it on. The app will build a video, post it, then move to the next book at the next slot.</li>
+            <li>Check the <strong>Today</strong> tab to see what&apos;s scheduled, ready, or in flight right now.</li>
+          </ol>
+          <p>You can set up multiple automations - one per account.</p>
+        </HowThisWorks>
       </div>
 
       {configs.length === 0 ? (

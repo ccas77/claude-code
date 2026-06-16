@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { and, desc, eq } from 'drizzle-orm';
 import { db, schema } from '@/lib/db/client';
 import { getOwnerId } from '@/lib/owner';
+import { HowThisWorks } from '@/components/HowThisWorks';
 
 export const dynamic = 'force-dynamic';
 
@@ -49,6 +50,21 @@ export default async function RendersList() {
         >
           Test render
         </Link>
+      </div>
+
+      <div className="mt-4">
+        <HowThisWorks>
+          <p>
+            Renders is where you build videos by hand (as opposed to automation, which does it on a schedule).
+          </p>
+          <ol className="list-decimal pl-5 space-y-1">
+            <li>Click <strong>Test render</strong>. Pick a book and a music clip.</li>
+            <li>The app builds the video: AI image of the book in your genre&apos;s style, your audio, captions synced word-by-word. Takes about a minute.</li>
+            <li>When it&apos;s ready, you&apos;ll see the video on the render&apos;s detail page along with a caption written by the app.</li>
+            <li>To post it: pick a Post Bridge account, edit the caption if you want (or hit Regenerate for a different riff), choose <strong>Post now</strong> or <strong>Schedule for later</strong>, and hit Publish.</li>
+            <li>Friends - you&apos;ll only see the accounts Cordelia has assigned to you in the publish dropdown.</li>
+          </ol>
+        </HowThisWorks>
       </div>
 
       {rows.length === 0 ? (
