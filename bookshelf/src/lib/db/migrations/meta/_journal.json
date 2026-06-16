@@ -50,6 +50,13 @@
       "when": 1813814400000,
       "tag": "0006_daily_render_cap",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1813900800000,
+      "tag": "0007_user_account_assignments",
+      "breakpoints": true
     }
   ]
 }

@@ -268,6 +268,17 @@ export const mcpTokens = pgTable('mcp_tokens', {
 // Automation configs (per social account)
 // =============================================================================
 
+export const userAccountAssignments = pgTable(
+  'user_account_assignments',
+  {
+    ownerId: uuid('owner_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    postBridgeAccountId: integer('post_bridge_account_id').notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.ownerId, t.postBridgeAccountId] })],
+);
+
 export type IntervalWindow = {
   start: string; // "18:00" - HH:MM in Europe/London local time
   end: string;   // "23:00" - HH:MM in Europe/London local time

@@ -1,8 +1,10 @@
 import Link from 'next/link';
 import { ReactNode } from 'react';
 import { HiggsfieldConnect } from '@/components/HiggsfieldConnect';
+import { isPrimaryOwner } from '@/lib/owner-role';
 
-export default function LibraryLayout({ children }: { children: ReactNode }) {
+export default async function LibraryLayout({ children }: { children: ReactNode }) {
+  const primary = await isPrimaryOwner();
   return (
     <div className="min-h-screen bg-stone-50 text-stone-800">
       <header className="border-b border-stone-200 bg-white">
@@ -29,6 +31,11 @@ export default function LibraryLayout({ children }: { children: ReactNode }) {
             <Link href="/history" className="hover:underline">
               History
             </Link>
+            {primary && (
+              <Link href="/library/admin/assignments" className="hover:underline">
+                Admin
+              </Link>
+            )}
             <HiggsfieldConnect />
           </nav>
         </div>

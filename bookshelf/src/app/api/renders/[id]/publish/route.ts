@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { db, schema } from '@/lib/db/client';
-import { assertOwns, getOwnerId, mapError } from '@/lib/ownership';
+import { assertOwns, getOwnerId, mapError, ForbiddenError } from '@/lib/ownership';
+import { getOwnerEmail } from '@/lib/owner';
+import { isPrimaryEmail } from '@/lib/owner-role';
 import type { ProviderUsage } from '@/lib/db/schema';
 
 export const dynamic = 'force-dynamic';
@@ -41,6 +43,21 @@ export async function POST(
 
     const input = PublishSchema.parse(await req.json());
     const postTime = input.postAt ? new Date(input.postAt) : new Date();
+
+    // Account assignment guard: friends can only publish to accounts the
+    // primary owner has explicitly assigned to them. The primary owner has
+    // unrestricted access to her own Post Bridge accounts.
+    const ownerEmail = await getOwnerEmail(card!.ownerId);
+    if (!isPrimaryEmail(ownerEmail)) {
+      const allowed = await db
+        .select({ id: schema.userAccountAssignments.postBridgeAccountId })
+        .from(schema.userAccountAssignments)
+        .where(eq(schema.userAccountAssignments.ownerId, card!.ownerId));
+      const allowedSet = new Set(allowed.map((r) => r.id));
+      if (!allowedSet.has(input.accountId)) {
+        throw new ForbiddenError('That account is not assigned to you.');
+      }
+    }
 
     // Stamp account id on providersUsed (drop any prior post-account stamp).
     const priorProviders = (card!.providersUsed ?? []) as ProviderUsage[];

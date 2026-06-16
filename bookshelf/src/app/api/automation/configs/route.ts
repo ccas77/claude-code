@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { db, schema } from '@/lib/db/client';
-import { getOwnerId, mapError } from '@/lib/ownership';
+import { getOwnerId, mapError, ForbiddenError } from '@/lib/ownership';
+import { auth } from '@/auth';
+import { isPrimaryEmail } from '@/lib/owner-role';
 
 export const dynamic = 'force-dynamic';
 
@@ -70,6 +72,20 @@ export async function POST(req: NextRequest) {
   try {
     const ownerId = await getOwnerId();
     const input = CreateSchema.parse(await req.json());
+
+    // Account assignment guard for non-primary owners.
+    const session = await auth();
+    const email = session?.user?.email?.toLowerCase() ?? null;
+    if (!isPrimaryEmail(email)) {
+      const allowed = await db
+        .select({ id: schema.userAccountAssignments.postBridgeAccountId })
+        .from(schema.userAccountAssignments)
+        .where(eq(schema.userAccountAssignments.ownerId, ownerId));
+      const allowedSet = new Set(allowed.map((r) => r.id));
+      if (!allowedSet.has(input.postBridgeAccountId)) {
+        throw new ForbiddenError('That account is not assigned to you.');
+      }
+    }
 
     // Upsert: one config per (owner, account) combo.
     const existing = await db.query.automationConfigs.findFirst({
