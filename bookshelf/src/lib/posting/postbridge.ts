@@ -1,19 +1,16 @@
-import { requireKey } from '../config';
-
 /**
  * post-bridge.com client.
  *
- * The app talks ONLY to post-bridge for posting; it never touches the
- * individual platform APIs. The user signs up at post-bridge, connects their
- * social accounts, and generates an API key. One post per platform per
- * account, per the post-bridge constraint.
+ * Endpoint shapes match the toolkit's verified usage:
+ *   - GET  /v1/social-accounts?platform={platform}&limit=100
+ *   - POST /v1/media/create-upload-url        (2-step: presign + PUT)
+ *   - POST /v1/posts                           (caption + media[] + social_accounts[])
+ *   - GET  /v1/post-results?limit=100
  *
- * Endpoints below are the canonical post-bridge REST surface as of build
- * time. If post-bridge has shifted, swap them via the POSTBRIDGE_BASE_URL
- * env var without touching call sites.
+ * 10 req/sec rate limit. fetchWithRetry handles 429 with exponential backoff.
  */
 
-const BASE = process.env.POSTBRIDGE_BASE_URL ?? 'https://api.post-bridge.com/v1';
+const PB_BASE = process.env.POSTBRIDGE_BASE_URL ?? 'https://api.post-bridge.com';
 
 export type PostBridgePlatform =
   | 'tiktok'
@@ -26,9 +23,10 @@ export type PostBridgePlatform =
   | 'threads'
   | 'bluesky';
 
-export type PublishedPost = {
-  id: string;
-  url: string | null;
+export type PostBridgeAccount = {
+  id: number;
+  username: string;
+  platform: PostBridgePlatform;
 };
 
 export type PostStats = {
@@ -38,14 +36,38 @@ export type PostStats = {
   shares?: number;
 };
 
-async function pb<T>(path: string, init: RequestInit): Promise<T> {
-  const token = requireKey('POSTBRIDGE_API_KEY', 'post-bridge');
-  const res = await fetch(`${BASE}${path}`, {
+function requireKey(): string {
+  const key = process.env.POSTBRIDGE_API_KEY;
+  if (!key) {
+    throw new Error(
+      'POSTBRIDGE_API_KEY not set. Add it to your Vercel project env vars.',
+    );
+  }
+  return key;
+}
+
+async function fetchWithRetry(
+  url: string,
+  init: RequestInit,
+  retries = 3,
+): Promise<Response> {
+  const res = await fetch(url, init);
+  if (res.status === 429 && retries > 0) {
+    const waitMs = Math.pow(2, 3 - retries) * 1000;
+    await new Promise((r) => setTimeout(r, waitMs));
+    return fetchWithRetry(url, init, retries - 1);
+  }
+  return res;
+}
+
+async function pb<T>(path: string, init: RequestInit = {}): Promise<T> {
+  const token = requireKey();
+  const res = await fetchWithRetry(`${PB_BASE}${path}`, {
     ...init,
     headers: {
       Authorization: `Bearer ${token}`,
       'Content-Type': 'application/json',
-      ...init.headers,
+      ...(init.headers ?? {}),
     },
   });
   if (!res.ok) {
@@ -56,29 +78,141 @@ async function pb<T>(path: string, init: RequestInit): Promise<T> {
   return res.json() as Promise<T>;
 }
 
-export async function publishToPlatform(args: {
-  platform: PostBridgePlatform;
-  accountHandle: string;
-  videoUrl: string;
+// ---- Accounts ---------------------------------------------------------------
+
+export async function listAccounts(
+  platform: PostBridgePlatform,
+): Promise<PostBridgeAccount[]> {
+  const res = await pb<{ data?: { id: number; username: string }[] }>(
+    `/v1/social-accounts?platform=${platform}&limit=100`,
+  );
+  return (res.data ?? []).map((a) => ({ ...a, platform }));
+}
+
+export async function listAllAccounts(): Promise<PostBridgeAccount[]> {
+  const platforms: PostBridgePlatform[] = [
+    'tiktok',
+    'instagram',
+    'facebook',
+    'youtube',
+    'x',
+    'linkedin',
+    'pinterest',
+    'threads',
+    'bluesky',
+  ];
+  const results = await Promise.all(
+    platforms.map((p) => listAccounts(p).catch(() => [] as PostBridgeAccount[])),
+  );
+  return results.flat().sort((a, b) => {
+    const byPlatform = a.platform.localeCompare(b.platform);
+    if (byPlatform !== 0) return byPlatform;
+    return a.username.localeCompare(b.username, undefined, { sensitivity: 'base' });
+  });
+}
+
+// ---- Media upload (2-step) --------------------------------------------------
+
+export async function uploadVideo(
+  videoUrl: string,
+  fileName = 'render.mp4',
+): Promise<string> {
+  const sourceRes = await fetch(videoUrl);
+  if (!sourceRes.ok) {
+    throw new Error(`fetch video for upload failed (${sourceRes.status})`);
+  }
+  const bytes = Buffer.from(await sourceRes.arrayBuffer());
+
+  const upload = await pb<{ upload_url: string; media_id: string }>(
+    '/v1/media/create-upload-url',
+    {
+      method: 'POST',
+      body: JSON.stringify({
+        name: fileName,
+        mime_type: 'video/mp4',
+        size_bytes: bytes.length,
+      }),
+    },
+  );
+
+  const putRes = await fetch(upload.upload_url, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'video/mp4' },
+    body: new Uint8Array(bytes),
+  });
+  if (!putRes.ok) {
+    throw new Error(
+      `media S3 PUT failed: ${putRes.status} ${(await putRes.text()).slice(0, 200)}`,
+    );
+  }
+  return upload.media_id;
+}
+
+// ---- Create post ------------------------------------------------------------
+
+export type CreatePostArgs = {
   caption: string;
-}): Promise<PublishedPost> {
-  const body = {
-    platform: args.platform,
-    account: args.accountHandle,
-    media: { type: 'video', url: args.videoUrl },
+  mediaIds: string[];
+  accountIds: number[];
+  platform: PostBridgePlatform;
+  scheduledAt?: string; // ISO string; omit for immediate
+};
+
+export type PublishedPost = {
+  id: string;
+};
+
+export async function createPost(args: CreatePostArgs): Promise<PublishedPost> {
+  const platformConfig: Record<string, Record<string, unknown>> = {};
+  if (args.platform === 'tiktok') {
+    platformConfig.tiktok = { draft: false, is_aigc: true };
+  } else {
+    platformConfig[args.platform] = {};
+  }
+
+  const body: Record<string, unknown> = {
     caption: args.caption,
-    publish_at: 'now',
+    media: args.mediaIds,
+    social_accounts: args.accountIds,
+    platform_configurations: platformConfig,
   };
-  const res = await pb<{ id: string; url?: string | null }>(`/posts`, {
+  if (args.scheduledAt) body.scheduled_at = args.scheduledAt;
+
+  const res = await pb<{ id?: string; data?: { id?: string } }>('/v1/posts', {
     method: 'POST',
     body: JSON.stringify(body),
   });
-  return { id: res.id, url: res.url ?? null };
+  const id = res.id ?? res.data?.id;
+  if (!id) throw new Error('post-bridge created post but returned no id');
+  return { id };
 }
 
-export async function fetchPostStats(postId: string): Promise<PostStats> {
-  const res = await pb<{ stats?: PostStats }>(`/posts/${postId}/stats`, {
-    method: 'GET',
-  });
-  return res.stats ?? {};
+// ---- Results / stats --------------------------------------------------------
+
+export type PostResult = {
+  post_id: string;
+  social_account_id: number;
+  success: boolean;
+  error: string | null;
+  platform_data?: {
+    id?: string;
+    url?: string;
+    username?: string;
+  };
+};
+
+export async function getPostResults(): Promise<PostResult[]> {
+  const res = await pb<{ data?: PostResult[] }>(`/v1/post-results?limit=100`);
+  return res.data ?? [];
+}
+
+export function extractPostUrl(result: PostResult): string | null {
+  if (result.platform_data?.url) return result.platform_data.url;
+  const id = result.platform_data?.id;
+  const username = result.platform_data?.username;
+  if (id && username) {
+    const match = id.match(/v2\.(\d+)/);
+    if (match) return `https://www.tiktok.com/@${username}/photo/${match[1]}`;
+  }
+  return null;
 }
