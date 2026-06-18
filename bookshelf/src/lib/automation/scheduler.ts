@@ -20,15 +20,41 @@ import { generateCaption } from '../captions/generate';
  * are handled automatically.
  */
 
-const PREPARE_LEAD_MINUTES = 3 * 60; // give the renderer 3h headroom on slow days
 const COUNT_AS_POSTED_AFTER_RENDER = true;
 
-export async function runAutoSchedule(): Promise<{
+export type SkipReason =
+  | 'outside-window'
+  | 'daily-cap-reached'
+  | 'window-full'
+  | 'no-book-selections'
+  | 'book-missing'
+  | 'no-music-match';
+
+export type Decision =
+  | { fired: true; cardId: string }
+  | { fired: false; reason: SkipReason; detail?: Record<string, unknown> };
+
+export type RunResult = {
   triggered: number;
   skipped: number;
-}> {
+  decisions: Array<{
+    configId: string;
+    platform: string;
+    username: string;
+    decision: Decision;
+  }>;
+};
+
+export async function runAutoSchedule(options: {
+  dryRun?: boolean;
+  simulateMinutesOfDay?: number;
+} = {}): Promise<RunResult> {
   const now = new Date();
   const london = londonNow(now);
+  const effectiveMinutes =
+    typeof options.simulateMinutesOfDay === 'number'
+      ? options.simulateMinutesOfDay
+      : london.minutesOfDay;
 
   const configs = await db
     .select()
@@ -37,14 +63,41 @@ export async function runAutoSchedule(): Promise<{
 
   let triggered = 0;
   let skipped = 0;
+  const decisions: RunResult['decisions'] = [];
 
   for (const cfg of configs) {
-    const fired = await maybeFireOne(cfg, london.minutesOfDay, now, london);
-    if (fired) triggered++;
+    const decision = await maybeFireOne(
+      cfg,
+      effectiveMinutes,
+      now,
+      london,
+      options.dryRun ?? false,
+    );
+    decisions.push({
+      configId: cfg.id,
+      platform: cfg.platform,
+      username: cfg.username,
+      decision,
+    });
+    if (decision.fired) triggered++;
     else skipped++;
+
+    // Log every skip reason EXCEPT outside-window (would spam ~1440 rows/day
+    // per config). Window-matched skips are the interesting ones because they
+    // tell you the scheduler tried and bounced.
+    if (!options.dryRun && !decision.fired && decision.reason !== 'outside-window') {
+      await db.insert(schema.eventLog).values({
+        ownerId: cfg.ownerId,
+        cardId: null,
+        stage: 'auto.skip',
+        level: 'warn',
+        message: `${cfg.platform}/${cfg.username}: ${decision.reason}`,
+        payload: { configId: cfg.id, ...decision.detail },
+      });
+    }
   }
 
-  return { triggered, skipped };
+  return { triggered, skipped, decisions };
 }
 
 async function maybeFireOne(
@@ -52,13 +105,18 @@ async function maybeFireOne(
   minutesOfDayLondon: number,
   now: Date,
   london: ReturnType<typeof londonNow>,
-): Promise<boolean> {
+  dryRun: boolean,
+): Promise<Decision> {
   const window = currentWindow(cfg.intervals, minutesOfDayLondon);
-  if (!window) return false;
+  if (!window) {
+    return {
+      fired: false,
+      reason: 'outside-window',
+      detail: { minutesOfDay: minutesOfDayLondon, intervals: cfg.intervals },
+    };
+  }
 
-  // Per-owner daily cap: refuse to fire if today already produced N cards for
-  // this owner (sum across all their automation configs). Keeps any one user
-  // from burning the shared OpenAI/Gemini/Higgsfield budget.
+  // Per-owner daily cap.
   const dayStartLondonUtc = londonHHMMToUtc('00:00', london);
   const todayCount = await db
     .select({ count: sql<number>`count(*)` })
@@ -70,10 +128,12 @@ async function maybeFireOne(
       ),
     );
   const cap = cfg.dailyRenderCap ?? 20;
-  if (todayCount[0]?.count >= cap) return false;
+  const todayN = Number(todayCount[0]?.count ?? 0);
+  if (todayN >= cap) {
+    return { fired: false, reason: 'daily-cap-reached', detail: { todayN, cap } };
+  }
 
-  // Window bounds for today expressed as real UTC Dates (the wall-clock
-  // window in London converted to instant-in-time UTC).
+  // Window bounds for today expressed as UTC Dates.
   const windowStart = londonHHMMToUtc(window.start, london);
   const windowEnd = londonHHMMToUtc(window.end, london);
 
@@ -90,35 +150,62 @@ async function maybeFireOne(
       ),
     );
 
-  if (recentCards.length >= window.posts) return false;
+  if (recentCards.length >= window.posts) {
+    return {
+      fired: false,
+      reason: 'window-full',
+      detail: {
+        recentCount: recentCards.length,
+        targetPosts: window.posts,
+        window,
+      },
+    };
+  }
 
-  // Pick the next book at pointer.
   const books = await db
     .select({ bookId: schema.automationBookSelections.bookId })
     .from(schema.automationBookSelections)
     .where(eq(schema.automationBookSelections.configId, cfg.id))
     .orderBy(schema.automationBookSelections.position);
-  if (books.length === 0) return false;
+  if (books.length === 0) {
+    return { fired: false, reason: 'no-book-selections' };
+  }
 
   const bookId = books[cfg.bookPointer % books.length].bookId;
+  const book = await db.query.books.findFirst({
+    where: eq(schema.books.id, bookId),
+  });
+  if (!book) {
+    return { fired: false, reason: 'book-missing', detail: { bookId } };
+  }
 
-  // Pick music. Prefer same-genre as the book, fall back to any-genre, then any.
-  const book = await db.query.books.findFirst({ where: eq(schema.books.id, bookId) });
-  if (!book) return false;
+  const musicResult = await pickMusic(cfg, book.id, book.genreId);
+  if (!musicResult.musicId) {
+    return {
+      fired: false,
+      reason: 'no-music-match',
+      detail: {
+        bookId,
+        bookGenreId: book.genreId,
+        ...musicResult.diag,
+      },
+    };
+  }
+  const musicId = musicResult.musicId;
 
-  const musicId = await pickMusic(cfg, book.id, book.genreId);
-  if (!musicId) return false;
+  if (dryRun) {
+    return {
+      fired: true,
+      cardId: 'dry-run',
+    };
+  }
 
-  // Spread the day's posts evenly across the window: schedule each Nth post
-  // at start + (n/posts) of the window length.
-  const slot = recentCards.length; // 0-indexed slot within today's window
+  // Spread the day's posts evenly across the window.
+  const slot = recentCards.length;
   const windowMs = windowEnd.getTime() - windowStart.getTime();
   const offset = window.posts > 0 ? Math.round((slot + 0.5) * windowMs / window.posts) : 0;
   const postTime = new Date(windowStart.getTime() + offset);
 
-  // Riff a caption from the book's saved source material. Best-effort: if the
-  // generator fails (no AI Gateway, network blip), fall back to the book title
-  // so runPost still has something usable.
   const genre = book.genreId
     ? await db.query.genres.findFirst({ where: eq(schema.genres.id, book.genreId) })
     : null;
@@ -144,7 +231,6 @@ async function maybeFireOne(
     caption = book.title;
   }
 
-  // Stamp the post-bridge account id on providersUsed so runPost can resolve it.
   const providers: ProviderUsage[] = [
     { step: 'post', provider: `account:${cfg.postBridgeAccountId}`, fallback: false },
   ];
@@ -164,7 +250,6 @@ async function maybeFireOne(
     })
     .returning();
 
-  // Advance pointers + last_posted_at so the next tick picks the next book.
   await db
     .update(schema.automationConfigs)
     .set({
@@ -174,7 +259,6 @@ async function maybeFireOne(
     })
     .where(eq(schema.automationConfigs.id, cfg.id));
 
-  // Enqueue render now (prepare ahead, with the postTime up to 3h away).
   await enqueue(
     JOB_NAMES.RENDER_CARD,
     { cardId: card.id },
@@ -196,7 +280,10 @@ async function maybeFireOne(
     },
   });
 
-  return COUNT_AS_POSTED_AFTER_RENDER;
+  if (!COUNT_AS_POSTED_AFTER_RENDER) {
+    return { fired: true, cardId: card.id };
+  }
+  return { fired: true, cardId: card.id };
 }
 
 function currentWindow(intervals: IntervalWindow[], minutesOfDay: number): IntervalWindow | null {
@@ -212,24 +299,44 @@ function currentWindow(intervals: IntervalWindow[], minutesOfDay: number): Inter
   return null;
 }
 
+type MusicPick = {
+  musicId: string | null;
+  diag: {
+    selectedCount: number;
+    ownedClips: number;
+    bookSpecificClips: number;
+    sameGenreClips: number;
+    anyGenreClips: number;
+    poolPicked: 'book-specific' | 'same-genre' | 'any-genre' | 'all-selected' | 'none';
+    poolSize: number;
+  };
+};
+
 async function pickMusic(
   cfg: typeof schema.automationConfigs.$inferSelect,
   bookId: string,
   bookGenreId: string | null,
-): Promise<string | null> {
-  // First: clips selected for this config
+): Promise<MusicPick> {
   const selected = await db
     .select({ musicClipId: schema.automationMusicSelections.musicClipId })
     .from(schema.automationMusicSelections)
     .where(eq(schema.automationMusicSelections.configId, cfg.id))
     .orderBy(schema.automationMusicSelections.position);
-  if (selected.length === 0) {
-    return null;
-  }
+
+  const diagBase = {
+    selectedCount: selected.length,
+    ownedClips: 0,
+    bookSpecificClips: 0,
+    sameGenreClips: 0,
+    anyGenreClips: 0,
+    poolPicked: 'none' as MusicPick['diag']['poolPicked'],
+    poolSize: 0,
+  };
+
+  if (selected.length === 0) return { musicId: null, diag: diagBase };
 
   const selectedIds = selected.map((s) => s.musicClipId);
 
-  // Filter to genre-matching, book-specific, or any-genre clips
   const candidatesQuery: SQL[] = [
     inArray(schema.musicClips.id, selectedIds),
     eq(schema.musicClips.ownerId, cfg.ownerId),
@@ -241,6 +348,7 @@ async function pickMusic(
     })
     .from(schema.musicClips)
     .where(and(...candidatesQuery));
+  diagBase.ownedClips = clips.length;
 
   const bookLinks = await db
     .select({ musicClipId: schema.musicClipBooks.musicClipId })
@@ -258,22 +366,34 @@ async function pickMusic(
     : [];
   const sameGenreIds = new Set(genres.map((g) => g.musicClipId));
 
-  // Priority: clips assigned to this exact book win. Otherwise fall back to
-  // genre match, then any-genre, then anything selected for the config.
   const bookSpecific = clips.filter((c) => bookSpecificIds.has(c.id));
   const sameGenre = clips.filter((c) => sameGenreIds.has(c.id));
   const anyGenre = clips.filter((c) => c.anyGenre);
-  const pool =
-    bookSpecific.length > 0
-      ? bookSpecific
-      : sameGenre.length > 0
-        ? sameGenre
-        : anyGenre.length > 0
-          ? anyGenre
-          : clips;
-  if (pool.length === 0) return null;
+  diagBase.bookSpecificClips = bookSpecific.length;
+  diagBase.sameGenreClips = sameGenre.length;
+  diagBase.anyGenreClips = anyGenre.length;
 
-  // Round-robin: use musicPointer as a deterministic position into the pool.
-  // (Per-pool pointer isn't ideal but produces variation without extra state.)
-  return pool[cfg.musicPointer % pool.length].id;
+  let pool = bookSpecific;
+  let poolPicked: MusicPick['diag']['poolPicked'] = 'book-specific';
+  if (pool.length === 0) {
+    pool = sameGenre;
+    poolPicked = 'same-genre';
+  }
+  if (pool.length === 0) {
+    pool = anyGenre;
+    poolPicked = 'any-genre';
+  }
+  if (pool.length === 0) {
+    pool = clips;
+    poolPicked = 'all-selected';
+  }
+  diagBase.poolPicked = pool.length === 0 ? 'none' : poolPicked;
+  diagBase.poolSize = pool.length;
+
+  if (pool.length === 0) return { musicId: null, diag: diagBase };
+
+  return {
+    musicId: pool[cfg.musicPointer % pool.length].id,
+    diag: diagBase,
+  };
 }
