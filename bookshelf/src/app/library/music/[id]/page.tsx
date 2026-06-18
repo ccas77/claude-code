@@ -69,11 +69,20 @@ export default function MusicEditPage({
   const [books, setBooks] = useState<BookOption[]>([]);
 
   const [draftName, setDraftName] = useState('');
-  const [draftAnyGenre, setDraftAnyGenre] = useState(false);
+  const [draftMode, setDraftMode] = useState<'free' | 'genres' | 'books'>('free');
   const [draftGenres, setDraftGenres] = useState<string[]>([]);
   const [draftBooks, setDraftBooks] = useState<string[]>([]);
   const [draftFullText, setDraftFullText] = useState('');
   const [draftReviewed, setDraftReviewed] = useState(false);
+
+  const deriveMode = (
+    anyGenre: boolean,
+    bookIds: string[],
+  ): 'free' | 'genres' | 'books' => {
+    if (bookIds.length > 0) return 'books';
+    if (anyGenre) return 'free';
+    return 'genres';
+  };
 
   const [saving, setSaving] = useState(false);
   const [retranscribing, setRetranscribing] = useState(false);
@@ -96,7 +105,7 @@ export default function MusicEditPage({
     setServerBooks(data.bookIds ?? []);
     setCaption(data.caption);
     setDraftName(data.musicClip.name);
-    setDraftAnyGenre(data.musicClip.anyGenre);
+    setDraftMode(deriveMode(data.musicClip.anyGenre, data.bookIds ?? []));
     setDraftGenres(data.genreIds ?? []);
     setDraftBooks(data.bookIds ?? []);
     setDraftFullText(data.caption?.fullText ?? '');
@@ -121,10 +130,13 @@ export default function MusicEditPage({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
+  const serverMode = server
+    ? deriveMode(server.anyGenre, serverBooks)
+    : 'free';
   const clipDirty =
     server !== null &&
     (draftName !== server.name ||
-      draftAnyGenre !== server.anyGenre ||
+      draftMode !== serverMode ||
       [...draftGenres].sort().join('|') !== [...serverGenres].sort().join('|') ||
       [...draftBooks].sort().join('|') !== [...serverBooks].sort().join('|'));
 
@@ -145,9 +157,9 @@ export default function MusicEditPage({
           headers: { 'content-type': 'application/json' },
           body: JSON.stringify({
             name: draftName,
-            anyGenre: draftAnyGenre,
-            genreIds: draftAnyGenre ? [] : draftGenres,
-            bookIds: draftBooks,
+            anyGenre: draftMode === 'free',
+            genreIds: draftMode === 'genres' ? draftGenres : [],
+            bookIds: draftMode === 'books' ? draftBooks : [],
           }),
         });
         if (!res.ok) throw new Error((await res.json()).error ?? 'Failed');
@@ -179,7 +191,7 @@ export default function MusicEditPage({
   const discard = () => {
     if (!server) return;
     setDraftName(server.name);
-    setDraftAnyGenre(server.anyGenre);
+    setDraftMode(deriveMode(server.anyGenre, serverBooks));
     setDraftGenres(serverGenres);
     setDraftBooks(serverBooks);
     setDraftFullText(caption?.fullText ?? '');
@@ -259,24 +271,60 @@ export default function MusicEditPage({
           />
         </label>
 
-        <label className="flex items-start gap-2">
-          <input
-            type="checkbox"
-            checked={draftAnyGenre}
-            onChange={(e) => setDraftAnyGenre(e.target.checked)}
-            className="mt-1"
-          />
-          <span className="text-sm">
-            <span className="font-medium">Any genre</span>
-            <span className="block text-xs text-stone-500">
-              Trending/neutral clips that work over books in any genre.
-            </span>
-          </span>
-        </label>
+        <fieldset>
+          <legend className="text-sm font-medium">Restrict to</legend>
+          <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:gap-4 text-sm">
+            <label className="inline-flex items-start gap-2">
+              <input
+                type="radio"
+                name="restrict-mode"
+                checked={draftMode === 'free'}
+                onChange={() => setDraftMode('free')}
+                className="mt-1"
+              />
+              <span>
+                <span className="font-medium">Free for all</span>
+                <span className="block text-xs text-stone-500">
+                  Used over any book in any genre.
+                </span>
+              </span>
+            </label>
+            <label className="inline-flex items-start gap-2">
+              <input
+                type="radio"
+                name="restrict-mode"
+                checked={draftMode === 'genres'}
+                onChange={() => setDraftMode('genres')}
+                className="mt-1"
+              />
+              <span>
+                <span className="font-medium">Specific genres</span>
+                <span className="block text-xs text-stone-500">
+                  Only used for books in the genres you pick.
+                </span>
+              </span>
+            </label>
+            <label className="inline-flex items-start gap-2">
+              <input
+                type="radio"
+                name="restrict-mode"
+                checked={draftMode === 'books'}
+                onChange={() => setDraftMode('books')}
+                className="mt-1"
+              />
+              <span>
+                <span className="font-medium">Specific books</span>
+                <span className="block text-xs text-stone-500">
+                  Only used for the exact books you pick.
+                </span>
+              </span>
+            </label>
+          </div>
+        </fieldset>
 
-        {!draftAnyGenre && (
+        {draftMode === 'genres' && (
           <div>
-            <span className="text-sm font-medium">Genres</span>
+            <span className="text-sm font-medium">Pick genres</span>
             <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
               {genres.map((g) => (
                 <label key={g.id} className="flex items-center gap-2 text-sm">
@@ -288,34 +336,35 @@ export default function MusicEditPage({
                   {g.name}
                 </label>
               ))}
+              {genres.length === 0 && (
+                <p className="text-xs text-stone-500">
+                  No genres yet. Add some under Genres first.
+                </p>
+              )}
             </div>
           </div>
         )}
 
-        <details className="border-t border-stone-200 pt-3">
-          <summary className="cursor-pointer text-xs font-medium text-stone-600">
-            Advanced: pin to specific book(s) instead
-          </summary>
-          <p className="mt-2 text-xs text-stone-500">
-            Use this for signature tracks tied to one book. If any are picked, the
-            clip plays only for those books and the genre tags above are ignored.
-          </p>
-          <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
-            {books.map((b) => (
-              <label key={b.id} className="flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  checked={draftBooks.includes(b.id)}
-                  onChange={(e) => toggleBook(b.id, e.target.checked)}
-                />
-                <span className="truncate">{b.title}</span>
-              </label>
-            ))}
-            {books.length === 0 && (
-              <p className="text-xs text-stone-500">No books yet.</p>
-            )}
+        {draftMode === 'books' && (
+          <div>
+            <span className="text-sm font-medium">Pick books</span>
+            <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
+              {books.map((b) => (
+                <label key={b.id} className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={draftBooks.includes(b.id)}
+                    onChange={(e) => toggleBook(b.id, e.target.checked)}
+                  />
+                  <span className="truncate">{b.title}</span>
+                </label>
+              ))}
+              {books.length === 0 && (
+                <p className="text-xs text-stone-500">No books yet.</p>
+              )}
+            </div>
           </div>
-        </details>
+        )}
       </div>
 
       <div className="space-y-3">

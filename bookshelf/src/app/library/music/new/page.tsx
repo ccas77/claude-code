@@ -17,7 +17,7 @@ export default function NewMusicPage() {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [files, setFiles] = useState<File[]>([]);
-  const [anyGenre, setAnyGenre] = useState(false);
+  const [mode, setMode] = useState<'free' | 'genres' | 'books'>('free');
   const [genreIds, setGenreIds] = useState<string[]>([]);
   const [bookIds, setBookIds] = useState<string[]>([]);
   const [genres, setGenres] = useState<GenreOption[]>([]);
@@ -98,9 +98,9 @@ export default function NewMusicPage() {
               name,
               url: uploaded.url,
               pathname: uploaded.pathname,
-              anyGenre,
-              genreIds: anyGenre ? [] : genreIds,
-              bookIds,
+              anyGenre: mode === 'free',
+              genreIds: mode === 'genres' ? genreIds : [],
+              bookIds: mode === 'books' ? bookIds : [],
             }),
           });
           if (!res.ok) {
@@ -212,24 +212,60 @@ export default function NewMusicPage() {
             Applies to {files.length > 1 ? `all ${files.length} clips in this batch` : 'this clip'}
           </p>
 
-          <label className="mt-3 flex items-start gap-2">
-            <input
-              type="checkbox"
-              checked={anyGenre}
-              onChange={(e) => setAnyGenre(e.target.checked)}
-              className="mt-1"
-            />
-            <span className="text-sm">
-              <span className="font-medium">Any genre</span>
-              <span className="block text-xs text-stone-500">
-                Trending/neutral clips that work over books in any genre.
-              </span>
-            </span>
-          </label>
+          <fieldset className="mt-3">
+            <legend className="text-sm font-medium">Restrict to</legend>
+            <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:gap-4 text-sm">
+              <label className="inline-flex items-start gap-2">
+                <input
+                  type="radio"
+                  name="restrict-mode"
+                  checked={mode === 'free'}
+                  onChange={() => setMode('free')}
+                  className="mt-1"
+                />
+                <span>
+                  <span className="font-medium">Free for all</span>
+                  <span className="block text-xs text-stone-500">
+                    Used over any book in any genre.
+                  </span>
+                </span>
+              </label>
+              <label className="inline-flex items-start gap-2">
+                <input
+                  type="radio"
+                  name="restrict-mode"
+                  checked={mode === 'genres'}
+                  onChange={() => setMode('genres')}
+                  className="mt-1"
+                />
+                <span>
+                  <span className="font-medium">Specific genres</span>
+                  <span className="block text-xs text-stone-500">
+                    Only used for books in the genres you pick.
+                  </span>
+                </span>
+              </label>
+              <label className="inline-flex items-start gap-2">
+                <input
+                  type="radio"
+                  name="restrict-mode"
+                  checked={mode === 'books'}
+                  onChange={() => setMode('books')}
+                  className="mt-1"
+                />
+                <span>
+                  <span className="font-medium">Specific books</span>
+                  <span className="block text-xs text-stone-500">
+                    Only used for the exact books you pick.
+                  </span>
+                </span>
+              </label>
+            </div>
+          </fieldset>
 
-          {!anyGenre && (
-            <div className="mt-3">
-              <span className="text-sm font-medium">Genres</span>
+          {mode === 'genres' && (
+            <div className="mt-4">
+              <span className="text-sm font-medium">Pick genres</span>
               <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
                 {genres.map((g) => (
                   <label key={g.id} className="flex items-center gap-2 text-sm">
@@ -250,31 +286,26 @@ export default function NewMusicPage() {
             </div>
           )}
 
-          <details className="mt-4 border-t border-stone-200 pt-3">
-            <summary className="cursor-pointer text-xs font-medium text-stone-600">
-              Advanced: pin to specific book(s) instead
-            </summary>
-            <p className="mt-2 text-xs text-stone-500">
-              Use this for signature tracks tied to one book. If any are picked,
-              the clip plays only for those books and the genre tags above are
-              ignored.
-            </p>
-            <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
-              {books.map((b) => (
-                <label key={b.id} className="flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={bookIds.includes(b.id)}
-                    onChange={(e) => toggleBook(b.id, e.target.checked)}
-                  />
-                  <span className="truncate">{b.title}</span>
-                </label>
-              ))}
-              {books.length === 0 && (
-                <p className="text-xs text-stone-500">No books yet.</p>
-              )}
+          {mode === 'books' && (
+            <div className="mt-4">
+              <span className="text-sm font-medium">Pick books</span>
+              <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                {books.map((b) => (
+                  <label key={b.id} className="flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={bookIds.includes(b.id)}
+                      onChange={(e) => toggleBook(b.id, e.target.checked)}
+                    />
+                    <span className="truncate">{b.title}</span>
+                  </label>
+                ))}
+                {books.length === 0 && (
+                  <p className="text-xs text-stone-500">No books yet.</p>
+                )}
+              </div>
             </div>
-          </details>
+          )}
         </div>
 
         {progress && <p className="text-sm text-stone-600">{progress}</p>}
