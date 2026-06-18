@@ -70,15 +70,23 @@ export function BooksListClient({
 
   return (
     <>
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold tracking-tight">Books</h1>
-        <Link
-          href="/library/books/new"
-          className="inline-flex items-center gap-2 rounded-md bg-stone-900 px-4 py-2 text-base font-semibold text-white hover:bg-stone-800"
-        >
-          <span aria-hidden className="text-lg leading-none">+</span>
-          New book
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/library/books/edit-all"
+            className="rounded-md border border-stone-300 px-3 py-2 text-sm hover:bg-stone-50"
+          >
+            Edit all
+          </Link>
+          <Link
+            href="/library/books/new"
+            className="inline-flex items-center gap-2 rounded-md bg-stone-900 px-4 py-2 text-base font-semibold text-white hover:bg-stone-800"
+          >
+            <span aria-hidden className="text-lg leading-none">+</span>
+            New book
+          </Link>
+        </div>
       </div>
 
       {books.length === 0 ? (
