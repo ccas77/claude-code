@@ -1,4 +1,4 @@
-import { and, eq, inArray, sql, type SQL } from 'drizzle-orm';
+import { and, eq, gte, inArray, lte, sql, type SQL } from 'drizzle-orm';
 import { db, schema } from '../db/client';
 import type { IntervalWindow, ProviderUsage } from '../db/schema';
 import { enqueue, JOB_NAMES } from '../queue';
@@ -124,7 +124,7 @@ async function maybeFireOne(
     .where(
       and(
         eq(schema.cards.ownerId, cfg.ownerId),
-        sql`${schema.cards.createdAt} >= ${dayStartLondonUtc}`,
+        gte(schema.cards.createdAt, dayStartLondonUtc),
       ),
     );
   const cap = cfg.dailyRenderCap ?? 20;
@@ -145,8 +145,8 @@ async function maybeFireOne(
         eq(schema.cards.ownerId, cfg.ownerId),
         eq(schema.cards.platform, cfg.platform),
         eq(schema.cards.accountHandle, cfg.username),
-        sql`${schema.cards.postTime} >= ${windowStart}`,
-        sql`${schema.cards.postTime} <= ${windowEnd}`,
+        gte(schema.cards.postTime, windowStart),
+        lte(schema.cards.postTime, windowEnd),
       ),
     );
 
