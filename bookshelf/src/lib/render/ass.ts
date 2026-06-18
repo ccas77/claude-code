@@ -49,6 +49,7 @@ export const CAPTION_EFFECTS: CaptionEffect[] = [
 const MAX_WORDS_PER_CUE = 3;
 const SILENCE_BREAK_SEC = 0.45;
 const SENTENCE_END_RE = /[.!?]["')\]]*$/;
+const FORCED_BREAK_TOKENS = new Set(['/', '|']);
 
 const MIN_CUE_DURATION_SEC = 0.4;
 const POST_LAST_LINGER_SEC = 0.35;
@@ -102,25 +103,43 @@ export function wordsToAss(
 }
 
 function buildCues(words: CaptionWord[]): Cue[] {
+  // Pre-pass: strip forced-break tokens ("/" and "|") out of the word stream
+  // and remember that the NEXT real word must start a new cue. The marker
+  // token never renders.
+  type Marked = { word: CaptionWord; forceBreak: boolean };
+  const marked: Marked[] = [];
+  let pendingForceBreak = false;
+  for (const w of words) {
+    if (FORCED_BREAK_TOKENS.has(w.text.trim())) {
+      pendingForceBreak = true;
+      continue;
+    }
+    marked.push({ word: w, forceBreak: pendingForceBreak });
+    pendingForceBreak = false;
+  }
+
   const groups: { words: CaptionWord[]; isSentenceStart: boolean }[] = [];
   let current: { words: CaptionWord[]; isSentenceStart: boolean } | null = null;
 
-  for (let i = 0; i < words.length; i++) {
-    const w = words[i];
-    const prev = i > 0 ? words[i - 1] : null;
+  for (let i = 0; i < marked.length; i++) {
+    const w = marked[i].word;
+    const forcedHere = marked[i].forceBreak;
+    const prev = i > 0 ? marked[i - 1].word : null;
     const silenceGap = prev ? w.start - prev.end : 0;
     const prevEndedSentence = prev ? SENTENCE_END_RE.test(prev.text) : false;
     const newCueRequired =
       !current ||
       current.words.length >= MAX_WORDS_PER_CUE ||
       prevEndedSentence ||
-      silenceGap > SILENCE_BREAK_SEC;
+      silenceGap > SILENCE_BREAK_SEC ||
+      forcedHere;
 
     if (newCueRequired || !current) {
       if (current) groups.push(current);
       current = {
         words: [w],
-        isSentenceStart: !prev || prevEndedSentence || silenceGap > SILENCE_BREAK_SEC,
+        isSentenceStart:
+          !prev || prevEndedSentence || silenceGap > SILENCE_BREAK_SEC || forcedHere,
       };
     } else {
       current.words.push(w);
