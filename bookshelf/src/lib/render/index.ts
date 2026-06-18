@@ -46,7 +46,11 @@ export async function runRender({ cardId, jobId }: RunArgs): Promise<void> {
     .set({ status: 'preparing', updatedAt: new Date() })
     .where(eq(schema.cards.id, cardId));
 
-  const providers: ProviderUsage[] = [];
+  // Preserve any pre-existing stamps the scheduler/publish flow put on the
+  // card (notably the post-bridge `account:N` entry). The renderer appends
+  // its own step rows; it must not clobber what was already there.
+  const priorProviders = (card.providersUsed ?? []) as ProviderUsage[];
+  const providers: ProviderUsage[] = [...priorProviders];
 
   try {
     const book = await db.query.books.findFirst({
