@@ -1,20 +1,23 @@
 import { randomUUID } from 'node:crypto';
 import { putBlob } from '../storage';
 import { generateImageViaHiggsfieldMcp } from './higgsfield-mcp';
+import { generateImageViaGateway } from './image-gateway';
 import { isConnected as higgsfieldConnected } from '../higgsfield/oauth';
 
 /**
- * Image generation.
+ * Image generation. Provider is chosen by the orchestrator via the `provider`
+ * argument; callers pass 'higgsfield' or 'gateway' (or 'openai' for the
+ * legacy path).
  *
- *   - Higgsfield MCP (Nano Banana) when HIGGSFIELD_MCP_TOKEN is set.
- *     Primary path; talks directly to Higgsfield's remote MCP server from
- *     the worker function. Same auth model as her other Higgsfield apps.
- *   - OpenAI gpt-image-1 when OPENAI_API_KEY is set, with reference-image
- *     editing. Fallback.
- *   - Higgsfield REST (legacy http API) when HIGGSFIELD_API_KEY is set.
+ *   - 'higgsfield' / undefined: Higgsfield MCP (Nano Banana). Primary path.
+ *   - 'gateway':                Vercel AI Gateway -> google/gemini-2.5-flash
+ *                               -image-preview. Same model Higgsfield wraps,
+ *                               called direct so a Higgsfield outage doesn't
+ *                               take the fallback down too.
+ *   - 'openai':                 OpenAI gpt-image-1 with reference editing.
+ *                               Last-ditch path.
  *
- * All paths support reference images so the actual book cover stays
- * recognizable in the generated scene.
+ * All three accept reference images so the book cover stays recognisable.
  */
 
 export type GeneratedImage = {
@@ -30,19 +33,31 @@ export async function generateBookImage(args: {
   ownerId: string;
   provider?: string;
 }): Promise<GeneratedImage> {
-  if (await higgsfieldConnected().catch(() => false)) {
-    const r = await generateImageViaHiggsfieldMcp(args);
-    return { url: r.url, pathname: r.pathname, provider: r.provider, fallback: false };
+  const want = args.provider?.toLowerCase();
+
+  if (want === 'gateway' || want === 'gemini') {
+    return generateImageViaGateway(args);
   }
-  if (process.env.OPENAI_API_KEY) {
+  if (want === 'openai') {
+    if (!process.env.OPENAI_API_KEY) {
+      throw new Error('OPENAI_API_KEY not set; cannot use OpenAI image path.');
+    }
     return generateViaOpenAi(args);
   }
-  if (process.env.HIGGSFIELD_API_KEY) {
-    return generateViaHiggsfield(args);
+  if (want === 'higgsfield' || want === undefined) {
+    if (await higgsfieldConnected().catch(() => false)) {
+      const r = await generateImageViaHiggsfieldMcp(args);
+      return { url: r.url, pathname: r.pathname, provider: r.provider, fallback: false };
+    }
+    if (process.env.HIGGSFIELD_API_KEY) {
+      return generateViaHiggsfield(args);
+    }
+    throw new Error(
+      'Higgsfield is not connected. Connect at /api/auth/higgsfield/start or set HIGGSFIELD_API_KEY.',
+    );
   }
-  throw new Error(
-    'No image provider available. Connect Higgsfield (recommended) at /api/auth/higgsfield/start or set OPENAI_API_KEY.',
-  );
+
+  throw new Error(`Unknown image provider: ${args.provider}`);
 }
 
 // ---- Higgsfield Nano Banana -------------------------------------------------

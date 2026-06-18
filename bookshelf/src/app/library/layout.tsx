@@ -1,48 +1,10 @@
-import Link from 'next/link';
 import { ReactNode } from 'react';
-import { HiggsfieldConnect } from '@/components/HiggsfieldConnect';
-import { isPrimaryOwner } from '@/lib/owner-role';
+import { LibraryNav } from '@/components/LibraryNav';
 
-export default async function LibraryLayout({ children }: { children: ReactNode }) {
-  const primary = await isPrimaryOwner();
+export default function LibraryLayout({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen bg-stone-50 text-stone-800">
-      <header className="border-b border-stone-200 bg-white">
-        <div className="mx-auto flex max-w-5xl items-center gap-6 px-6 py-3">
-          <Link href="/" className="font-semibold tracking-tight">
-            Bookshelf
-          </Link>
-          <nav className="flex flex-1 items-center gap-4 text-sm">
-            <Link href="/library/genres" className="hover:underline">
-              Genres
-            </Link>
-            <Link href="/library/books" className="hover:underline">
-              Books
-            </Link>
-            <Link href="/library/music" className="hover:underline">
-              Music
-            </Link>
-            <Link href="/library/renders" className="hover:underline">
-              Renders
-            </Link>
-            <Link href="/library/automation" className="hover:underline">
-              Automation
-            </Link>
-            <Link href="/library/board" className="hover:underline">
-              Today
-            </Link>
-            <Link href="/history" className="hover:underline">
-              History
-            </Link>
-            {primary && (
-              <Link href="/library/admin/assignments" className="hover:underline">
-                Admin
-              </Link>
-            )}
-            <HiggsfieldConnect />
-          </nav>
-        </div>
-      </header>
+      <LibraryNav />
       <main className="mx-auto max-w-5xl px-6 py-8 pb-24">{children}</main>
     </div>
   );

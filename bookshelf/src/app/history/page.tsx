@@ -1,7 +1,7 @@
-import Link from 'next/link';
 import { and, desc, eq, ne, sql } from 'drizzle-orm';
 import { db, schema } from '@/lib/db/client';
 import { getOwnerId } from '@/lib/owner';
+import { LibraryNav } from '@/components/LibraryNav';
 
 export const dynamic = 'force-dynamic';
 
@@ -33,15 +33,9 @@ export default async function History() {
 
   return (
     <div className="min-h-screen bg-stone-50 text-stone-800">
-      <header className="border-b border-stone-200 bg-white">
-        <div className="mx-auto flex max-w-5xl items-center gap-6 px-6 py-3">
-          <Link href="/library" className="font-semibold tracking-tight">
-            Bookshelf
-          </Link>
-        </div>
-      </header>
+      <LibraryNav />
 
-      <main className="mx-auto max-w-5xl px-6 py-8">
+      <main className="mx-auto max-w-5xl px-6 py-8 pb-24">
         <div className="flex items-baseline justify-between">
           <h1 className="text-2xl font-semibold tracking-tight">History</h1>
           <span className="text-xs text-stone-500">

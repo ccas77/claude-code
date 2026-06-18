@@ -16,8 +16,8 @@ const EnvSchema = z.object({
   GEMINI_API_KEY: z.string().optional(),
   ANTHROPIC_API_KEY: z.string().optional(),
 
-  IMAGE_PROVIDER_PRIMARY: z.enum(['gemini', 'higgsfield']).default('gemini'),
-  IMAGE_PROVIDER_FALLBACK: z.enum(['gemini', 'higgsfield', '']).default(''),
+  IMAGE_PROVIDER_PRIMARY: z.enum(['gemini', 'higgsfield', 'gateway']).default('higgsfield'),
+  IMAGE_PROVIDER_FALLBACK: z.enum(['gemini', 'higgsfield', 'gateway', '']).default('gateway'),
   HIGGSFIELD_API_KEY: z.string().optional(),
 
   VIDEO_PROVIDER_PRIMARY: z.string().default('higgsfield'),
