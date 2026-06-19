@@ -38,25 +38,54 @@ function retokenizeWithTimestamps(
   // prints the slash on screen.
   const normalised = newText.replace(/[/|]/g, ' $& ');
   const tokens = normalised.split(/\s+/).filter(Boolean);
-  if (tokens.length === 0 || existing.length === 0) {
-    return tokens.map((text, i) => ({ text, start: i * 0.5, end: i * 0.5 + 0.4 }));
-  }
-  if (tokens.length === existing.length) {
-    return tokens.map((text, i) => ({
-      text,
-      start: existing[i].start,
-      end: existing[i].end,
+  if (tokens.length === 0) return [];
+
+  const isMarker = (t: string) => t === '/' || t === '|';
+  const realTokens = tokens.filter((t) => !isMarker(t));
+
+  // Compute the timing per REAL word (non-marker). Marker tokens never
+  // render and are stripped at the renderer's pre-pass, so they get a
+  // placeholder pinned to the following real word's start time. This keeps
+  // every real word in sync with the audio regardless of how many markers
+  // the user sprinkles in.
+  let realTimings: { start: number; end: number }[];
+  if (existing.length === 0 || realTokens.length === 0) {
+    realTimings = realTokens.map((_, i) => ({
+      start: i * 0.5,
+      end: i * 0.5 + 0.4,
+    }));
+  } else if (realTokens.length === existing.length) {
+    realTimings = existing.map((w) => ({ start: w.start, end: w.end }));
+  } else {
+    // Genuine word-count change (edits, not just marker insertions). Spread
+    // the new real words evenly across the original span.
+    const firstStart = existing[0].start;
+    const lastEnd = existing[existing.length - 1].end;
+    const span = Math.max(0.1, lastEnd - firstStart);
+    const step = span / realTokens.length;
+    realTimings = realTokens.map((_, i) => ({
+      start: firstStart + step * i,
+      end: firstStart + step * (i + 1),
     }));
   }
-  const firstStart = existing[0].start;
-  const lastEnd = existing[existing.length - 1].end;
-  const span = Math.max(0.1, lastEnd - firstStart);
-  const step = span / tokens.length;
-  return tokens.map((text, i) => ({
-    text,
-    start: firstStart + step * i,
-    end: firstStart + step * (i + 1),
-  }));
+
+  const out: CaptionWord[] = [];
+  let realIdx = 0;
+  for (const t of tokens) {
+    if (isMarker(t)) {
+      const anchor =
+        realIdx < realTimings.length
+          ? realTimings[realIdx].start
+          : realTimings.length > 0
+            ? realTimings[realTimings.length - 1].end
+            : 0;
+      out.push({ text: t, start: anchor, end: anchor });
+      continue;
+    }
+    out.push({ text: t, ...realTimings[realIdx] });
+    realIdx++;
+  }
+  return out;
 }
 
 export default function MusicEditPage({
