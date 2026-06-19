@@ -249,9 +249,24 @@ export default function MusicEditPage({
 
   const retranscribe = async () => {
     setRetranscribing(true);
+    setError(null);
     try {
       const res = await fetch(`/api/music/${id}/transcribe`, { method: 'POST' });
       if (!res.ok) throw new Error((await res.json()).error ?? 'Failed');
+
+      // Poll until Whisper actually finishes, then load fresh captions. The
+      // POST only enqueues the job; without polling here, load() pulls the
+      // OLD caption back and the UI looks like nothing changed.
+      const start = Date.now();
+      const TIMEOUT_MS = 5 * 60 * 1000;
+      while (Date.now() - start < TIMEOUT_MS) {
+        await new Promise((r) => setTimeout(r, 2000));
+        const statusRes = await fetch(`/api/music/${id}`);
+        if (!statusRes.ok) continue;
+        const data = await statusRes.json();
+        const status = data.musicClip?.transcriptionStatus;
+        if (status === 'done' || status === 'failed') break;
+      }
       await load();
     } catch (e) {
       setError((e as Error).message);
