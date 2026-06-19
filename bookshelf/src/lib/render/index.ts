@@ -100,9 +100,13 @@ export async function runRender({ cardId, jobId }: RunArgs): Promise<void> {
     let image: Awaited<ReturnType<typeof generateBookImage>> | null = null;
     let imageErr: unknown = null;
 
+    // Rotate through the chain across attempts so a repeated cover-check
+    // rejection on the primary advances to the fallback instead of asking
+    // the primary again for the same prompt.
     for (let attempt = 0; attempt < MAX_IMAGE_ATTEMPTS; attempt++) {
+      const primaryIdx = Math.min(attempt, imageChain.length - 1);
       let candidate: Awaited<ReturnType<typeof generateBookImage>> | null = null;
-      for (let i = 0; i < imageChain.length; i++) {
+      for (let i = primaryIdx; i < imageChain.length; i++) {
         try {
           candidate = await generateBookImage({
             prompt,
@@ -136,7 +140,7 @@ export async function runRender({ cardId, jobId }: RunArgs): Promise<void> {
           provider: candidate.provider,
           fallback: candidate.fallback || attempt > 0,
         });
-        providers.push({ step: 'cover-check', provider: 'gemini-flash', fallback: false });
+        providers.push({ step: 'cover-check', provider: 'gemini-2.5-pro', fallback: false });
         break;
       }
 

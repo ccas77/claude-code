@@ -43,24 +43,30 @@ function retokenizeWithTimestamps(
   const isMarker = (t: string) => t === '/' || t === '|';
   const realTokens = tokens.filter((t) => !isMarker(t));
 
+  // Strip out any prior markers from the existing word array before counting
+  // - otherwise a clip whose previous save had wide-duration markers would
+  // make realTokens.length and existing.length mismatch and the code below
+  // would fall through to even-spread, scrubbing the real Whisper timings.
+  const existingReal = existing.filter((w) => !isMarker(w.text.trim()));
+
   // Compute the timing per REAL word (non-marker). Marker tokens never
   // render and are stripped at the renderer's pre-pass, so they get a
   // placeholder pinned to the following real word's start time. This keeps
   // every real word in sync with the audio regardless of how many markers
   // the user sprinkles in.
   let realTimings: { start: number; end: number }[];
-  if (existing.length === 0 || realTokens.length === 0) {
+  if (existingReal.length === 0 || realTokens.length === 0) {
     realTimings = realTokens.map((_, i) => ({
       start: i * 0.5,
       end: i * 0.5 + 0.4,
     }));
-  } else if (realTokens.length === existing.length) {
-    realTimings = existing.map((w) => ({ start: w.start, end: w.end }));
+  } else if (realTokens.length === existingReal.length) {
+    realTimings = existingReal.map((w) => ({ start: w.start, end: w.end }));
   } else {
     // Genuine word-count change (edits, not just marker insertions). Spread
     // the new real words evenly across the original span.
-    const firstStart = existing[0].start;
-    const lastEnd = existing[existing.length - 1].end;
+    const firstStart = existingReal[0].start;
+    const lastEnd = existingReal[existingReal.length - 1].end;
     const span = Math.max(0.1, lastEnd - firstStart);
     const step = span / realTokens.length;
     realTimings = realTokens.map((_, i) => ({

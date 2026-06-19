@@ -18,31 +18,31 @@ const Verdict = z.object({
   coverArtMatches: z
     .boolean()
     .describe(
-      'Does the illustration / artwork / composition / colour scheme on the rendered book cover match the reference? Lighting and scene shadows can differ.',
+      'Same illustration / subject / composition / colour scheme as the reference cover. Artistic reinterpretation, brush-stroke differences, and minor colour shifts are fine - the question is whether it is recognisably the same artwork. FALSE only if the cover art is clearly a different image.',
     ),
   titleMatches: z
     .boolean()
     .describe(
-      'Does the title text on the rendered cover say the same words as the reference, in a recognisably similar typeface and layout? Blurred or illegible where the reference is readable is FALSE.',
+      'Title text says the same words as the reference, where you can read it. If the title is angled, small, partially obscured, or unreadable but nothing about it contradicts the reference, mark TRUE - that is the book just photographed at an angle. Mark FALSE only when you can clearly read DIFFERENT words.',
     ),
   authorMatches: z
     .boolean()
     .describe(
-      'Does the author name on the rendered cover match the reference? Missing or illegible where the reference shows the author is FALSE.',
+      'Author name matches the reference where legible. Same rule as title: unreadable does not fail it; only clearly-different words fail it.',
     ),
   notAStandin: z
     .boolean()
     .describe(
-      'Is this the actual book from the reference rather than a generic-looking stand-in that merely fits the same genre or aesthetic? FALSE if the cover looks like a plausibly-typed substitute.',
+      'This is the actual book from the reference, not a generic stand-in fitting the same genre. A stand-in is when the cover art is clearly different but happens to vibe similarly. If the cover art matches you can trust this one.',
     ),
   reason: z
     .string()
     .max(280)
-    .describe('One short sentence stating exactly which criterion failed, if any.'),
+    .describe('One short sentence stating which criterion failed, if any.'),
 });
 
-const SET_INSTRUCTION = `IMAGE A shows a set of books (a duet, trilogy, series). IMAGE B is a generated photograph that is supposed to feature the same set together. Evaluate the criteria as ALL TRUE only when every book from the reference is present and faithfully reproduced in the output. Missing any book, inventing extras, blurred titles where the reference was readable, or generic stand-ins all flip the relevant booleans to false.`;
-const SINGLE_INSTRUCTION = `IMAGE A is the original book cover. IMAGE B is a generated photograph that is supposed to feature the exact same book. Evaluate the criteria for that single book. Lighting and scene context can change; the cover artwork, title text, and author name cannot.`;
+const SET_INSTRUCTION = `IMAGE A shows a set of books (a duet, trilogy, series). IMAGE B is a generated photograph featuring the set together. Each book in B may be angled, partially overlapping, or in shadow - that is fine. Apply the criteria across the WHOLE set: a missing book or a substituted stand-in for any one fails the relevant criterion; a faithful set rendered with photographic angle/lighting passes.`;
+const SINGLE_INSTRUCTION = `IMAGE A is the original book cover, presented head-on. IMAGE B is a generated photograph meant to feature the SAME book inside a styled scene, so the book may be angled, small, in shadow, or partially obscured - this is a photograph, not a flat scan. You are checking identity, not legibility. A small or angled book whose cover art clearly matches the reference is a pass even if you cannot read the title text.`;
 
 export type CoverCheckResult = { ok: boolean; reason: string };
 
@@ -62,7 +62,7 @@ export async function verifyCoverMatch(
         {
           type: 'text',
           text:
-            'You are an unforgiving visual verifier. Default to false for every criterion. Only mark a criterion true when you can clearly see the evidence in both images. Be especially harsh on stand-ins: a cover that "looks about right" for the genre but is not literally the same book is NOT a match. ' +
+            'You are a fair-but-careful visual verifier. The reference is a flat cover image; the generated image is a photograph of the book in a scene, so the book may be tilted, small, or partly shadowed. Identity is what matters, not whether every word is legible. The only criterion to mark FALSE is one where you have clear evidence AGAINST it - never on "I cannot tell." If the cover art clearly matches the reference, the book is the right book. The single failure case you must catch is a stand-in: a cover whose art is clearly different but feels genre-adjacent. ' +
             instruction,
         },
         { type: 'text', text: labelA },
