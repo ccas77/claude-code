@@ -231,6 +231,7 @@ export const cards = pgTable(
     videoBlobUrl: text('video_blob_url'),
     videoBlobPathname: text('video_blob_pathname'),
     caption: text('caption'),
+    postBridgePostId: text('post_bridge_post_id'),
     providersUsed: jsonb('providers_used').$type<ProviderUsage[]>().notNull().default([]),
     errorInfo: jsonb('error_info').$type<ErrorInfo | null>(),
     postUrl: text('post_url'),

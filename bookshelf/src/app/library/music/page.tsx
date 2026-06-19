@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic';
 
 export default async function MusicList() {
   const ownerId = await getOwnerId();
-  const [rows, genreRows] = await Promise.all([
+  const [rows, genreRows, bookRows] = await Promise.all([
     db
       .select({
         id: schema.musicClips.id,
@@ -24,6 +24,11 @@ export default async function MusicList() {
       .from(schema.genres)
       .where(eq(schema.genres.ownerId, ownerId))
       .orderBy(asc(schema.genres.name)),
+    db
+      .select({ id: schema.books.id, title: schema.books.title })
+      .from(schema.books)
+      .where(eq(schema.books.ownerId, ownerId))
+      .orderBy(asc(schema.books.title)),
   ]);
 
   return (
@@ -41,7 +46,7 @@ export default async function MusicList() {
         </ol>
         <p>Tip: tick multiple clips in the list to bulk-assign genres using the floating bar.</p>
       </HowThisWorks>
-      <MusicListClient clips={rows} genres={genreRows} />
+      <MusicListClient clips={rows} genres={genreRows} books={bookRows} />
     </div>
   );
 }

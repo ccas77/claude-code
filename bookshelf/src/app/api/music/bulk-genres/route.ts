@@ -6,10 +6,23 @@ import { getOwnerId, mapError } from '@/lib/ownership';
 
 export const dynamic = 'force-dynamic';
 
+/**
+ * Bulk-assign one restriction mode to many clips.
+ *
+ *   mode = 'free'   -> anyGenre = true,  clear genre + book links
+ *   mode = 'genres' -> anyGenre = false, replace genre links with genreIds,
+ *                      clear book links
+ *   mode = 'books'  -> anyGenre = false, replace book links with bookIds,
+ *                      clear genre links
+ *
+ * Path name is historical ("bulk-genres") but the endpoint covers all three
+ * modes; renaming would break the client deploy synchronisation.
+ */
 const Body = z.object({
   ids: z.array(z.string().uuid()).min(1).max(500),
-  anyGenre: z.boolean(),
+  mode: z.enum(['free', 'genres', 'books']),
   genreIds: z.array(z.string().uuid()).default([]),
+  bookIds: z.array(z.string().uuid()).default([]),
 });
 
 export async function POST(req: NextRequest) {
@@ -17,7 +30,6 @@ export async function POST(req: NextRequest) {
     const ownerId = await getOwnerId();
     const input = Body.parse(await req.json());
 
-    // Scope to clips this user actually owns.
     const owned = await db
       .select({ id: schema.musicClips.id })
       .from(schema.musicClips)
@@ -32,23 +44,33 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ updated: 0 });
     }
 
-    // Flip the any_genre flag (and bump updatedAt).
     await db
       .update(schema.musicClips)
-      .set({ anyGenre: input.anyGenre, updatedAt: new Date() })
+      .set({ anyGenre: input.mode === 'free', updatedAt: new Date() })
       .where(inArray(schema.musicClips.id, ownedIds));
 
-    // Clear existing genre links for these clips, then write the new ones.
     await db
       .delete(schema.musicClipGenres)
       .where(inArray(schema.musicClipGenres.musicClipId, ownedIds));
+    await db
+      .delete(schema.musicClipBooks)
+      .where(inArray(schema.musicClipBooks.musicClipId, ownedIds));
 
-    if (!input.anyGenre && input.genreIds.length > 0) {
+    if (input.mode === 'genres' && input.genreIds.length > 0) {
       const rows = ownedIds.flatMap((musicClipId) =>
         input.genreIds.map((genreId) => ({ musicClipId, genreId })),
       );
       if (rows.length > 0) {
         await db.insert(schema.musicClipGenres).values(rows);
+      }
+    }
+
+    if (input.mode === 'books' && input.bookIds.length > 0) {
+      const rows = ownedIds.flatMap((musicClipId) =>
+        input.bookIds.map((bookId) => ({ musicClipId, bookId })),
+      );
+      if (rows.length > 0) {
+        await db.insert(schema.musicClipBooks).values(rows);
       }
     }
 

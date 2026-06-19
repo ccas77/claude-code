@@ -54,8 +54,13 @@ export async function runStatsRefresh({ jobId }: { jobId: string }): Promise<voi
 
   for (const card of cards) {
     if (card.postUrl) continue;
+    if (!card.postBridgePostId) continue;
     const results = resultsByOwner.get(card.ownerId) ?? [];
-    const match = results.find((r) => r.success);
+    // Strict match: only attach a URL when the Post Bridge result's post_id
+    // matches the one we stored at posting time. Without this filter the
+    // shared Post Bridge key returns results for other apps using the same
+    // key, and the wrong URL gets stamped on our card.
+    const match = results.find((r) => r.success && r.post_id === card.postBridgePostId);
     if (!match) continue;
     const url = extractPostUrl(match);
     if (!url) continue;

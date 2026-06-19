@@ -12,20 +12,35 @@ type Clip = {
 };
 
 type Genre = { id: string; name: string };
+type Book = { id: string; title: string };
+
+type Mode = 'free' | 'genres' | 'books';
 
 export function MusicListClient({
   clips,
-  genres,
+  genres: initialGenres,
+  books: initialBooks,
 }: {
   clips: Clip[];
   genres: Genre[];
+  books: Book[];
 }) {
   const router = useRouter();
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [anyGenre, setAnyGenre] = useState(false);
+  const [mode, setMode] = useState<Mode>('genres');
   const [pickedGenres, setPickedGenres] = useState<Set<string>>(new Set());
+  const [pickedBooks, setPickedBooks] = useState<Set<string>>(new Set());
+  const [genres, setGenres] = useState<Genre[]>(initialGenres);
+  const [books, setBooks] = useState<Book[]>(initialBooks);
   const [working, setWorking] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Inline create state
+  const [creatingGenre, setCreatingGenre] = useState(false);
+  const [newGenreName, setNewGenreName] = useState('');
+  const [creatingBook, setCreatingBook] = useState(false);
+  const [newBookTitle, setNewBookTitle] = useState('');
+  const [newBookGenreId, setNewBookGenreId] = useState('');
 
   const allChecked = clips.length > 0 && selected.size === clips.length;
   const someChecked = selected.size > 0 && !allChecked;
@@ -52,10 +67,96 @@ export function MusicListClient({
     });
   };
 
+  const togglePickedBook = (id: string) => {
+    setPickedBooks((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const cancel = () => {
+    setSelected(new Set());
+    setPickedGenres(new Set());
+    setPickedBooks(new Set());
+    setMode('genres');
+    setError(null);
+    setCreatingGenre(false);
+    setCreatingBook(false);
+    setNewGenreName('');
+    setNewBookTitle('');
+    setNewBookGenreId('');
+  };
+
+  const addGenre = async () => {
+    const name = newGenreName.trim();
+    if (!name) return;
+    setError(null);
+    try {
+      const res = await fetch('/api/genres', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ name }),
+      });
+      if (!res.ok) {
+        const body = (await res.json().catch(() => ({}))) as { error?: string };
+        throw new Error(body.error ?? `HTTP ${res.status}`);
+      }
+      const data = (await res.json()) as { genre: Genre };
+      setGenres((prev) => {
+        const next = [...prev, data.genre];
+        next.sort((a, b) => a.name.localeCompare(b.name));
+        return next;
+      });
+      setPickedGenres((prev) => new Set([...prev, data.genre.id]));
+      setNewGenreName('');
+      setCreatingGenre(false);
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  };
+
+  const addBook = async () => {
+    const title = newBookTitle.trim();
+    if (!title) return;
+    setError(null);
+    try {
+      const res = await fetch('/api/books', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          title,
+          genreId: newBookGenreId || null,
+        }),
+      });
+      if (!res.ok) {
+        const body = (await res.json().catch(() => ({}))) as { error?: string };
+        throw new Error(body.error ?? `HTTP ${res.status}`);
+      }
+      const data = (await res.json()) as { book: { id: string; title: string } };
+      setBooks((prev) => {
+        const next = [...prev, { id: data.book.id, title: data.book.title }];
+        next.sort((a, b) => a.title.localeCompare(b.title));
+        return next;
+      });
+      setPickedBooks((prev) => new Set([...prev, data.book.id]));
+      setNewBookTitle('');
+      setNewBookGenreId('');
+      setCreatingBook(false);
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  };
+
   const apply = async () => {
     if (selected.size === 0) return;
-    if (!anyGenre && pickedGenres.size === 0) {
-      setError('Pick at least one genre, or enable "Any genre".');
+    if (mode === 'genres' && pickedGenres.size === 0) {
+      setError('Pick at least one genre, or switch to "Free for all".');
+      return;
+    }
+    if (mode === 'books' && pickedBooks.size === 0) {
+      setError('Pick at least one book, or switch mode.');
       return;
     }
     setError(null);
@@ -66,17 +167,16 @@ export function MusicListClient({
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
           ids: Array.from(selected),
-          anyGenre,
-          genreIds: anyGenre ? [] : Array.from(pickedGenres),
+          mode,
+          genreIds: mode === 'genres' ? Array.from(pickedGenres) : [],
+          bookIds: mode === 'books' ? Array.from(pickedBooks) : [],
         }),
       });
       if (!res.ok) {
         const body = (await res.json().catch(() => ({}))) as { error?: string };
         throw new Error(body.error ?? `HTTP ${res.status}`);
       }
-      setSelected(new Set());
-      setPickedGenres(new Set());
-      setAnyGenre(false);
+      cancel();
       router.refresh();
     } catch (e) {
       setError((e as Error).message);
@@ -88,6 +188,10 @@ export function MusicListClient({
   const sortedGenres = useMemo(
     () => [...genres].sort((a, b) => a.name.localeCompare(b.name)),
     [genres],
+  );
+  const sortedBooks = useMemo(
+    () => [...books].sort((a, b) => a.title.localeCompare(b.title)),
+    [books],
   );
 
   return (
@@ -160,22 +264,62 @@ export function MusicListClient({
 
       {selected.size > 0 && (
         <div className="fixed inset-x-0 bottom-0 z-30 border-t border-stone-200 bg-white shadow-lg">
-          <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-4 px-6 py-3">
-            <span className="text-sm font-medium">
-              {selected.size} selected
-            </span>
+          <div className="mx-auto flex max-w-5xl flex-col gap-3 px-6 py-3">
+            <div className="flex items-center gap-3 flex-wrap text-sm">
+              <span className="font-medium">{selected.size} selected</span>
+              <span className="text-stone-400">|</span>
+              <span className="text-xs uppercase tracking-wide text-stone-500">
+                Restrict to
+              </span>
+              <label className="inline-flex items-center gap-1.5">
+                <input
+                  type="radio"
+                  name="bulk-mode"
+                  checked={mode === 'free'}
+                  onChange={() => setMode('free')}
+                />
+                Free for all
+              </label>
+              <label className="inline-flex items-center gap-1.5">
+                <input
+                  type="radio"
+                  name="bulk-mode"
+                  checked={mode === 'genres'}
+                  onChange={() => setMode('genres')}
+                />
+                Specific genres
+              </label>
+              <label className="inline-flex items-center gap-1.5">
+                <input
+                  type="radio"
+                  name="bulk-mode"
+                  checked={mode === 'books'}
+                  onChange={() => setMode('books')}
+                />
+                Specific books
+              </label>
+              <div className="ml-auto flex gap-2">
+                <button
+                  type="button"
+                  onClick={cancel}
+                  disabled={working}
+                  className="rounded-md border border-stone-300 px-3 py-1.5 text-sm hover:bg-stone-50 disabled:opacity-40"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={apply}
+                  disabled={working}
+                  className="rounded-md bg-stone-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-stone-800 disabled:opacity-50"
+                >
+                  {working ? 'Applying...' : `Apply to ${selected.size}`}
+                </button>
+              </div>
+            </div>
 
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={anyGenre}
-                onChange={(e) => setAnyGenre(e.target.checked)}
-              />
-              Any genre
-            </label>
-
-            {!anyGenre && (
-              <div className="flex flex-wrap gap-2">
+            {mode === 'genres' && (
+              <div className="flex flex-wrap items-center gap-2">
                 {sortedGenres.map((g) => {
                   const on = pickedGenres.has(g.id);
                   return (
@@ -194,37 +338,154 @@ export function MusicListClient({
                   );
                 })}
                 {sortedGenres.length === 0 && (
-                  <span className="text-xs text-stone-500">No genres defined yet.</span>
+                  <span className="text-xs text-stone-500">No genres yet.</span>
+                )}
+                {!creatingGenre ? (
+                  <button
+                    type="button"
+                    onClick={() => setCreatingGenre(true)}
+                    className="rounded-full border border-dashed border-stone-300 px-3 py-1 text-xs text-stone-600 hover:bg-stone-100"
+                  >
+                    + New genre
+                  </button>
+                ) : (
+                  <span className="inline-flex items-center gap-1 rounded-full border border-stone-300 bg-white px-2 py-0.5 text-xs">
+                    <input
+                      autoFocus
+                      type="text"
+                      value={newGenreName}
+                      onChange={(e) => setNewGenreName(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          addGenre();
+                        }
+                        if (e.key === 'Escape') {
+                          setCreatingGenre(false);
+                          setNewGenreName('');
+                        }
+                      }}
+                      placeholder="Genre name"
+                      className="w-32 bg-transparent px-1 outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={addGenre}
+                      className="rounded-full bg-stone-900 px-2 py-0.5 text-[10px] font-medium text-white"
+                    >
+                      Add
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCreatingGenre(false);
+                        setNewGenreName('');
+                      }}
+                      className="text-stone-500"
+                      aria-label="Cancel"
+                    >
+                      ×
+                    </button>
+                  </span>
                 )}
               </div>
             )}
 
-            {error && (
-              <span className="text-xs text-red-700">{error}</span>
+            {mode === 'books' && (
+              <div className="flex flex-wrap items-center gap-2">
+                {sortedBooks.map((b) => {
+                  const on = pickedBooks.has(b.id);
+                  return (
+                    <button
+                      key={b.id}
+                      type="button"
+                      onClick={() => togglePickedBook(b.id)}
+                      className={
+                        on
+                          ? 'rounded-full bg-stone-900 px-3 py-1 text-xs font-medium text-white max-w-[20rem] truncate'
+                          : 'rounded-full border border-stone-300 px-3 py-1 text-xs text-stone-700 hover:bg-stone-100 max-w-[20rem] truncate'
+                      }
+                      title={b.title}
+                    >
+                      {b.title}
+                    </button>
+                  );
+                })}
+                {sortedBooks.length === 0 && (
+                  <span className="text-xs text-stone-500">No books yet.</span>
+                )}
+                {!creatingBook ? (
+                  <button
+                    type="button"
+                    onClick={() => setCreatingBook(true)}
+                    className="rounded-full border border-dashed border-stone-300 px-3 py-1 text-xs text-stone-600 hover:bg-stone-100"
+                  >
+                    + New book
+                  </button>
+                ) : (
+                  <span className="inline-flex items-center gap-1 rounded-full border border-stone-300 bg-white px-2 py-0.5 text-xs">
+                    <input
+                      autoFocus
+                      type="text"
+                      value={newBookTitle}
+                      onChange={(e) => setNewBookTitle(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          addBook();
+                        }
+                        if (e.key === 'Escape') {
+                          setCreatingBook(false);
+                          setNewBookTitle('');
+                          setNewBookGenreId('');
+                        }
+                      }}
+                      placeholder="Book title"
+                      className="w-40 bg-transparent px-1 outline-none"
+                    />
+                    <select
+                      value={newBookGenreId}
+                      onChange={(e) => setNewBookGenreId(e.target.value)}
+                      className="bg-transparent text-[10px] outline-none"
+                    >
+                      <option value="">No genre</option>
+                      {sortedGenres.map((g) => (
+                        <option key={g.id} value={g.id}>
+                          {g.name}
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      onClick={addBook}
+                      className="rounded-full bg-stone-900 px-2 py-0.5 text-[10px] font-medium text-white"
+                    >
+                      Add
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCreatingBook(false);
+                        setNewBookTitle('');
+                        setNewBookGenreId('');
+                      }}
+                      className="text-stone-500"
+                      aria-label="Cancel"
+                    >
+                      ×
+                    </button>
+                  </span>
+                )}
+              </div>
             )}
 
-            <div className="ml-auto flex gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setSelected(new Set());
-                  setPickedGenres(new Set());
-                  setAnyGenre(false);
-                  setError(null);
-                }}
-                className="rounded-md border border-stone-300 px-3 py-1.5 text-sm hover:bg-stone-50"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={apply}
-                disabled={working}
-                className="rounded-md bg-stone-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-stone-800 disabled:opacity-50"
-              >
-                {working ? 'Applying...' : `Apply to ${selected.size}`}
-              </button>
-            </div>
+            {mode === 'free' && (
+              <p className="text-xs text-stone-500">
+                These clips will be used over books in any genre.
+              </p>
+            )}
+
+            {error && <span className="text-xs text-red-700">{error}</span>}
           </div>
         </div>
       )}

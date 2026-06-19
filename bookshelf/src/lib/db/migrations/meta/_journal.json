@@ -57,6 +57,13 @@
       "when": 1813900800000,
       "tag": "0007_user_account_assignments",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1814000000000,
+      "tag": "0008_post_bridge_post_id",
+      "breakpoints": true
     }
   ]
 }

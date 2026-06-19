@@ -103,6 +103,7 @@ export async function runPost({ cardId, jobId }: RunArgs): Promise<void> {
       .set({
         status: 'posted',
         postUrl: null, // platform url resolves async via refreshStats
+        postBridgePostId: published.id,
         providersUsed: providers,
         updatedAt: new Date(),
       })
