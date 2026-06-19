@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { AdminSubNav } from '@/components/AdminSubNav';
 
 type Friend = {
   id: string;
@@ -116,6 +117,7 @@ export default function AssignmentsPage() {
 
   return (
     <div className="space-y-6">
+      <AdminSubNav current="assignments" />
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Account assignments</h1>
         <p className="mt-1 text-sm text-stone-600">

@@ -1,9 +1,12 @@
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
 import { and, desc, eq, gte, lte, ne, sql } from 'drizzle-orm';
 import { db, schema } from '@/lib/db/client';
 import { getOwnerId } from '@/lib/owner';
+import { isPrimaryOwner } from '@/lib/owner-role';
 import { londonHHMMToUtc, londonNow } from '@/lib/time/london';
 import { HowThisWorks } from '@/components/HowThisWorks';
+import { AdminSubNav } from '@/components/AdminSubNav';
 
 export const dynamic = 'force-dynamic';
 
@@ -44,6 +47,9 @@ const STATUS_TONE: Record<string, string> = {
 };
 
 export default async function BoardPage() {
+  if (!(await isPrimaryOwner())) {
+    redirect('/library');
+  }
   const ownerId = await getOwnerId();
   const now = new Date();
   const london = londonNow(now);
@@ -91,6 +97,7 @@ export default async function BoardPage() {
 
   return (
     <div className="space-y-6">
+      <AdminSubNav current="board" />
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Today&apos;s board</h1>
         <p className="mt-1 text-sm text-stone-600">

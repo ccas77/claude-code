@@ -30,9 +30,6 @@ export async function LibraryNav() {
           <Link href="/library/automation" className="hover:underline">
             Automation
           </Link>
-          <Link href="/library/board" className="hover:underline">
-            Today
-          </Link>
           <Link href="/history" className="hover:underline">
             History
           </Link>
