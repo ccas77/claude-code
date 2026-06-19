@@ -31,7 +31,13 @@ function retokenizeWithTimestamps(
   newText: string,
   existing: CaptionWord[],
 ): CaptionWord[] {
-  const tokens = newText.split(/\s+/).filter(Boolean);
+  // Normalise forced-break markers ('/' and '|') so they become standalone
+  // tokens even when the user typed them without surrounding spaces
+  // (e.g. "monster/king" or "monster/ king"). Without this, the marker
+  // stays embedded in a token and the ASS renderer treats it as text and
+  // prints the slash on screen.
+  const normalised = newText.replace(/[/|]/g, ' $& ');
+  const tokens = normalised.split(/\s+/).filter(Boolean);
   if (tokens.length === 0 || existing.length === 0) {
     return tokens.map((text, i) => ({ text, start: i * 0.5, end: i * 0.5 + 0.4 }));
   }

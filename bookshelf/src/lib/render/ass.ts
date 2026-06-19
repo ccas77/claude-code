@@ -106,10 +106,41 @@ function buildCues(words: CaptionWord[]): Cue[] {
   // Pre-pass: strip forced-break tokens ("/" and "|") out of the word stream
   // and remember that the NEXT real word must start a new cue. The marker
   // token never renders.
+  //
+  // Defence in depth: if a marker arrives embedded in a token (e.g.
+  // "monster/king" - the client retokeniser is supposed to normalise these
+  // out but a stale word array from before that fix could still hit us),
+  // split the token here and proportionally split its timing so the marker
+  // still works.
   type Marked = { word: CaptionWord; forceBreak: boolean };
+  const expanded: CaptionWord[] = [];
+  for (const w of words) {
+    const text = w.text.trim();
+    if (FORCED_BREAK_TOKENS.has(text)) {
+      expanded.push(w);
+      continue;
+    }
+    if (!/[/|]/.test(text)) {
+      expanded.push(w);
+      continue;
+    }
+    // Split on every '/' and '|' keeping the marker as its own token, then
+    // distribute the original word's [start, end] span across the parts.
+    const parts = text.split(/([/|])/).filter(Boolean);
+    const dur = Math.max(0.001, w.end - w.start);
+    const step = dur / parts.length;
+    parts.forEach((p, i) => {
+      expanded.push({
+        text: p,
+        start: w.start + step * i,
+        end: w.start + step * (i + 1),
+      });
+    });
+  }
+
   const marked: Marked[] = [];
   let pendingForceBreak = false;
-  for (const w of words) {
+  for (const w of expanded) {
     if (FORCED_BREAK_TOKENS.has(w.text.trim())) {
       pendingForceBreak = true;
       continue;
