@@ -236,19 +236,34 @@ export async function getPostResults(apiKey: string): Promise<PostResult[]> {
 }
 
 /**
- * Per-post results. The right pattern for capturing share_url + post_result_id
- * at post time, instead of paginating through /v1/post-results later (the
- * deep-pagination endpoint 500s past offset ~1500, see toolkit pattern).
+ * Find the result rows for a specific Post Bridge post by walking the global
+ * /v1/post-results endpoint and filtering client-side. The per-post path
+ * /v1/posts/{id}/results returns 404 (toolkit example pointed at a route
+ * that doesn't exist on the real API). Paging stops as soon as we've found
+ * the wanted id; for older posts on a busy shared key the walk may take
+ * several pages.
  */
 export async function getResultsForPost(
   apiKey: string,
   postBridgePostId: string,
 ): Promise<PostResult[]> {
-  const res = await pb<{ data?: PostResult[] }>(
-    `/v1/posts/${postBridgePostId}/results`,
-    apiKey,
-  );
-  return res.data ?? [];
+  const MAX_PAGES = 50;
+  const matched: PostResult[] = [];
+  let offset = 0;
+  for (let page = 0; page < MAX_PAGES; page++) {
+    const r = await pb<{ data?: PostResult[] }>(
+      `/v1/post-results?limit=100&offset=${offset}`,
+      apiKey,
+    ).catch(() => ({ data: [] as PostResult[] }));
+    const rows = r.data ?? [];
+    for (const row of rows) {
+      if (row.post_id === postBridgePostId) matched.push(row);
+    }
+    if (matched.length > 0) return matched;
+    if (rows.length < 100) break;
+    offset += 100;
+  }
+  return matched;
 }
 
 // ---- Live analytics ---------------------------------------------------------
