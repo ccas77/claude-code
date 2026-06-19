@@ -5,6 +5,7 @@ import { getOwnerEmail } from '../owner';
 import {
   uploadVideo,
   createPost,
+  getResultsForPost,
   getPostBridgeKeyForEmail,
   type PostBridgePlatform,
 } from './postbridge';
@@ -93,6 +94,30 @@ export async function runPost({ cardId, jobId }: RunArgs): Promise<void> {
       platform: card.platform as PostBridgePlatform,
     });
 
+    // Per the toolkit pattern: immediately fetch per-post results to capture
+    // share_url + post_result_id on our row. Don't paginate /v1/post-results
+    // later (that endpoint 500s on deep offsets and pulls in other apps'
+    // posts using the shared key).
+    let postUrl: string | null = null;
+    let postResultId: string | null = null;
+    try {
+      const results = await getResultsForPost(apiKey, published.id);
+      const r = results.find((x) => x.success) ?? results[0];
+      if (r) {
+        postUrl = r.platform_data?.url ?? null;
+        // r.id is the post_result_id (PostResult shape uses post_id for the
+        // parent post, and the row's own id for the result itself; the API
+        // returns this in `id` when present, otherwise we fall back to the
+        // platform_data.id which is enough to match analytics).
+        postResultId =
+          (r as unknown as { id?: string }).id ?? r.platform_data?.id ?? null;
+      }
+    } catch (err) {
+      // Don't fail the post on a results lookup blip. The hourly stats
+      // sweep will backfill missing url + result id later.
+      console.warn('[post] results fetch failed', err);
+    }
+
     const providers: ProviderUsage[] = [
       ...((card.providersUsed ?? []) as ProviderUsage[]),
       { step: 'post', provider: 'post-bridge', fallback: false },
@@ -102,8 +127,9 @@ export async function runPost({ cardId, jobId }: RunArgs): Promise<void> {
       .update(schema.cards)
       .set({
         status: 'posted',
-        postUrl: null, // platform url resolves async via refreshStats
+        postUrl,
         postBridgePostId: published.id,
+        postBridgeResultId: postResultId,
         providersUsed: providers,
         updatedAt: new Date(),
       })

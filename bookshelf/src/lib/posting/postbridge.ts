@@ -235,6 +235,57 @@ export async function getPostResults(apiKey: string): Promise<PostResult[]> {
   return res.data ?? [];
 }
 
+/**
+ * Per-post results. The right pattern for capturing share_url + post_result_id
+ * at post time, instead of paginating through /v1/post-results later (the
+ * deep-pagination endpoint 500s past offset ~1500, see toolkit pattern).
+ */
+export async function getResultsForPost(
+  apiKey: string,
+  postBridgePostId: string,
+): Promise<PostResult[]> {
+  const res = await pb<{ data?: PostResult[] }>(
+    `/v1/posts/${postBridgePostId}/results`,
+    apiKey,
+  );
+  return res.data ?? [];
+}
+
+// ---- Live analytics ---------------------------------------------------------
+
+export type AnalyticsItem = {
+  id: string;
+  post_result_id?: string | null;
+  view_count?: number | null;
+  like_count?: number | null;
+  comment_count?: number | null;
+  share_count?: number | null;
+};
+
+export async function getAnalytics(
+  apiKey: string,
+  timeframe: '24h' | '7d' | '30d' | '90d' | 'all' = '30d',
+): Promise<AnalyticsItem[]> {
+  // /v1/analytics doesn't accept 24h; that's a UI concept layered on top of
+  // the 7d window via per-post daily deltas. For our stats sync we walk the
+  // chosen timeframe straight through.
+  const tf = timeframe === '24h' ? '7d' : timeframe;
+  const all: AnalyticsItem[] = [];
+  let offset = 0;
+  const MAX_PAGES = 50; // 50 * 100 = 5000 posts upper bound
+  for (let page = 0; page < MAX_PAGES; page++) {
+    const r = await pb<{ data?: AnalyticsItem[]; meta?: { total?: number } }>(
+      `/v1/analytics?limit=100&offset=${offset}&timeframe=${tf}`,
+      apiKey,
+    );
+    const rows = r.data ?? [];
+    all.push(...rows);
+    if (rows.length < 100) break;
+    offset += 100;
+  }
+  return all;
+}
+
 export function extractPostUrl(result: PostResult): string | null {
   if (result.platform_data?.url) return result.platform_data.url;
   const id = result.platform_data?.id;

@@ -2,6 +2,7 @@ import { and, desc, eq, ne, sql } from 'drizzle-orm';
 import { db, schema } from '@/lib/db/client';
 import { getOwnerId } from '@/lib/owner';
 import { LibraryNav } from '@/components/LibraryNav';
+import { HistoryClient } from './HistoryClient';
 
 export const dynamic = 'force-dynamic';
 
@@ -15,7 +16,7 @@ export default async function History() {
       postTime: schema.cards.postTime,
       postUrl: schema.cards.postUrl,
       stats: schema.cards.stats,
-      videoBlobUrl: schema.cards.videoBlobUrl,
+      caption: schema.cards.caption,
       bookTitle: schema.books.title,
     })
     .from(schema.cards)
@@ -31,76 +32,17 @@ export default async function History() {
     .orderBy(desc(schema.cards.postTime))
     .limit(200);
 
+  const serialised = rows.map((r) => ({
+    ...r,
+    postTime: r.postTime.toISOString(),
+  }));
+
   return (
     <div className="min-h-screen bg-stone-50 text-stone-800">
       <LibraryNav />
-
       <main className="mx-auto max-w-5xl px-6 py-8 pb-24">
-        <div className="flex items-baseline justify-between">
-          <h1 className="text-2xl font-semibold tracking-tight">History</h1>
-          <span className="text-xs text-stone-500">
-            {rows.length} post{rows.length === 1 ? '' : 's'}
-          </span>
-        </div>
-
-        {rows.length === 0 ? (
-          <p className="mt-8 text-sm text-stone-600">No posts yet.</p>
-        ) : (
-          <ul className="mt-6 divide-y divide-stone-200 rounded-lg border border-stone-200 bg-white">
-            {rows.map((r) => {
-              const s = r.stats ?? {};
-              return (
-                <li key={r.id} className="px-4 py-4">
-                  <div className="flex items-baseline justify-between gap-4">
-                    <div>
-                      <div className="font-medium">{r.bookTitle ?? 'deleted book'}</div>
-                      <div className="mt-0.5 text-xs text-stone-500">
-                        {r.platform} · {r.accountHandle} ·{' '}
-                        {new Date(r.postTime).toLocaleString('en-GB', {
-                          timeZone: 'Europe/London',
-                        })}
-                      </div>
-                    </div>
-                    {r.postUrl && (
-                      <a
-                        href={r.postUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-xs underline"
-                      >
-                        Live post
-                      </a>
-                    )}
-                  </div>
-                  <div className="mt-2 flex flex-wrap gap-4 text-xs text-stone-600">
-                    <Stat label="views" n={s.views} />
-                    <Stat label="likes" n={s.likes} />
-                    <Stat label="comments" n={s.comments} />
-                    <Stat label="shares" n={s.shares} />
-                    {s.refreshedAt && (
-                      <span className="text-stone-400">
-                        refreshed{' '}
-                        {new Date(s.refreshedAt).toLocaleString('en-GB', {
-                          timeZone: 'Europe/London',
-                        })}
-                      </span>
-                    )}
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-        )}
+        <HistoryClient rows={serialised} />
       </main>
     </div>
-  );
-}
-
-function Stat({ label, n }: { label: string; n: number | undefined }) {
-  return (
-    <span>
-      <span className="font-mono">{n ?? '-'}</span>{' '}
-      <span className="text-stone-500">{label}</span>
-    </span>
   );
 }
