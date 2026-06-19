@@ -5,11 +5,18 @@ import {
   PKCE_COOKIE,
   PKCE_COOKIE_MAX_AGE,
 } from '@/lib/higgsfield/oauth';
+import { isPrimaryOwner } from '@/lib/owner-role';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
   try {
+    if (!(await isPrimaryOwner())) {
+      // Higgsfield is single-tenant on the primary owner's token; only she can
+      // initiate the OAuth handshake. Send a friend who hits this URL back to
+      // the library with no further info.
+      return NextResponse.redirect(new URL('/library', req.url));
+    }
     const origin = new URL(req.url).origin;
     const redirectUri = `${origin}/api/auth/higgsfield/callback`;
     const { url, state, verifier } = await buildAuthorizeUrl(redirectUri);

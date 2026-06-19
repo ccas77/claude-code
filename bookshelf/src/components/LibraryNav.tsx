@@ -38,7 +38,7 @@ export async function LibraryNav() {
               Admin
             </Link>
           )}
-          <HiggsfieldConnect />
+          {primary && <HiggsfieldConnect />}
         </nav>
       </div>
     </header>
