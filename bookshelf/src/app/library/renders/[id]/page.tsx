@@ -211,20 +211,57 @@ export default function RenderDetailPage({
     if (res.ok) router.push('/library/renders');
   };
 
+  const [rerendering, setRerendering] = useState(false);
+  const rerender = async () => {
+    if (
+      !confirm(
+        'Re-render this card? The current video will be replaced with a fresh image, caption riff, and ffmpeg pass.',
+      )
+    ) {
+      return;
+    }
+    setRerendering(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/renders/${id}/rerender`, { method: 'POST' });
+      if (!res.ok) throw new Error((await res.json()).error ?? 'Failed');
+      // Reset local caption draft so the new render's auto-caption gets
+      // picked up when polling sees status flip back to ready.
+      setCaption('');
+      router.refresh();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setRerendering(false);
+    }
+  };
+
   if (error && !card) return <p className="text-sm text-red-600">{error}</p>;
   if (!card) return <p className="text-sm text-stone-600">Loading...</p>;
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between">
+      <div className="flex items-start justify-between gap-2">
         <h1 className="text-2xl font-semibold tracking-tight">Render</h1>
-        <button
-          type="button"
-          onClick={remove}
-          className="rounded-md border border-red-200 px-3 py-1.5 text-sm text-red-700 hover:bg-red-50"
-        >
-          Delete
-        </button>
+        <div className="flex items-center gap-2">
+          {card.status !== 'posted' && (
+            <button
+              type="button"
+              onClick={rerender}
+              disabled={rerendering}
+              className="rounded-md border border-stone-300 px-3 py-1.5 text-sm hover:bg-stone-50 disabled:opacity-50"
+            >
+              {rerendering ? 'Queuing...' : 'Re-render'}
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={remove}
+            className="rounded-md border border-red-200 px-3 py-1.5 text-sm text-red-700 hover:bg-red-50"
+          >
+            Delete
+          </button>
+        </div>
       </div>
 
       <div className="rounded-lg border border-stone-200 bg-white p-4 text-sm">
