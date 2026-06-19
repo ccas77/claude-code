@@ -39,10 +39,17 @@ function fmtNum(n: number | undefined): string {
   return String(Math.round(n));
 }
 
-export function HistoryClient({ rows }: { rows: Row[] }) {
+export function HistoryClient({
+  rows,
+  primary,
+}: {
+  rows: Row[];
+  primary: boolean;
+}) {
   const router = useRouter();
   const [, startTransition] = useTransition();
   const [syncing, setSyncing] = useState(false);
+  const [legacy, setLegacy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastSync, setLastSync] = useState<string | null>(null);
 
@@ -68,6 +75,32 @@ export function HistoryClient({ rows }: { rows: Row[] }) {
     }
   };
 
+  const runLegacyBackfill = async () => {
+    if (
+      !confirm(
+        'Run legacy backfill? Walks Post Bridge results and matches URLs to your older cards by account + chronological order. Safe to re-run.',
+      )
+    ) {
+      return;
+    }
+    setLegacy(true);
+    setError(null);
+    try {
+      const res = await fetch('/api/admin/legacy-backfill', { method: 'POST' });
+      if (!res.ok)
+        throw new Error((await res.json()).error ?? 'Legacy backfill failed');
+      const data = (await res.json()) as { scanned: number; backfilled: number };
+      setLastSync(
+        `Legacy backfill - scanned ${data.scanned} URL-less card${data.scanned === 1 ? '' : 's'}, matched ${data.backfilled}.`,
+      );
+      startTransition(() => router.refresh());
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setLegacy(false);
+    }
+  };
+
   const totals = rows.reduce(
     (acc, r) => ({
       posts: acc.posts + 1,
@@ -88,14 +121,27 @@ export function HistoryClient({ rows }: { rows: Row[] }) {
             What you&apos;ve posted. Stats refresh on a sync.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={sync}
-          disabled={syncing}
-          className="rounded-md border border-stone-300 bg-white px-3 py-1.5 text-sm hover:bg-stone-50 disabled:opacity-50"
-        >
-          {syncing ? 'Syncing...' : 'Sync stats'}
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          {primary && (
+            <button
+              type="button"
+              onClick={runLegacyBackfill}
+              disabled={legacy || syncing}
+              title="One-shot fixup for cards that posted before share_url capture was wired."
+              className="rounded-md border border-stone-300 bg-white px-3 py-1.5 text-sm hover:bg-stone-50 disabled:opacity-50"
+            >
+              {legacy ? 'Matching...' : 'Legacy backfill'}
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={sync}
+            disabled={syncing || legacy}
+            className="rounded-md border border-stone-300 bg-white px-3 py-1.5 text-sm hover:bg-stone-50 disabled:opacity-50"
+          >
+            {syncing ? 'Syncing...' : 'Sync stats'}
+          </button>
+        </div>
       </div>
 
       {(error || lastSync) && (

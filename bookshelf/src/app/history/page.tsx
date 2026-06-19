@@ -1,6 +1,7 @@
 import { and, desc, eq, ne, sql } from 'drizzle-orm';
 import { db, schema } from '@/lib/db/client';
 import { getOwnerId } from '@/lib/owner';
+import { isPrimaryOwner } from '@/lib/owner-role';
 import { LibraryNav } from '@/components/LibraryNav';
 import { HistoryClient } from './HistoryClient';
 
@@ -8,6 +9,7 @@ export const dynamic = 'force-dynamic';
 
 export default async function History() {
   const ownerId = await getOwnerId();
+  const primary = await isPrimaryOwner();
   const rows = await db
     .select({
       id: schema.cards.id,
@@ -41,7 +43,7 @@ export default async function History() {
     <div className="min-h-screen bg-stone-50 text-stone-800">
       <LibraryNav />
       <main className="mx-auto max-w-5xl px-6 py-8 pb-24">
-        <HistoryClient rows={serialised} />
+        <HistoryClient rows={serialised} primary={primary} />
       </main>
     </div>
   );
