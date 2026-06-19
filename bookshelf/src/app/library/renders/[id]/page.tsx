@@ -92,6 +92,7 @@ export default function RenderDetailPage({
   const router = useRouter();
   const [card, setCard] = useState<Card | null>(null);
   const [dryRun, setDryRun] = useState(false);
+  const [pollKey, setPollKey] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -133,7 +134,7 @@ export default function RenderDetailPage({
       if (timer) clearTimeout(timer);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
+  }, [id, pollKey]);
 
   // Load Post Bridge accounts only when render is ready, since the call hits
   // the upstream API.
@@ -226,9 +227,14 @@ export default function RenderDetailPage({
       const res = await fetch(`/api/renders/${id}/rerender`, { method: 'POST' });
       if (!res.ok) throw new Error((await res.json()).error ?? 'Failed');
       // Reset local caption draft so the new render's auto-caption gets
-      // picked up when polling sees status flip back to ready.
+      // picked up when polling sees status flip back to ready, and bump
+      // pollKey so the poller restarts (it stopped when the card was
+      // last in a terminal state).
       setCaption('');
-      router.refresh();
+      setCard((prev) =>
+        prev ? { ...prev, status: 'scheduled', videoBlobUrl: null } : prev,
+      );
+      setPollKey((k) => k + 1);
     } catch (e) {
       setError((e as Error).message);
     } finally {
