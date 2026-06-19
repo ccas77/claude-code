@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { HiggsfieldConnect } from './HiggsfieldConnect';
+import { HiggsfieldStatusBadge } from './HiggsfieldStatusBadge';
 import { isPrimaryOwner } from '@/lib/owner-role';
 
 /**
@@ -38,7 +39,7 @@ export async function LibraryNav() {
               Admin
             </Link>
           )}
-          {primary && <HiggsfieldConnect />}
+          {primary ? <HiggsfieldConnect /> : <HiggsfieldStatusBadge />}
         </nav>
       </div>
     </header>
