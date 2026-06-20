@@ -12,10 +12,10 @@ const PatchSchema = z.object({
   kind: z.enum(['single', 'set']).optional(),
   genreId: z.string().uuid().nullable().optional(),
   accessories: z.array(z.string().min(1).max(120)).max(40).optional(),
-  description: z.string().max(5000).nullable().optional(),
-  reviewDump: z.string().max(20000).nullable().optional(),
+  description: z.string().max(20000).nullable().optional(),
+  reviewDump: z.string().max(200000).nullable().optional(),
   tropes: z.array(z.string().min(1).max(120)).max(40).optional(),
-  vibeNotes: z.string().max(5000).nullable().optional(),
+  vibeNotes: z.string().max(20000).nullable().optional(),
   hashtags: z.array(z.string().min(1).max(80)).max(40).optional(),
 });
 
