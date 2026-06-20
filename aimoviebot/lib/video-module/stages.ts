@@ -22,10 +22,12 @@ import {
   renderStage5,
 } from "./prompts";
 import {
+  clearInflightHiggsfieldJob,
   keys,
   mergeArtifacts,
   persistArtifact,
   recordBackend,
+  trackInflightHiggsfieldJob,
   writeShotList,
 } from "./storage";
 import type {
@@ -49,11 +51,19 @@ export async function stage1(
   const result = await hgImage({
     prompt,
     imageRefs: [character.imageUrl],
+    onSubmit: (hfJobId) =>
+      trackInflightHiggsfieldJob(jobId, {
+        hfJobId,
+        stage: "stage1",
+        label: `Character: ${character.name}`,
+        submittedAt: new Date().toISOString(),
+      }),
   });
   const url = await persistArtifact(
     keys.characterSheet(jobId, character.name),
     result.url,
   );
+  if (result.hfJobId) await clearInflightHiggsfieldJob(jobId, result.hfJobId);
   return { name: character.name, url, backend: "higgsfield" };
 }
 
@@ -67,8 +77,16 @@ export async function stage2(
   const result = await hgImage({
     prompt,
     imageRefs: [locationImageUrl],
+    onSubmit: (hfJobId) =>
+      trackInflightHiggsfieldJob(jobId, {
+        hfJobId,
+        stage: "stage2",
+        label: "Location",
+        submittedAt: new Date().toISOString(),
+      }),
   });
   const url = await persistArtifact(keys.locationSheet(jobId), result.url);
+  if (result.hfJobId) await clearInflightHiggsfieldJob(jobId, result.hfJobId);
   return { url, backend: "higgsfield" };
 }
 
@@ -190,8 +208,19 @@ export async function stage4(
     args.locationSheetUrl,
     ...args.characterSheets.map((s) => s.url),
   ];
-  const result = await hgImage({ prompt, imageRefs: refs });
+  const result = await hgImage({
+    prompt,
+    imageRefs: refs,
+    onSubmit: (hfJobId) =>
+      trackInflightHiggsfieldJob(jobId, {
+        hfJobId,
+        stage: "stage4",
+        label: "Storyboard",
+        submittedAt: new Date().toISOString(),
+      }),
+  });
   const url = await persistArtifact(keys.storyboard(jobId), result.url);
+  if (result.hfJobId) await clearInflightHiggsfieldJob(jobId, result.hfJobId);
   await mergeArtifacts(jobId, { storyboardUrl: url });
   await recordBackend(jobId, "stage4", "higgsfield");
   return { url, backend: "higgsfield" };
@@ -261,6 +290,13 @@ export async function stage5(
         mode,
         duration,
         startImageUrl: args.storyboardUrl,
+        onSubmit: (hfJobId) =>
+          trackInflightHiggsfieldJob(jobId, {
+            hfJobId,
+            stage: "stage5",
+            label: "Video",
+            submittedAt: new Date().toISOString(),
+          }),
       }),
     () =>
       gatewayGenerateVideo({
@@ -273,6 +309,9 @@ export async function stage5(
       }),
   );
   const url = await persistArtifact(keys.video(jobId), result.url, "video/mp4");
+  if ("hfJobId" in result && result.hfJobId) {
+    await clearInflightHiggsfieldJob(jobId, result.hfJobId);
+  }
   await mergeArtifacts(jobId, { videoUrl: url });
   await recordBackend(jobId, "stage5", servedBy);
   return { url, backend: servedBy };

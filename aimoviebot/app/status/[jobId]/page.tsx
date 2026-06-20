@@ -3,6 +3,12 @@ import { use, useEffect, useState } from "react";
 
 type DialogueLine = { speaker: string; line: string };
 type CharacterSheet = { name: string; url: string };
+type InflightHiggsfieldJob = {
+  hfJobId: string;
+  stage: string;
+  label: string;
+  submittedAt: string;
+};
 
 type StatusResponse = {
   jobId: string;
@@ -15,6 +21,7 @@ type StatusResponse = {
     shotList?: { n: number; camera: string; action: string; dialogue: DialogueLine[] }[];
     storyboardUrl?: string;
     videoUrl?: string;
+    inflightHiggsfieldJobs?: InflightHiggsfieldJob[];
   };
   servedBy?: Record<string, "higgsfield" | "gateway">;
   error?: { stage: string; message: string };
@@ -82,6 +89,32 @@ export default function StatusPage({ params }: { params: Promise<{ jobId: string
           </p>
         ) : null}
       </header>
+
+      {a.inflightHiggsfieldJobs && a.inflightHiggsfieldJobs.length > 0 ? (
+        <section className="space-y-2 border border-violet-200 bg-violet-50 rounded-lg p-4">
+          <h2 className="text-sm font-medium text-violet-900">
+            Higgsfield jobs in flight ({a.inflightHiggsfieldJobs.length})
+          </h2>
+          <p className="text-xs text-violet-800">
+            These jobs are currently submitted to Higgsfield. If a job
+            stalls (e.g. queued waiting for IP approval), look it up in
+            your Higgsfield dashboard by ID, approve there, and the next
+            poll will pick it up automatically.
+          </p>
+          <ul className="space-y-1 text-sm text-stone-800">
+            {a.inflightHiggsfieldJobs.map((j) => (
+              <li key={j.hfJobId} className="flex gap-2 items-baseline">
+                <span className="text-stone-500 text-xs font-mono">{j.stage}</span>
+                <span className="font-medium">{j.label}</span>
+                <code className="text-violet-700 text-xs">{j.hfJobId}</code>
+                <span className="text-stone-400 text-xs ml-auto">
+                  {new Date(j.submittedAt).toLocaleTimeString()}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
 
       {a.videoUrl ? (
         <section className="space-y-2">

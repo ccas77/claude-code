@@ -40,6 +40,17 @@ export type Shot = {
 
 export type ShotList = Shot[]; // length always 16
 
+// One Higgsfield job currently in flight for this app job. Persisted as
+// soon as the MCP returns a jobId so the status page can show what's
+// happening BEFORE the gen completes (lets the user click into Higgsfield
+// directly if a job hangs or needs manual ip approval).
+export type InflightHiggsfieldJob = {
+  hfJobId: string;
+  stage: "stage1" | "stage2" | "stage4" | "stage5";
+  label: string; // e.g. "Character: Mira" or "Location" or "Storyboard" or "Video"
+  submittedAt: string;
+};
+
 export type Artifacts = {
   sceneDescription?: string;
   dialogue?: DialogueLine[];
@@ -48,6 +59,7 @@ export type Artifacts = {
   shotList?: ShotList;
   storyboardUrl?: string;
   videoUrl?: string;
+  inflightHiggsfieldJobs?: InflightHiggsfieldJob[];
 };
 
 export type JobStatus =

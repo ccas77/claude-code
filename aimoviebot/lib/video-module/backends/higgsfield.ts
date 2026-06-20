@@ -294,12 +294,13 @@ async function pollUntilDone(
 export async function generateImage(args: {
   prompt: string;
   imageRefs: string[];
-}): Promise<{ url: string }> {
+  // Called as soon as Higgsfield returns a jobId, BEFORE polling. Lets the
+  // caller persist the in-flight jobId so the UI can show "Higgsfield is
+  // working on this" with a link, instead of "pending" with no detail.
+  onSubmit?: (hfJobId: string) => Promise<void>;
+}): Promise<{ url: string; hfJobId?: string }> {
   const model = MODELS.image.higgsfield;
-  // Import each reference to a Higgsfield media_id before submission.
   const mediaIds = await Promise.all(args.imageRefs.map((u) => importMedia(u)));
-  // Params confirmed working in tslides for gpt_image_2: aspect_ratio,
-  // resolution, quality. medias[] is the documented MCP shape for refs.
   const submitted = await callGenerate("generate_image", {
     model,
     prompt: args.prompt,
@@ -309,12 +310,18 @@ export async function generateImage(args: {
     count: 1,
     medias: mediaIds.map((value) => ({ value, role: "image" })),
   });
-  // Some Higgsfield models return the URL on the create response directly.
-  if (submitted.imageUrl) return { url: submitted.imageUrl };
+  if (submitted.imageUrl) {
+    return { url: submitted.imageUrl, hfJobId: submitted.jobId || undefined };
+  }
   if (!submitted.jobId) {
-    throw new HiggsfieldError(
-      "generate_image returned no jobId and no imageUrl",
-    );
+    throw new HiggsfieldError("generate_image returned no jobId and no imageUrl");
+  }
+  if (args.onSubmit) {
+    try {
+      await args.onSubmit(submitted.jobId);
+    } catch {
+      // Tracking failure is not a blocker for the actual gen.
+    }
   }
   const final = await pollUntilDone(submitted.jobId, {
     timeoutMs: 4 * 60 * 1000,
@@ -325,7 +332,7 @@ export async function generateImage(args: {
       `Higgsfield image job ${submitted.jobId} completed without a URL: ${JSON.stringify(final.raw).slice(0, 400)}`,
     );
   }
-  return { url: final.imageUrl };
+  return { url: final.imageUrl, hfJobId: submitted.jobId };
 }
 
 export async function generateVideo(args: {
@@ -335,7 +342,8 @@ export async function generateVideo(args: {
   mode: "std" | "fast";
   duration: number;
   startImageUrl?: string;
-}): Promise<{ url: string }> {
+  onSubmit?: (hfJobId: string) => Promise<void>;
+}): Promise<{ url: string; hfJobId?: string }> {
   if (!GENERATE_AUDIO) {
     throw new Error("generate_audio guard tripped: AI Movie Bot requires audio ON");
   }
@@ -361,6 +369,13 @@ export async function generateVideo(args: {
   if (!submitted.jobId) {
     throw new HiggsfieldError("generate_video returned no jobId");
   }
+  if (args.onSubmit) {
+    try {
+      await args.onSubmit(submitted.jobId);
+    } catch {
+      // ignore
+    }
+  }
   const final = await pollUntilDone(submitted.jobId, {
     timeoutMs: 12 * 60 * 1000,
     kind: "video",
@@ -370,6 +385,5 @@ export async function generateVideo(args: {
       `Higgsfield video job ${submitted.jobId} completed without a URL: ${JSON.stringify(final.raw).slice(0, 400)}`,
     );
   }
-  // Some responses use imageUrl for the rendered video; honor either.
-  return { url: final.videoUrl ?? final.imageUrl! };
+  return { url: final.videoUrl ?? final.imageUrl!, hfJobId: submitted.jobId };
 }
