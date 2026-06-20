@@ -15,11 +15,11 @@ import {
 } from "./backends/gateway";
 import { withFallback } from "./backends/withFallback";
 import {
-  stage1Prompt,
-  stage2Prompt,
-  stage3Prompt,
-  stage4Prompt,
-  stage5Prompt,
+  renderStage1,
+  renderStage2,
+  renderStage3,
+  renderStage4,
+  renderStage5,
 } from "./prompts";
 import {
   keys,
@@ -45,7 +45,7 @@ export async function stage1(
   jobId: string,
   character: Character,
 ): Promise<{ name: string; url: string; backend: Backend }> {
-  const prompt = stage1Prompt(character.name);
+  const prompt = await renderStage1(character.name);
   const result = await hgImage({
     prompt,
     imageRefs: [character.imageUrl],
@@ -63,8 +63,9 @@ export async function stage2(
   jobId: string,
   locationImageUrl: string,
 ): Promise<{ url: string; backend: Backend }> {
+  const prompt = await renderStage2();
   const result = await hgImage({
-    prompt: stage2Prompt,
+    prompt,
     imageRefs: [locationImageUrl],
   });
   const url = await persistArtifact(keys.locationSheet(jobId), result.url);
@@ -92,12 +93,13 @@ export async function stage3(
     locationSheetUrl: string;
   },
 ): Promise<ShotList> {
+  const prompt = await renderStage3({
+    sceneDescription: args.sceneDescription,
+    dialogue: args.dialogue,
+    characters: args.characters,
+  });
   const text = await gatewayGenerateText({
-    prompt: stage3Prompt({
-      sceneDescription: args.sceneDescription,
-      dialogue: args.dialogue,
-      characters: args.characters,
-    }),
+    prompt,
     imageUrls: [
       ...args.characterSheets.map((s) => s.url),
       args.locationSheetUrl,
@@ -180,7 +182,7 @@ export async function stage4(
     locationSheetUrl: string;
   },
 ): Promise<{ url: string; backend: Backend }> {
-  const prompt = stage4Prompt({
+  const prompt = await renderStage4({
     shots: args.shots,
     characters: args.characters,
   });
@@ -238,7 +240,7 @@ export async function stage5(
     );
   }
 
-  const prompt = stage5Prompt({
+  const prompt = await renderStage5({
     shots: args.shots,
     characters: args.characters,
   });

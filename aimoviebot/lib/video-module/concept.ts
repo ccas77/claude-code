@@ -1,10 +1,10 @@
 import { z } from "zod";
 import { gatewayGenerateJSON } from "./backends/gateway";
 import {
-  conceptSystem,
-  promptModeA,
-  promptModeB,
-  promptModeC,
+  renderConceptSystem,
+  renderModeA,
+  renderModeB,
+  renderModeC,
 } from "./prompts";
 import { stripEmDashes } from "./stages";
 import type { ConceptInput, ConceptResult } from "./types";
@@ -34,20 +34,20 @@ const schemaHint = `Return JSON only, matching:
 // Mode A doesn't need vision input (the user authored the scene). Modes B/C
 // do, so the proposed scene fits the actual cast and set. ALL character
 // images are passed in cast order so the model can connect names to faces.
-function promptFor(input: ConceptInput): {
+async function promptFor(input: ConceptInput): Promise<{
   prompt: string;
   imageUrls: string[];
-} {
+}> {
   const characters = input.characters;
   if (input.mode === "A") {
     return {
-      prompt: `${schemaHint}\n\n${promptModeA(input.conceptInput, characters)}`,
+      prompt: `${schemaHint}\n\n${await renderModeA(input.conceptInput, characters)}`,
       imageUrls: [],
     };
   }
   if (input.mode === "B") {
     return {
-      prompt: `${schemaHint}\n\n${promptModeB(input.conceptInput, characters)}`,
+      prompt: `${schemaHint}\n\n${await renderModeB(input.conceptInput, characters)}`,
       imageUrls: [
         ...characters.map((c) => c.imageUrl),
         input.locationImageUrl,
@@ -55,7 +55,7 @@ function promptFor(input: ConceptInput): {
     };
   }
   return {
-    prompt: `${schemaHint}\n\n${promptModeC(input.conceptInput, characters)}`,
+    prompt: `${schemaHint}\n\n${await renderModeC(input.conceptInput, characters)}`,
     imageUrls: [
       ...characters.map((c) => c.imageUrl),
       input.locationImageUrl,
@@ -64,9 +64,10 @@ function promptFor(input: ConceptInput): {
 }
 
 export async function runConcept(input: ConceptInput): Promise<ConceptResult> {
-  const { prompt, imageUrls } = promptFor(input);
+  const { prompt, imageUrls } = await promptFor(input);
+  const system = await renderConceptSystem();
   const raw = await gatewayGenerateJSON<unknown>({
-    system: conceptSystem,
+    system,
     prompt,
     imageUrls,
   });

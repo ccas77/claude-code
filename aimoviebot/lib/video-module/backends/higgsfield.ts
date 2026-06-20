@@ -165,7 +165,7 @@ type JobStatusResponse = {
 async function pollJob(
   token: string,
   jobId: string,
-  opts: { timeoutMs: number },
+  opts: { timeoutMs: number; kind: "image" | "video" },
 ): Promise<JobStatusResponse> {
   const start = Date.now();
   let interval = 5_000;
@@ -175,7 +175,40 @@ async function pollJob(
     });
     const s = (status.status ?? "").toLowerCase();
     if (s === "completed") return status;
-    if (s === "failed" || s === "cancelled" || s === "nsfw" || s === "ip_detected") {
+    // ip_detected = Higgsfield flagged the generation pending rights
+    // confirmation. The bytes exist; the hold is a metadata flag.
+    //   - Video (seedance family): reveal_generation can flip it to
+    //     completed server-side. Call it and re-poll.
+    //   - Image: reveal_generation is seedance-family-only, so we
+    //     optimistically accept the URL. If the URL turns out to be
+    //     unreadable, persistArtifact will surface a clear download error
+    //     on the next stage and the user can manually approve in
+    //     Higgsfield then retry that stage.
+    if (s === "ip_detected") {
+      if (opts.kind === "video") {
+        try {
+          await toolCall<unknown>(token, "reveal_generation", { jobId });
+          // Loop continues; next job_status should see "completed".
+          await new Promise((r) => setTimeout(r, 2_000));
+          continue;
+        } catch (revealErr) {
+          throw new HiggsfieldError(
+            `Higgsfield video ${jobId} flagged ip_detected and reveal_generation failed: ${
+              revealErr instanceof Error ? revealErr.message : String(revealErr)
+            }. Approve manually in your Higgsfield dashboard, then retry this render.`,
+          );
+        }
+      }
+      // Image path: capture and return whatever URL is on the result so
+      // downstream stages can try to fetch it.
+      if (status.results?.[0]?.url || status.urls?.[0]) {
+        return status;
+      }
+      throw new HiggsfieldError(
+        `Higgsfield image ${jobId} flagged ip_detected and no URL returned. Approve in your Higgsfield dashboard, then retry this render.`,
+      );
+    }
+    if (s === "failed" || s === "cancelled" || s === "nsfw") {
       throw new HiggsfieldError(
         `Higgsfield job ${jobId} ended in status ${status.status}: ${status.error ?? "(no detail)"}`,
       );
@@ -230,7 +263,10 @@ export async function generateImage(args: {
   // Image gen normally completes in 10-30s. 90s is a generous ceiling that
   // bails fast if Higgsfield's queue is hung, so we don't waste credits or
   // user time.
-  const final = await pollJob(token, jobId, { timeoutMs: 90 * 1000 });
+  const final = await pollJob(token, jobId, {
+    timeoutMs: 90 * 1000,
+    kind: "image",
+  });
   return { url: extractUrl(final) };
 }
 
@@ -292,6 +328,9 @@ export async function generateVideo(args: {
       `generate_video returned no job id: ${JSON.stringify(submitted).slice(0, 300)}`,
     );
   }
-  const final = await pollJob(token, jobId, { timeoutMs: 12 * 60 * 1000 });
+  const final = await pollJob(token, jobId, {
+    timeoutMs: 12 * 60 * 1000,
+    kind: "video",
+  });
   return { url: extractUrl(final) };
 }
