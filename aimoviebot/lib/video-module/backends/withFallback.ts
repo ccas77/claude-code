@@ -1,9 +1,14 @@
+import { FatalError } from "workflow";
 import type { Backend } from "../types";
 
 // One helper, used by every image/video stage. Tries the primary (Higgsfield)
 // first; on ANY error (error response, timeout, missing creds, wrong model
 // slug) runs the fallback (Gateway). Records which backend served the
 // artifact so the orchestrator can persist it.
+//
+// When BOTH backends fail we throw FatalError so the workflow runtime does
+// NOT retry the step. Each retry would re-submit a new Higgsfield job and
+// burn paid credits; we'd rather surface the error once than burn three.
 
 export type FallbackResult<T> = {
   result: T;
@@ -29,7 +34,7 @@ export async function withFallback<T>(
         fallbackErr instanceof Error
           ? fallbackErr.message
           : String(fallbackErr);
-      throw new Error(
+      throw new FatalError(
         `Both backends failed.\nPrimary (higgsfield): ${primaryMessage}\nFallback (gateway): ${fallbackMessage}`,
       );
     }
