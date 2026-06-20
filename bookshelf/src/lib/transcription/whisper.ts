@@ -16,8 +16,11 @@ export type TranscriptionResult = {
   words: CaptionWord[];
 };
 
-export async function transcribeWithWhisper(audioUrl: string): Promise<TranscriptionResult> {
-  if (process.env.OPENAI_API_KEY) return transcribeDirectOpenAi(audioUrl);
+export async function transcribeWithWhisper(
+  audioUrl: string,
+  hint?: string | null,
+): Promise<TranscriptionResult> {
+  if (process.env.OPENAI_API_KEY) return transcribeDirectOpenAi(audioUrl, hint);
   if (process.env.REPLICATE_API_TOKEN) return transcribeViaReplicate(audioUrl);
   throw new Error(
     'No transcription provider configured. Set OPENAI_API_KEY (word-level) or REPLICATE_API_TOKEN (segment-level) in your Vercel project env vars.',
@@ -31,7 +34,10 @@ type WhisperVerboseResponse = {
   words?: { word: string; start: number; end: number }[];
 };
 
-async function transcribeDirectOpenAi(audioUrl: string): Promise<TranscriptionResult> {
+async function transcribeDirectOpenAi(
+  audioUrl: string,
+  hint?: string | null,
+): Promise<TranscriptionResult> {
   const apiKey = process.env.OPENAI_API_KEY!;
 
   const audio = await fetch(audioUrl);
@@ -41,11 +47,23 @@ async function transcribeDirectOpenAi(audioUrl: string): Promise<TranscriptionRe
   const blob = await audio.blob();
   const ext = pickExt(audioUrl) ?? 'mp3';
 
+  // Without Demucs vocal isolation the model often labels sung vocals as
+  // music and returns "🎶 Music 🎶" instead of transcribing. A language
+  // hint + a "these are lyrics" priming prompt nudges it into attempting a
+  // real transcription. If the caller passes a clip-specific hint (e.g. a
+  // known lyric snippet), include that for an even bigger accuracy boost.
+  const basePrompt =
+    "Song lyrics. Sung vocals over music. Transcribe the lyrics verbatim. Do not write 'music' or '[Music]' as placeholders.";
+  const prompt = hint ? `${basePrompt} ${hint.slice(0, 800)}` : basePrompt;
+
   const form = new FormData();
   form.append('file', blob, `audio.${ext}`);
   form.append('model', 'whisper-1');
   form.append('response_format', 'verbose_json');
   form.append('timestamp_granularities[]', 'word');
+  form.append('language', 'en');
+  form.append('temperature', '0');
+  form.append('prompt', prompt);
 
   const res = await fetch('https://api.openai.com/v1/audio/transcriptions', {
     method: 'POST',
