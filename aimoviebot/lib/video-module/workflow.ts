@@ -1,13 +1,28 @@
+import { FatalError } from "workflow";
 import type { Backend, Character, StageName } from "./types";
 
 // WORKFLOW SANDBOX RULE: the "use workflow" function runs in a VM sandbox
 // without Node-only modules (no `require`, no fs, no @vercel/blob). Anything
 // imported at the TOP of this file gets bundled into that sandbox and crashes
 // the workflow on load if it transitively pulls in CJS. So:
-//   - Top-level imports here are TYPES ONLY.
+//   - Top-level imports here are TYPES ONLY (plus FatalError from workflow,
+//     which lives in the same package as the sandbox).
 //   - Every "use step" function does its own dynamic `await import(...)` to
 //     pull in the modules it actually needs. Steps run in full Node, so this
 //     is fine.
+
+// Wrap any step body so a thrown Error becomes FatalError. Vercel Workflow
+// retries regular Errors up to 3 times by default; for image generation
+// steps that means three new Higgsfield job submissions per failure, which
+// drains paid credits when the underlying model is hung. FatalError stops
+// the step at the first failure.
+async function fatal<T>(fn: () => Promise<T>): Promise<T> {
+  try {
+    return await fn();
+  } catch (e) {
+    throw new FatalError(e instanceof Error ? e.message : String(e));
+  }
+}
 
 async function runStage1ForCharacterStep(
   jobId: string,
@@ -15,7 +30,7 @@ async function runStage1ForCharacterStep(
 ): Promise<{ name: string; url: string; backend: Backend }> {
   "use step";
   const { stage1 } = await import("./stages");
-  return stage1(jobId, character);
+  return fatal(() => stage1(jobId, character));
 }
 
 async function runStage2Step(
@@ -24,7 +39,7 @@ async function runStage2Step(
 ): Promise<{ url: string; backend: Backend }> {
   "use step";
   const { stage2 } = await import("./stages");
-  return stage2(jobId, locationImageUrl);
+  return fatal(() => stage2(jobId, locationImageUrl));
 }
 
 async function persistStage1And2Step(
@@ -69,13 +84,15 @@ async function runStage3Step(jobId: string) {
   ) {
     throw new Error("Stage 1/2 artifacts missing for Stage 3");
   }
-  await stage3(jobId, {
-    sceneDescription: job.artifacts.sceneDescription,
-    dialogue: job.artifacts.dialogue,
-    characters: job.characters,
-    characterSheets: job.artifacts.characterSheets,
-    locationSheetUrl: job.artifacts.locationSheetUrl,
-  });
+  await fatal(() =>
+    stage3(jobId, {
+      sceneDescription: job.artifacts.sceneDescription!,
+      dialogue: job.artifacts.dialogue!,
+      characters: job.characters,
+      characterSheets: job.artifacts.characterSheets!,
+      locationSheetUrl: job.artifacts.locationSheetUrl!,
+    }),
+  );
 }
 
 async function runStage4Step(jobId: string) {
@@ -93,12 +110,14 @@ async function runStage4Step(jobId: string) {
   ) {
     throw new Error("Stage 4 missing upstream artifacts");
   }
-  await stage4(jobId, {
-    shots: job.artifacts.shotList,
-    characters: job.characters,
-    characterSheets: job.artifacts.characterSheets,
-    locationSheetUrl: job.artifacts.locationSheetUrl,
-  });
+  await fatal(() =>
+    stage4(jobId, {
+      shots: job.artifacts.shotList!,
+      characters: job.characters,
+      characterSheets: job.artifacts.characterSheets!,
+      locationSheetUrl: job.artifacts.locationSheetUrl!,
+    }),
+  );
 }
 
 async function runStage5Step(jobId: string) {
@@ -117,14 +136,16 @@ async function runStage5Step(jobId: string) {
   ) {
     throw new Error("Stage 5 missing upstream artifacts");
   }
-  await stage5(jobId, {
-    shots: job.artifacts.shotList,
-    characters: job.characters,
-    characterSheets: job.artifacts.characterSheets,
-    locationSheetUrl: job.artifacts.locationSheetUrl,
-    storyboardUrl: job.artifacts.storyboardUrl,
-    durationSec: job.videoDurationSec,
-  });
+  await fatal(() =>
+    stage5(jobId, {
+      shots: job.artifacts.shotList!,
+      characters: job.characters,
+      characterSheets: job.artifacts.characterSheets!,
+      locationSheetUrl: job.artifacts.locationSheetUrl!,
+      storyboardUrl: job.artifacts.storyboardUrl!,
+      durationSec: job.videoDurationSec,
+    }),
+  );
 }
 
 async function setSheetsStatusStep(jobId: string) {
