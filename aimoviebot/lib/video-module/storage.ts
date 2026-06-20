@@ -1,4 +1,4 @@
-import { put, head } from "@vercel/blob";
+import { put, head, list } from "@vercel/blob";
 import type {
   Artifacts,
   Backend,
@@ -7,8 +7,8 @@ import type {
   StageName,
 } from "./types";
 
-// Deterministic Blob keys. One job, one folder; per stage, one artifact.
-// Retries overwrite (addRandomSuffix: false).
+// Deterministic Blob keys for immutable artifacts. Mutable JSON (job state,
+// shot list) uses a per-write unique URL pattern — see below.
 
 const key = (jobId: string, suffix: string) => `jobs/${jobId}/${suffix}`;
 
@@ -21,84 +21,72 @@ export const slug = (name: string) =>
     .slice(0, 40) || "char";
 
 export const keys = {
-  job: (jobId: string) => key(jobId, "job.json"),
+  jobPrefix: (jobId: string) => `jobs/${jobId}/job-`,
+  shotListPrefix: (jobId: string) => `jobs/${jobId}/stage3-shotlist-`,
   upload: (jobId: string, name: string) => key(jobId, `uploads/${name}`),
   characterSheet: (jobId: string, characterName: string) =>
     key(jobId, `stage1-character-${slug(characterName)}.png`),
   locationSheet: (jobId: string) => key(jobId, "stage2-location.png"),
-  shotList: (jobId: string) => key(jobId, "stage3-shotlist.json"),
   storyboard: (jobId: string) => key(jobId, "stage4-storyboard.png"),
   video: (jobId: string) => key(jobId, "stage5-video.mp4"),
 };
 
-const putBlob = async (
+// Put for IMMUTABLE artifacts (character sheets, location, storyboard, video).
+// Same key + allowOverwrite handles re-renders; these are read from in-process
+// after upload via the returned URL, not via a future read-after-write, so the
+// 60s CDN cache is never observed as a problem here.
+const putImmutable = async (
   k: string,
   body: Blob | ArrayBuffer | string,
   contentType?: string,
-  mutable?: boolean,
 ) => {
   const blob = await put(k, body, {
     access: "public",
     addRandomSuffix: false,
     ...(contentType ? { contentType } : {}),
     allowOverwrite: true,
-    // Mutable keys (job.json, shotList JSON) get cacheControlMaxAge: 0 so the
-    // CDN never serves stale content after an overwrite. Without this, a
-    // read-modify-write sequence can clobber newer state with older state.
-    ...(mutable ? { cacheControlMaxAge: 0 } : {}),
   });
   return blob.url;
 };
 
-// putJSON / getJSON — used for job state, concept result, shot list, etc.
-// These keys mutate, so they're written with cache-control: max-age=0.
-export async function putJSON(key: string, data: unknown): Promise<string> {
-  return putBlob(
-    key,
-    JSON.stringify(data, null, 2),
-    "application/json",
-    true,
-  );
-}
+// Put for MUTABLE JSON state. Each write creates a NEW unique URL via the
+// random suffix. Reads find the latest via list() + uploadedAt sort, which
+// goes through the metadata API (not the body CDN) and is therefore fresh.
+// This bypasses Vercel Blob's 60s minimum CDN cache on body fetches.
+const putMutable = async (prefix: string, data: unknown) => {
+  const blob = await put(`${prefix}${Date.now()}.json`, JSON.stringify(data, null, 2), {
+    access: "public",
+    addRandomSuffix: true,
+    contentType: "application/json",
+  });
+  return blob.url;
+};
 
-export async function getJSON<T>(key: string): Promise<T | null> {
+async function readLatestJSON<T>(prefix: string): Promise<T | null> {
   try {
-    const meta = await head(key);
-    console.log(
-      `[getJSON ${key}] meta=${JSON.stringify({
-        url: meta.url,
-        downloadUrl: meta.downloadUrl,
-        size: meta.size,
-        cacheControl: meta.cacheControl,
-        uploadedAt: meta.uploadedAt,
-      })}`,
+    const result = await list({ prefix });
+    if (result.blobs.length === 0) return null;
+    result.blobs.sort(
+      (a, b) =>
+        new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime(),
     );
-    const base = meta.downloadUrl ?? meta.url;
-    const url = `${base}${base.includes("?") ? "&" : "?"}_t=${Date.now()}`;
-    const res = await fetch(url, {
-      cache: "no-store",
-      headers: { "Cache-Control": "no-cache" },
-    });
+    const latest = result.blobs[0];
+    const res = await fetch(latest.url, { cache: "no-store" });
     if (!res.ok) {
-      console.log(`[getJSON ${key}] fetch !ok status=${res.status}`);
+      console.log(`[readLatestJSON ${prefix}] fetch !ok ${res.status}`);
       return null;
     }
-    const text = await res.text();
-    console.log(
-      `[getJSON ${key}] blobSize=${meta.size} bodyLen=${text.length} cfCache=${res.headers.get("x-vercel-cache") ?? "(none)"} age=${res.headers.get("age") ?? "(none)"}`,
-    );
-    return JSON.parse(text) as T;
+    return (await res.json()) as T;
   } catch (e) {
     console.log(
-      `[getJSON ${key}] threw: ${e instanceof Error ? e.message : String(e)}`,
+      `[readLatestJSON ${prefix}] threw: ${e instanceof Error ? e.message : String(e)}`,
     );
     return null;
   }
 }
 
-// Save an artifact returned by a backend (could be an HTTPS URL the backend
-// hosts, or a data: URL from a base64 image). Downloads/decodes and stores in
-// our Blob so the asset stays available even if the backend GCs its hosting.
+// Save an artifact returned by a backend (HTTPS URL or data: URL) to a
+// deterministic Blob key. Used for binary artifacts only.
 export async function persistArtifact(
   key: string,
   sourceUrl: string,
@@ -109,7 +97,7 @@ export async function persistArtifact(
     if (!match) throw new Error("Malformed data URL");
     const ct = contentType ?? match[1];
     const bytes = Uint8Array.from(Buffer.from(match[2], "base64"));
-    return putBlob(key, new Blob([bytes], { type: ct }), ct);
+    return putImmutable(key, new Blob([bytes], { type: ct }), ct);
   }
   const res = await fetch(sourceUrl);
   if (!res.ok) {
@@ -117,18 +105,22 @@ export async function persistArtifact(
   }
   const ct = contentType ?? res.headers.get("content-type") ?? undefined;
   const buf = await res.arrayBuffer();
-  return putBlob(key, buf, ct);
+  return putImmutable(key, buf, ct);
 }
 
 // Job state lifecycle ------------------------------------------------------
 
 export async function readJob(jobId: string): Promise<Job | null> {
-  return getJSON<Job>(keys.job(jobId));
+  return readLatestJSON<Job>(keys.jobPrefix(jobId));
 }
 
 export async function writeJob(job: Job): Promise<void> {
   job.updatedAt = new Date().toISOString();
-  await putJSON(keys.job(job.jobId), job);
+  await putMutable(keys.jobPrefix(job.jobId), job);
+}
+
+export async function writeShotList(jobId: string, shots: unknown): Promise<void> {
+  await putMutable(keys.shotListPrefix(jobId), shots);
 }
 
 export async function updateJob(
@@ -138,9 +130,6 @@ export async function updateJob(
   const current = await readJob(jobId);
   if (!current) throw new Error(`Job ${jobId} not found`);
   const next = patch(current);
-  console.log(
-    `[updateJob ${jobId}] status ${current.status} -> ${next.status} artifactsKeys=${Object.keys(next.artifacts).join(",")}`,
-  );
   await writeJob(next);
   return next;
 }
@@ -159,7 +148,6 @@ export async function mergeArtifacts(
   }));
 }
 
-
 export async function recordBackend(
   jobId: string,
   stage: StageName,
@@ -171,3 +159,10 @@ export async function recordBackend(
   }));
 }
 
+// Compat alias for older call sites in stages.ts that used putJSON for the
+// shot list. Routes through writeShotList so the unique-URL pattern applies.
+export async function putJSON(_key: string, _data: unknown): Promise<string> {
+  throw new Error(
+    "putJSON is deprecated. Use writeShotList(jobId, shots) for mutable JSON, or putImmutable via persistArtifact for binary artifacts.",
+  );
+}

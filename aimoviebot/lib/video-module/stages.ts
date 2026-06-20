@@ -26,8 +26,8 @@ import {
   keys,
   mergeArtifacts,
   persistArtifact,
-  putJSON,
   recordBackend,
+  writeShotList,
 } from "./storage";
 import type {
   Backend,
@@ -124,7 +124,7 @@ export async function stage3(
       dialogue: [...shots[mid].dialogue, ...missing],
     };
   }
-  await putJSON(keys.shotList(jobId), shots);
+  await writeShotList(jobId, shots);
   await mergeArtifacts(jobId, { shotList: shots });
   await recordBackend(jobId, "stage3", "gateway");
   return shots;
