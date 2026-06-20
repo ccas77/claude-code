@@ -40,10 +40,19 @@ const STAGE_LABELS: Record<string, string> = {
   failed: "Failed",
 };
 
+const STAGE_FROM: Record<string, 1 | 2 | 3 | 4 | 5> = {
+  stage1: 1,
+  stage2: 2,
+  stage3: 3,
+  stage4: 4,
+  stage5: 5,
+};
+
 export default function StatusPage({ params }: { params: Promise<{ jobId: string }> }) {
   const { jobId } = use(params);
   const [data, setData] = useState<StatusResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [retrying, setRetrying] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -71,10 +80,34 @@ export default function StatusPage({ params }: { params: Promise<{ jobId: string
     };
   }, [jobId]);
 
+  async function retry(fromStage: 1 | 2 | 3 | 4 | 5) {
+    setRetrying(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/video/retry", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jobId, fromStage }),
+      });
+      const json = (await res.json()) as { error?: string };
+      if (!res.ok) throw new Error(json.error ?? `HTTP ${res.status}`);
+      // Wipe the local snapshot so the next tick re-renders fresh state.
+      setData(null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setRetrying(false);
+    }
+  }
+
   if (error) return <p className="text-red-600">{error}</p>;
   if (!data) return <p>Loading…</p>;
 
   const a = data.artifacts;
+  const failedStage =
+    data.status === "failed" && data.error?.stage
+      ? STAGE_FROM[data.error.stage] ?? 1
+      : null;
 
   return (
     <main className="space-y-8">
@@ -84,9 +117,29 @@ export default function StatusPage({ params }: { params: Promise<{ jobId: string
         </h1>
         <p className="text-stone-600 mt-1 text-sm">Job {jobId}</p>
         {data.error ? (
-          <p className="text-red-600 mt-2 text-sm">
-            Failed at {data.error.stage}: {data.error.message}
-          </p>
+          <div className="mt-3 space-y-2">
+            <p className="text-red-600 text-sm">
+              Failed at {data.error.stage}: {data.error.message}
+            </p>
+            <div className="flex gap-2 flex-wrap">
+              {failedStage ? (
+                <button
+                  onClick={() => retry(failedStage)}
+                  disabled={retrying}
+                  className="bg-violet-700 text-white text-sm rounded px-3 py-1.5 disabled:bg-stone-300"
+                >
+                  {retrying ? "Restarting…" : `Retry from ${data.error.stage}`}
+                </button>
+              ) : null}
+              <button
+                onClick={() => retry(1)}
+                disabled={retrying}
+                className="text-violet-700 text-sm border border-violet-300 rounded px-3 py-1.5 disabled:text-stone-400 disabled:border-stone-200"
+              >
+                Retry from stage 1
+              </button>
+            </div>
+          </div>
         ) : null}
       </header>
 
