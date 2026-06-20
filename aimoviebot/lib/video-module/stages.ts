@@ -5,9 +5,11 @@ import {
   MODELS,
   VIDEO_DEFAULTS,
 } from "./config";
-import { generateVideo as hgVideo } from "./backends/higgsfield";
 import {
-  gatewayGenerateImage,
+  generateImage as hgImage,
+  generateVideo as hgVideo,
+} from "./backends/higgsfield";
+import {
   gatewayGenerateText,
   gatewayGenerateVideo,
 } from "./backends/gateway";
@@ -35,17 +37,16 @@ import type {
   ShotList,
 } from "./types";
 
-// Stage 1: one character sheet per character. Generates via gpt-image-2 on
-// Gateway (no Higgsfield primary for images: nano_banana_pro was producing
-// generic stock-style output that ignored the reference). Persists to a
-// deterministic Blob key but defers the job.json write to the orchestrator
+// Stage 1: one character sheet per character. Generates via Higgsfield
+// gpt-image-2 (model configurable in MODELS.image.higgsfield). Persists to
+// a deterministic Blob key but defers the job.json write to the orchestrator
 // so concurrent character calls can't race on the characterSheets array.
 export async function stage1(
   jobId: string,
   character: Character,
 ): Promise<{ name: string; url: string; backend: Backend }> {
   const prompt = stage1Prompt(character.name);
-  const result = await gatewayGenerateImage({
+  const result = await hgImage({
     prompt,
     imageRefs: [character.imageUrl],
   });
@@ -53,7 +54,7 @@ export async function stage1(
     keys.characterSheet(jobId, character.name),
     result.url,
   );
-  return { name: character.name, url, backend: "gateway" };
+  return { name: character.name, url, backend: "higgsfield" };
 }
 
 // Stage 2: location sheet. Same shape as stage1: generate + persist to Blob,
@@ -62,12 +63,12 @@ export async function stage2(
   jobId: string,
   locationImageUrl: string,
 ): Promise<{ url: string; backend: Backend }> {
-  const result = await gatewayGenerateImage({
+  const result = await hgImage({
     prompt: stage2Prompt,
     imageRefs: [locationImageUrl],
   });
   const url = await persistArtifact(keys.locationSheet(jobId), result.url);
-  return { url, backend: "gateway" };
+  return { url, backend: "higgsfield" };
 }
 
 // Stage 3: shot list, 16 panels, dialogue distributed.
@@ -168,7 +169,7 @@ export function parseShotList(text: string): Shot[] {
 }
 
 // Stage 4: storyboard grid image (2x8 vertical panels). Reference ORDER
-// matters: location FIRST so gpt-image-2 anchors the literal setting before
+// matters: location FIRST so the model anchors the literal setting before
 // the characters are placed inside it. Then character sheets in cast order.
 export async function stage4(
   jobId: string,
@@ -187,11 +188,11 @@ export async function stage4(
     args.locationSheetUrl,
     ...args.characterSheets.map((s) => s.url),
   ];
-  const result = await gatewayGenerateImage({ prompt, imageRefs: refs });
+  const result = await hgImage({ prompt, imageRefs: refs });
   const url = await persistArtifact(keys.storyboard(jobId), result.url);
   await mergeArtifacts(jobId, { storyboardUrl: url });
-  await recordBackend(jobId, "stage4", "gateway");
-  return { url, backend: "gateway" };
+  await recordBackend(jobId, "stage4", "higgsfield");
+  return { url, backend: "higgsfield" };
 }
 
 // Stage 5: video, with dialogue baked in.

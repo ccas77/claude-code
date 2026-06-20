@@ -202,10 +202,37 @@ function extractUrl(status: JobStatusResponse): string {
   return url;
 }
 
-// Higgsfield image gen was removed: nano_banana_pro produced generic
-// stock-style scenery that ignored the user's uploads. Image stages now go
-// exclusively through Gateway (gpt-image-2). Higgsfield is still the
-// primary for video via generateVideo below.
+// Image gen via Higgsfield. The model is configurable (currently
+// gpt_image_2 per MODELS.image.higgsfield) so the route swaps without
+// touching this function. References go through media_import_url so the
+// model receives a Higgsfield media_id, not a raw URL.
+export async function generateImage(args: {
+  prompt: string;
+  imageRefs: string[];
+}): Promise<{ url: string }> {
+  const token = await authToken();
+  const mediaIds = await Promise.all(args.imageRefs.map((u) => importMedia(u)));
+  const submitted = await toolCall<JobSubmitResponse>(token, "generate_image", {
+    params: {
+      model: MODELS.image.higgsfield,
+      prompt: args.prompt,
+      aspect_ratio: ASPECT_RATIO,
+      count: 1,
+      medias: mediaIds.map((value) => ({ value, role: "image" })),
+    },
+  });
+  const jobId = submitted.results?.[0]?.id;
+  if (!jobId) {
+    throw new HiggsfieldError(
+      `generate_image returned no job id: ${JSON.stringify(submitted).slice(0, 300)}`,
+    );
+  }
+  // Image gen normally completes in 10-30s. 90s is a generous ceiling that
+  // bails fast if Higgsfield's queue is hung, so we don't waste credits or
+  // user time.
+  const final = await pollJob(token, jobId, { timeoutMs: 90 * 1000 });
+  return { url: extractUrl(final) };
+}
 
 export async function generateVideo(args: {
   prompt: string;
