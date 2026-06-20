@@ -28,7 +28,6 @@ import {
   persistArtifact,
   putJSON,
   recordBackend,
-  upsertCharacterSheet,
 } from "./storage";
 import type {
   Backend,
@@ -39,13 +38,16 @@ import type {
   ShotList,
 } from "./types";
 
-// Stage 1 — one character sheet per character. The orchestrator calls this
-// once per cast member (in parallel) so a re-run of one character's sheet
-// doesn't redo the others.
+// Stage 1 — one character sheet per character. Generates the image and
+// persists it to a deterministic Blob key, but DOES NOT touch job.json.
+// The orchestrator runs multiple stage1 calls concurrently (one per cast
+// member) and writes the aggregated results to job.json in a single
+// updateJob call afterward, so concurrent stage1 calls don't race each
+// other on the characterSheets array.
 export async function stage1(
   jobId: string,
   character: Character,
-): Promise<{ url: string; backend: Backend }> {
+): Promise<{ name: string; url: string; backend: Backend }> {
   const prompt = stage1Prompt(character.name);
   const { result, servedBy } = await withFallback(
     () => hgImage({ prompt, imageRefs: [character.imageUrl] }),
@@ -55,12 +57,11 @@ export async function stage1(
     keys.characterSheet(jobId, character.name),
     result.url,
   );
-  await upsertCharacterSheet(jobId, { name: character.name, url });
-  await recordBackend(jobId, "stage1", servedBy);
-  return { url, backend: servedBy };
+  return { name: character.name, url, backend: servedBy };
 }
 
-// Stage 2 — location sheet.
+// Stage 2 — location sheet. Same shape as stage1: generate + persist to Blob,
+// but defer the job.json write to the orchestrator.
 export async function stage2(
   jobId: string,
   locationImageUrl: string,
@@ -74,8 +75,6 @@ export async function stage2(
       }),
   );
   const url = await persistArtifact(keys.locationSheet(jobId), result.url);
-  await mergeArtifacts(jobId, { locationSheetUrl: url });
-  await recordBackend(jobId, "stage2", servedBy);
   return { url, backend: servedBy };
 }
 

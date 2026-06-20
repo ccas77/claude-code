@@ -2,7 +2,6 @@ import { put, head } from "@vercel/blob";
 import type {
   Artifacts,
   Backend,
-  CharacterSheet,
   Job,
   JobStatus,
   StageName,
@@ -136,21 +135,6 @@ export async function mergeArtifacts(
   }));
 }
 
-// Appends/updates one character sheet by name. Idempotent: re-running stage 1
-// for the same character overwrites that character's entry only.
-export async function upsertCharacterSheet(
-  jobId: string,
-  sheet: CharacterSheet,
-): Promise<void> {
-  await updateJob(jobId, (j) => {
-    const existing = j.artifacts.characterSheets ?? [];
-    const without = existing.filter((s) => s.name !== sheet.name);
-    return {
-      ...j,
-      artifacts: { ...j.artifacts, characterSheets: [...without, sheet] },
-    };
-  });
-}
 
 export async function recordBackend(
   jobId: string,
