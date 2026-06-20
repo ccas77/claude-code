@@ -54,8 +54,8 @@ export async function persistArtifact(
     const match = sourceUrl.match(/^data:([^;]+);base64,(.+)$/);
     if (!match) throw new Error("Malformed data URL");
     const ct = contentType ?? match[1];
-    const buf = Buffer.from(match[2], "base64");
-    return putBlob(key, buf, ct);
+    const bytes = Uint8Array.from(Buffer.from(match[2], "base64"));
+    return putBlob(key, new Blob([bytes], { type: ct }), ct);
   }
   const res = await fetch(sourceUrl);
   if (!res.ok) {
