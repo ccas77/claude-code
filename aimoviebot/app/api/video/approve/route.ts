@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { start } from "workflow/api";
 import { approvedVideoWorkflow } from "@/lib/video-module/workflow";
-import { mergeArtifacts, readJob, updateJob } from "@/lib/video-module/storage";
+import { readJob, updateJob } from "@/lib/video-module/storage";
+import { stripEmDashes } from "@/lib/video-module/stages";
 
 export const runtime = "nodejs";
 
@@ -38,14 +39,26 @@ export async function POST(req: Request) {
     );
   }
 
-  // Persist the user-approved scene + dialogue + duration, then kick off
-  // the durable workflow. Stages 1-5 pick the inputs up off Blob.
+  // Sanitize user-edited fields. Em dashes break the Seedance speech pipeline
+  // and the user may have typed or pasted them on the review page.
+  const cleanedScene = stripEmDashes(sceneDescription);
+  const cleanedDialogue = dialogue.map((d) => ({
+    speaker: d.speaker.trim(),
+    line: stripEmDashes(d.line),
+  }));
+
+  // Collapse status, duration, and approved-artifacts into ONE updateJob so
+  // two sequential read-modify-writes can't race each other on Blob.
   await updateJob(jobId, (j) => ({
     ...j,
     status: "queued",
     videoDurationSec,
+    artifacts: {
+      ...j.artifacts,
+      sceneDescription: cleanedScene,
+      dialogue: cleanedDialogue,
+    },
   }));
-  await mergeArtifacts(jobId, { sceneDescription, dialogue });
 
   const run = await start(approvedVideoWorkflow, [
     jobId,

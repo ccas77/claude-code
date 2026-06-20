@@ -1,21 +1,20 @@
-import { stage1, stage2, stage3, stage4, stage5 } from "./stages";
-import { readJob, setStatus, updateJob } from "./storage";
 import type { Backend, Character, StageName } from "./types";
 
-// Each stage is a "use step" function: it runs in a full Node.js context
-// (Blob, fetch, AI SDK all work), it's independently retryable, and the
-// workflow runtime persists the result so a replay doesn't redo the work.
-
-// Stage 1+2 generation steps. Each writes its own artifact to a deterministic
-// Blob key but DOES NOT touch job.json. The orchestrator collects the
-// returned descriptors after Promise.all and merges them in one updateJob
-// call, so concurrent parallel steps never race on the same job.json key.
+// WORKFLOW SANDBOX RULE: the "use workflow" function runs in a VM sandbox
+// without Node-only modules (no `require`, no fs, no @vercel/blob). Anything
+// imported at the TOP of this file gets bundled into that sandbox and crashes
+// the workflow on load if it transitively pulls in CJS. So:
+//   - Top-level imports here are TYPES ONLY.
+//   - Every "use step" function does its own dynamic `await import(...)` to
+//     pull in the modules it actually needs. Steps run in full Node, so this
+//     is fine.
 
 async function runStage1ForCharacterStep(
   jobId: string,
   character: Character,
 ): Promise<{ name: string; url: string; backend: Backend }> {
   "use step";
+  const { stage1 } = await import("./stages");
   return stage1(jobId, character);
 }
 
@@ -24,6 +23,7 @@ async function runStage2Step(
   locationImageUrl: string,
 ): Promise<{ url: string; backend: Backend }> {
   "use step";
+  const { stage2 } = await import("./stages");
   return stage2(jobId, locationImageUrl);
 }
 
@@ -33,6 +33,7 @@ async function persistStage1And2Step(
   locationSheet: { url: string; backend: Backend },
 ) {
   "use step";
+  const { updateJob } = await import("./storage");
   await updateJob(jobId, (j) => ({
     ...j,
     artifacts: {
@@ -53,6 +54,8 @@ async function persistStage1And2Step(
 
 async function runStage3Step(jobId: string) {
   "use step";
+  const { setStatus, readJob } = await import("./storage");
+  const { stage3 } = await import("./stages");
   await setStatus(jobId, "shot_list");
   const job = await readJob(jobId);
   if (!job) throw new Error(`Job ${jobId} disappeared`);
@@ -77,6 +80,8 @@ async function runStage3Step(jobId: string) {
 
 async function runStage4Step(jobId: string) {
   "use step";
+  const { setStatus, readJob } = await import("./storage");
+  const { stage4 } = await import("./stages");
   await setStatus(jobId, "storyboard");
   const job = await readJob(jobId);
   if (!job) throw new Error(`Job ${jobId} disappeared`);
@@ -98,6 +103,8 @@ async function runStage4Step(jobId: string) {
 
 async function runStage5Step(jobId: string) {
   "use step";
+  const { setStatus, readJob } = await import("./storage");
+  const { stage5 } = await import("./stages");
   await setStatus(jobId, "video");
   const job = await readJob(jobId);
   if (!job) throw new Error(`Job ${jobId} disappeared`);
@@ -122,11 +129,13 @@ async function runStage5Step(jobId: string) {
 
 async function setSheetsStatusStep(jobId: string) {
   "use step";
+  const { setStatus } = await import("./storage");
   await setStatus(jobId, "char_sheets");
 }
 
 async function markFailed(jobId: string, stage: StageName, message: string) {
   "use step";
+  const { updateJob } = await import("./storage");
   await updateJob(jobId, (j) => ({
     ...j,
     status: "failed",
@@ -136,12 +145,30 @@ async function markFailed(jobId: string, stage: StageName, message: string) {
 
 async function markDone(jobId: string) {
   "use step";
+  const { setStatus } = await import("./storage");
   await setStatus(jobId, "done");
 }
 
 async function readJobStep(jobId: string) {
   "use step";
+  const { readJob } = await import("./storage");
   return readJob(jobId);
+}
+
+async function refreshLocationOnly(
+  jobId: string,
+  locationSheet: { url: string; backend: Backend },
+) {
+  "use step";
+  const { updateJob } = await import("./storage");
+  await updateJob(jobId, (j) => ({
+    ...j,
+    artifacts: { ...j.artifacts, locationSheetUrl: locationSheet.url },
+    servedBy: {
+      ...(j.servedBy ?? {}),
+      stage2: locationSheet.backend,
+    },
+  }));
 }
 
 // Durable orchestrator. Started by /api/video/approve once the user locks in
@@ -206,15 +233,7 @@ export async function retryFromStage(jobId: string, fromStage: 1 | 2 | 3 | 4 | 5
       await persistStage1And2Step(jobId, characterResults, locationResult);
     } else if (fromStage <= 2) {
       const locationResult = await runStage2Step(jobId, job.locationImageUrl);
-      // keep existing character sheets; only refresh location
-      await updateJob(jobId, (j) => ({
-        ...j,
-        artifacts: { ...j.artifacts, locationSheetUrl: locationResult.url },
-        servedBy: {
-          ...(j.servedBy ?? {}),
-          stage2: locationResult.backend,
-        },
-      }));
+      await refreshLocationOnly(jobId, locationResult);
     }
     if (fromStage <= 3) await runStage3Step(jobId);
     if (fromStage <= 4) await runStage4Step(jobId);
