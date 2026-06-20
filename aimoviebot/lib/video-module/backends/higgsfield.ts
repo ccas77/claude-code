@@ -136,9 +136,30 @@ export async function importMedia(blobUrl: string): Promise<string> {
   });
 }
 
-// ---- generate_image ----
-// Returns the submitted job's id. Polling for completion is in pollJob.
-type GenerateResult = { jobId: string; imageUrl?: string };
+// ---- generate_image / generate_video ----
+// Returns the submitted job's id. Polling for completion is in pollUntilDone.
+// declinedPresetId is set when Higgsfield's MCP returns a notice asking us
+// to use a built-in preset instead of running the literal prompt. The
+// caller (generateVideo) re-submits with declined_preset_id to force
+// literal interpretation of the curated prompt.
+type GenerateResult = {
+  jobId: string;
+  imageUrl?: string;
+  declinedPresetId?: string;
+};
+
+function extractDeclinedPreset(
+  merged: Record<string, unknown>,
+): string | undefined {
+  const notice = merged.notice;
+  if (!notice || typeof notice !== "object") return undefined;
+  const data = (notice as { data?: unknown }).data;
+  if (!data || typeof data !== "object") return undefined;
+  const retry = (data as { retry_literal_with?: unknown }).retry_literal_with;
+  if (!retry || typeof retry !== "object") return undefined;
+  const id = (retry as { declined_preset_id?: unknown }).declined_preset_id;
+  return typeof id === "string" && id ? id : undefined;
+}
 
 async function callGenerate(
   toolName: "generate_image" | "generate_video",
@@ -172,12 +193,13 @@ async function callGenerate(
       (firstResult
         ? pickString(firstResult, ["url", "image_url", "imageUrl"])
         : undefined);
-    if (!jobId && !imageUrl) {
+    const declinedPresetId = extractDeclinedPreset(merged);
+    if (!jobId && !imageUrl && !declinedPresetId) {
       throw new HiggsfieldError(
         `${toolName} returned neither jobId nor URL: ${JSON.stringify(merged).slice(0, 400)}`,
       );
     }
-    return { jobId: jobId ?? "", imageUrl, raw: res };
+    return { jobId: jobId ?? "", imageUrl, declinedPresetId, raw: res };
   });
 }
 
@@ -355,22 +377,39 @@ export async function generateVideo(args: {
   const startMedia = args.startImageUrl
     ? await importMedia(args.startImageUrl)
     : undefined;
-  const submitted = await callGenerate("generate_video", {
-    model,
-    prompt: args.prompt,
-    aspect_ratio: ASPECT_RATIO,
-    resolution: args.resolution,
-    mode: args.mode,
-    duration: args.duration,
-    generate_audio: true,
-    count: 1,
-    medias: [
-      ...mediaIds.map((value) => ({ value, role: "image" })),
-      ...(startMedia ? [{ value: startMedia, role: "start_image" }] : []),
-    ],
-  });
+  const buildParams = (declinedPresetId?: string): Record<string, unknown> => {
+    const p: Record<string, unknown> = {
+      model,
+      prompt: args.prompt,
+      aspect_ratio: ASPECT_RATIO,
+      resolution: args.resolution,
+      mode: args.mode,
+      duration: args.duration,
+      generate_audio: true,
+      count: 1,
+      medias: [
+        ...mediaIds.map((value) => ({ value, role: "image" })),
+        ...(startMedia ? [{ value: startMedia, role: "start_image" }] : []),
+      ],
+    };
+    if (declinedPresetId) p.declined_preset_id = declinedPresetId;
+    return p;
+  };
+
+  // First submission. Higgsfield may respond with a preset_recommendation
+  // notice instead of running the literal prompt. If it does, re-submit
+  // once with declined_preset_id so our curated prompt actually runs.
+  let submitted = await callGenerate("generate_video", buildParams());
+  if (!submitted.jobId && submitted.declinedPresetId) {
+    submitted = await callGenerate(
+      "generate_video",
+      buildParams(submitted.declinedPresetId),
+    );
+  }
   if (!submitted.jobId) {
-    throw new HiggsfieldError("generate_video returned no jobId");
+    throw new HiggsfieldError(
+      `generate_video returned no jobId after preset decline: ${JSON.stringify(submitted.raw).slice(0, 400)}`,
+    );
   }
   if (args.onSubmit) {
     try {
