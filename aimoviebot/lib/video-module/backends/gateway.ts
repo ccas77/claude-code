@@ -171,11 +171,11 @@ export async function gatewayGenerateImage(args: {
       args.imageRefs[i],
     );
     const ext = mediaType.split("/")[1] ?? "png";
-    form.append(
-      "image[]",
-      new Blob([data], { type: mediaType }),
-      `ref-${i}.${ext}`,
-    );
+    // Wrap via Uint8Array.from(data) to normalize the buffer type — the
+    // raw fetch().arrayBuffer() result is typed Uint8Array<ArrayBufferLike>
+    // which TS won't accept as a BlobPart without normalization.
+    const blob = new Blob([Uint8Array.from(data)], { type: mediaType });
+    form.append("image[]", blob, `ref-${i}.${ext}`);
   }
 
   const res = await fetch("https://ai-gateway.vercel.sh/v1/images/edits", {
