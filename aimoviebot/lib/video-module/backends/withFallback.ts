@@ -1,8 +1,8 @@
 import type { Backend } from "../types";
 
 // One helper, used by every image/video stage. Tries the primary (Higgsfield)
-// first; on ANY error — error response, timeout, missing creds, wrong model
-// slug — runs the fallback (Gateway). Records which backend served the
+// first; on ANY error (error response, timeout, missing creds, wrong model
+// slug) runs the fallback (Gateway). Records which backend served the
 // artifact so the orchestrator can persist it.
 
 export type FallbackResult<T> = {

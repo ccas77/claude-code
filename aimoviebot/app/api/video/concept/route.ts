@@ -30,8 +30,8 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: parsed.error.message }, { status: 400 });
   }
   const input = parsed.data;
-  // Reject duplicate character names — they'd collide on dialogue mapping
-  // and Blob keys.
+  // Reject duplicate character names (they'd collide on dialogue mapping
+  // and Blob keys).
   const names = input.characters.map((c) => c.name.trim().toLowerCase());
   if (new Set(names).size !== names.length) {
     return NextResponse.json(

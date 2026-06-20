@@ -6,7 +6,7 @@ import { higgsfieldStore, type TokenSet, type RegisteredClient } from "./higgsfi
 //
 // All discovery is runtime: GET /.well-known/oauth-authorization-server off
 // the MCP origin. The MCP server supports DCR, so we don't need a pre-issued
-// client_id — we register on first use and cache in Blob.
+// client_id; we register on first use and cache in Blob.
 
 export const MCP_URL =
   process.env.HIGGSFIELD_MCP_URL ?? "https://mcp.higgsfield.ai/mcp";

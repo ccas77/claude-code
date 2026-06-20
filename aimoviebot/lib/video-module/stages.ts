@@ -38,7 +38,7 @@ import type {
   ShotList,
 } from "./types";
 
-// Stage 1 — one character sheet per character. Generates the image and
+// Stage 1: one character sheet per character. Generates the image and
 // persists it to a deterministic Blob key, but DOES NOT touch job.json.
 // The orchestrator runs multiple stage1 calls concurrently (one per cast
 // member) and writes the aggregated results to job.json in a single
@@ -60,7 +60,7 @@ export async function stage1(
   return { name: character.name, url, backend: servedBy };
 }
 
-// Stage 2 — location sheet. Same shape as stage1: generate + persist to Blob,
+// Stage 2: location sheet. Same shape as stage1: generate + persist to Blob,
 // but defer the job.json write to the orchestrator.
 export async function stage2(
   jobId: string,
@@ -78,7 +78,17 @@ export async function stage2(
   return { url, backend: servedBy };
 }
 
-// Stage 3 — shot list, 16 panels, dialogue distributed.
+// Stage 3: shot list, 16 panels, dialogue distributed.
+
+// Strip em dashes from any model output before it reaches storage or the
+// next stage's prompt. Em dashes break the speech pipeline (Seedance
+// stumbles on them) and the user has banned them.
+export const stripEmDashes = (s: string): string =>
+  s
+    .replace(/\s*—\s*/g, ", ")
+    .replace(/,\s*,/g, ",")
+    .replace(/\s+/g, " ")
+    .trim();
 export async function stage3(
   jobId: string,
   args: {
@@ -131,11 +141,13 @@ export async function stage3(
 }
 
 // Parses lines like:
-//   Shot 1: Wide low-angle — Mira approaches the doorway. [Mira: "Hello?"]
-// Tolerant of em-dash variants, missing dialogue, multi dialogue markers.
+//   Shot 1: Wide low-angle | Mira approaches the doorway. [Mira: "Hello?"]
+// Pipe is the canonical separator (em dashes are banned). Hyphen and em
+// dash are still accepted on parse for resilience against drift, but every
+// captured string is sanitized via stripEmDashes before it leaves the parser.
 export function parseShotList(text: string): Shot[] {
   const out: Shot[] = [];
-  const lineRe = /^Shot\s+(\d+)\s*:\s*([^—-]+?)\s*[—-]\s*(.+)$/i;
+  const lineRe = /^Shot\s+(\d+)\s*:\s*([^|—-]+?)\s*[|—-]\s*(.+)$/i;
   const dlgRe = /\[([^:\]]+):\s*"([^"]+)"\]/g;
   for (const raw of text.split(/\r?\n/)) {
     const line = raw.trim();
@@ -143,23 +155,27 @@ export function parseShotList(text: string): Shot[] {
     const m = lineRe.exec(line);
     if (!m) continue;
     const n = Number(m[1]);
-    const camera = m[2].trim();
+    const camera = stripEmDashes(m[2]);
     let action = m[3].trim();
     const dialogue: DialogueLine[] = [];
     action = action
       .replace(dlgRe, (_full, speaker: string, lineText: string) => {
-        dialogue.push({ speaker: speaker.trim(), line: lineText.trim() });
+        dialogue.push({
+          speaker: speaker.trim(),
+          line: stripEmDashes(lineText),
+        });
         return "";
       })
       .replace(/\s+/g, " ")
       .trim();
+    action = stripEmDashes(action);
     out.push({ n, camera, action, dialogue });
   }
   out.sort((a, b) => a.n - b.n);
   return out;
 }
 
-// Stage 4 — storyboard grid image (2x8 vertical panels). References = all
+// Stage 4: storyboard grid image (2x8 vertical panels). References = all
 // character sheets + the location sheet, so each panel can correctly draw
 // whichever character is on screen.
 export async function stage4(
@@ -189,7 +205,7 @@ export async function stage4(
   return { url, backend: servedBy };
 }
 
-// Stage 5 — video, with dialogue baked in.
+// Stage 5: video, with dialogue baked in.
 // Hard guards:
 //   - aspect ratio must be 9:16 (config const)
 //   - 1080p banned unless ALLOW_1080P flips

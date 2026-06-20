@@ -6,6 +6,7 @@ import {
   promptModeB,
   promptModeC,
 } from "./prompts";
+import { stripEmDashes } from "./stages";
 import type { ConceptInput, ConceptResult } from "./types";
 
 const dialogueLineSchema = z.object({
@@ -30,7 +31,7 @@ const schemaHint = `Return JSON only, matching:
   "notes"?: string
 }`;
 
-// Mode A doesn't need vision input — the user authored the scene. Modes B/C
+// Mode A doesn't need vision input (the user authored the scene). Modes B/C
 // do, so the proposed scene fits the actual cast and set. ALL character
 // images are passed in cast order so the model can connect names to faces.
 function promptFor(input: ConceptInput): {
@@ -64,24 +65,30 @@ function promptFor(input: ConceptInput): {
 
 export async function runConcept(input: ConceptInput): Promise<ConceptResult> {
   const { prompt, imageUrls } = promptFor(input);
-  console.log(
-    `[runConcept] mode=${input.mode} imageUrls=${imageUrls.length} promptLen=${prompt.length}`,
-  );
   const raw = await gatewayGenerateJSON<unknown>({
     system: conceptSystem,
     prompt,
     imageUrls,
   });
-  console.log(
-    `[runConcept] got raw keys=${Object.keys(raw as object).join(",")}`,
-  );
   const parsed = conceptResultSchema.safeParse(raw);
   if (!parsed.success) {
     throw new Error(
       `Concept output failed schema: ${parsed.error.message}\nRaw: ${JSON.stringify(raw).slice(0, 500)}`,
     );
   }
-  const out: ConceptResult = { ...parsed.data, mode: input.mode };
+  // Sanitize every model-emitted string. Em dashes break the speech pipeline
+  // downstream (Seedance stumbles on them) and are banned across the app.
+  const parsedData = parsed.data;
+  const out: ConceptResult = {
+    mode: input.mode,
+    sceneDescription: stripEmDashes(parsedData.sceneDescription),
+    dialogue: parsedData.dialogue.map((d) => ({
+      speaker: d.speaker.trim(),
+      line: stripEmDashes(d.line),
+    })),
+    alternates: parsedData.alternates?.map(stripEmDashes),
+    notes: parsedData.notes ? stripEmDashes(parsedData.notes) : undefined,
+  };
   if (input.mode !== "C") delete out.alternates;
   return out;
 }

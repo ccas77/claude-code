@@ -50,11 +50,26 @@ export default function ReviewPage({ params }: { params: Promise<{ jobId: string
   function setLine(i: number, patch: Partial<DialogueLine>) {
     setDialogue((d) => d.map((row, idx) => (idx === i ? { ...row, ...patch } : row)));
   }
-  function addLine() {
-    setDialogue((d) => [...d, { speaker: "", line: "" }]);
+  // Insert a new blank line at any position. insertLineAt(0) puts it at the
+  // top; insertLineAt(dialogue.length) appends to the bottom.
+  function insertLineAt(index: number) {
+    setDialogue((d) => {
+      const next = [...d];
+      next.splice(index, 0, { speaker: "", line: "" });
+      return next;
+    });
   }
   function removeLine(i: number) {
     setDialogue((d) => d.filter((_, idx) => idx !== i));
+  }
+  function moveLine(i: number, dir: -1 | 1) {
+    setDialogue((d) => {
+      const j = i + dir;
+      if (j < 0 || j >= d.length) return d;
+      const next = [...d];
+      [next[i], next[j]] = [next[j], next[i]];
+      return next;
+    });
   }
 
   async function approve() {
@@ -106,14 +121,9 @@ export default function ReviewPage({ params }: { params: Promise<{ jobId: string
       </section>
 
       <section className="space-y-3">
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-medium text-stone-700">
-            Dialogue ({dialogue.length} {dialogue.length === 1 ? "line" : "lines"})
-          </h2>
-          <button onClick={addLine} className="text-violet-700 text-sm">
-            + Add line
-          </button>
-        </div>
+        <h2 className="text-sm font-medium text-stone-700">
+          Dialogue ({dialogue.length} {dialogue.length === 1 ? "line" : "lines"})
+        </h2>
         {cast.length > 0 ? (
           <p className="text-xs text-stone-500">
             Speakers should match a cast name so the right reference is voiced:{" "}
@@ -123,12 +133,7 @@ export default function ReviewPage({ params }: { params: Promise<{ jobId: string
                 {i < cast.length - 1 ? ", " : ""}
               </span>
             ))}
-            . Free text is fine for narrators / off-screen voices.
-          </p>
-        ) : null}
-        {dialogue.length === 0 ? (
-          <p className="text-stone-500 text-sm">
-            No dialogue. This scene will be wordless unless you add lines.
+            . Free text is fine for narrators or off-screen voices.
           </p>
         ) : null}
         <datalist id="cast-names">
@@ -136,30 +141,57 @@ export default function ReviewPage({ params }: { params: Promise<{ jobId: string
             <option key={c.name} value={c.name} />
           ))}
         </datalist>
-        <ul className="space-y-2">
-          {dialogue.map((d, i) => (
-            <li key={i} className="flex gap-2 items-start">
-              <input
-                value={d.speaker}
-                onChange={(e) => setLine(i, { speaker: e.target.value })}
-                placeholder="Speaker"
-                list="cast-names"
-                className="w-32 border border-stone-300 rounded p-2 bg-white"
-              />
-              <input
-                value={d.line}
-                onChange={(e) => setLine(i, { line: e.target.value })}
-                placeholder="What they say out loud"
-                className="flex-1 border border-stone-300 rounded p-2 bg-white"
-              />
-              <button
-                onClick={() => removeLine(i)}
-                className="text-stone-500 text-sm px-2 py-2"
-                aria-label="Remove"
-              >
-                ×
-              </button>
+        <ul className="space-y-1">
+          <InsertHere onClick={() => insertLineAt(0)} />
+          {dialogue.length === 0 ? (
+            <li className="text-stone-500 text-sm py-1">
+              No dialogue. This scene will be wordless unless you add lines.
             </li>
+          ) : null}
+          {dialogue.map((d, i) => (
+            <div key={i}>
+              <li className="flex gap-2 items-start">
+                <input
+                  value={d.speaker}
+                  onChange={(e) => setLine(i, { speaker: e.target.value })}
+                  placeholder="Speaker"
+                  list="cast-names"
+                  className="w-32 border border-stone-300 rounded p-2 bg-white"
+                />
+                <input
+                  value={d.line}
+                  onChange={(e) => setLine(i, { line: e.target.value })}
+                  placeholder="What they say out loud"
+                  className="flex-1 border border-stone-300 rounded p-2 bg-white"
+                />
+                <div className="flex flex-col">
+                  <button
+                    onClick={() => moveLine(i, -1)}
+                    disabled={i === 0}
+                    className="text-stone-500 text-xs px-1 disabled:text-stone-300"
+                    aria-label="Move up"
+                  >
+                    ↑
+                  </button>
+                  <button
+                    onClick={() => moveLine(i, 1)}
+                    disabled={i === dialogue.length - 1}
+                    className="text-stone-500 text-xs px-1 disabled:text-stone-300"
+                    aria-label="Move down"
+                  >
+                    ↓
+                  </button>
+                </div>
+                <button
+                  onClick={() => removeLine(i)}
+                  className="text-stone-500 text-sm px-2 py-2"
+                  aria-label="Remove"
+                >
+                  ×
+                </button>
+              </li>
+              <InsertHere onClick={() => insertLineAt(i + 1)} />
+            </div>
           ))}
         </ul>
       </section>
@@ -193,5 +225,23 @@ export default function ReviewPage({ params }: { params: Promise<{ jobId: string
         {submitting ? "Starting render…" : "Approve & render"}
       </button>
     </main>
+  );
+}
+
+// Thin hover-target between dialogue rows. Inserts a blank line at this
+// position. Visible as a faint dashed line that turns purple on hover so
+// inserting anywhere in the middle is one click.
+function InsertHere({ onClick }: { onClick: () => void }) {
+  return (
+    <li className="list-none">
+      <button
+        onClick={onClick}
+        className="w-full group flex items-center gap-2 py-1 text-xs text-stone-400 hover:text-violet-700"
+      >
+        <span className="flex-1 border-t border-dashed border-stone-200 group-hover:border-violet-300" />
+        <span>+ insert</span>
+        <span className="flex-1 border-t border-dashed border-stone-200 group-hover:border-violet-300" />
+      </button>
+    </li>
   );
 }

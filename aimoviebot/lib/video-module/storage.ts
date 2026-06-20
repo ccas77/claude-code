@@ -8,7 +8,7 @@ import type {
 } from "./types";
 
 // Deterministic Blob keys for immutable artifacts. Mutable JSON (job state,
-// shot list) uses a per-write unique URL pattern — see below.
+// shot list) uses a per-write unique URL pattern (see below).
 
 const key = (jobId: string, suffix: string) => `jobs/${jobId}/${suffix}`;
 

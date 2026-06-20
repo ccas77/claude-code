@@ -134,7 +134,7 @@ export default function StatusPage({ params }: { params: Promise<{ jobId: string
             {a.shotList.map((s) => (
               <li key={s.n}>
                 <span className="font-medium">Shot {s.n}:</span>{" "}
-                <span className="text-stone-600">{s.camera}</span> — {s.action}
+                <span className="text-stone-600">{s.camera}</span> | {s.action}
                 {s.dialogue.length > 0 ? (
                   <span className="ml-1 text-violet-700">
                     {s.dialogue
