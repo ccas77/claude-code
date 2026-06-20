@@ -52,13 +52,16 @@ export async function POST(req: Request) {
     createdAt: now,
     updatedAt: now,
   };
+  console.log(`[concept ${jobId}] initial writeJob start`);
   await writeJob(job);
+  console.log(`[concept ${jobId}] initial writeJob done`);
 
   try {
+    console.log(`[concept ${jobId}] runConcept start mode=${input.mode}`);
     const result = await runConcept(input);
-    // Collapse artifacts+status into one write. Two sequential
-    // read-modify-write ops on the same Blob key race with CDN propagation
-    // and can clobber each other.
+    console.log(
+      `[concept ${jobId}] runConcept done sceneLen=${result.sceneDescription.length} dialogueLen=${result.dialogue.length}`,
+    );
     await updateJob(jobId, (j) => ({
       ...j,
       status: "awaiting_approval",
@@ -68,6 +71,7 @@ export async function POST(req: Request) {
         dialogue: result.dialogue,
       },
     }));
+    console.log(`[concept ${jobId}] updateJob done`);
     return NextResponse.json({
       jobId,
       sceneDescription: result.sceneDescription,
@@ -77,7 +81,16 @@ export async function POST(req: Request) {
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    await setStatus(jobId, "failed");
+    console.log(`[concept ${jobId}] CAUGHT ERROR: ${message}`);
+    try {
+      await setStatus(jobId, "failed");
+    } catch (statusErr) {
+      console.log(
+        `[concept ${jobId}] failed to mark failed: ${
+          statusErr instanceof Error ? statusErr.message : String(statusErr)
+        }`,
+      );
+    }
     return NextResponse.json(
       { jobId, error: `Concept failed: ${message}` },
       { status: 500 },

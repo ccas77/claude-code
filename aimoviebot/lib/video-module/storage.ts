@@ -117,6 +117,9 @@ export async function updateJob(
   const current = await readJob(jobId);
   if (!current) throw new Error(`Job ${jobId} not found`);
   const next = patch(current);
+  console.log(
+    `[updateJob ${jobId}] status ${current.status} -> ${next.status} artifactsKeys=${Object.keys(next.artifacts).join(",")}`,
+  );
   await writeJob(next);
   return next;
 }

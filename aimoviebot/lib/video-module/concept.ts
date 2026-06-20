@@ -64,11 +64,17 @@ function promptFor(input: ConceptInput): {
 
 export async function runConcept(input: ConceptInput): Promise<ConceptResult> {
   const { prompt, imageUrls } = promptFor(input);
+  console.log(
+    `[runConcept] mode=${input.mode} imageUrls=${imageUrls.length} promptLen=${prompt.length}`,
+  );
   const raw = await gatewayGenerateJSON<unknown>({
     system: conceptSystem,
     prompt,
     imageUrls,
   });
+  console.log(
+    `[runConcept] got raw keys=${Object.keys(raw as object).join(",")}`,
+  );
   const parsed = conceptResultSchema.safeParse(raw);
   if (!parsed.success) {
     throw new Error(
