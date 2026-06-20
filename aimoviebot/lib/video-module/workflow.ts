@@ -1,5 +1,9 @@
-import { FatalError } from "workflow";
+import { createHook, FatalError } from "workflow";
 import type { Backend, Character, StageName } from "./types";
+
+// Deterministic hook token for the shot list approval step. The
+// /api/video/approve-shotlist route uses the same token to resume the run.
+const SHOTLIST_HOOK = (jobId: string) => `approve-shotlist:${jobId}`;
 
 // WORKFLOW SANDBOX RULE: the "use workflow" function runs in a VM sandbox
 // without Node-only modules (no `require`, no fs, no @vercel/blob). Anything
@@ -154,6 +158,12 @@ async function setSheetsStatusStep(jobId: string) {
   await setStatus(jobId, "char_sheets");
 }
 
+async function setAwaitingShotlistStep(jobId: string) {
+  "use step";
+  const { setStatus } = await import("./storage");
+  await setStatus(jobId, "awaiting_shotlist_approval");
+}
+
 async function markFailed(jobId: string, stage: StageName, message: string) {
   "use step";
   const { updateJob } = await import("./storage");
@@ -215,6 +225,15 @@ export async function approvedVideoWorkflow(
     ]);
     await persistStage1And2Step(jobId, characterResults, locationResult);
     await runStage3Step(jobId);
+    // Approval gate #2: pause for user to review + edit the 16-shot list
+    // before paying for storyboard image + Seedance video. /api/video/
+    // approve-shotlist resumes this hook after writing the edited shots
+    // to artifacts.shotList.
+    await setAwaitingShotlistStep(jobId);
+    const hook = createHook<{ approved: true }>({
+      token: SHOTLIST_HOOK(jobId),
+    });
+    await hook;
     await runStage4Step(jobId);
     await runStage5Step(jobId);
     await markDone(jobId);
@@ -256,7 +275,16 @@ export async function retryFromStage(jobId: string, fromStage: 1 | 2 | 3 | 4 | 5
       const locationResult = await runStage2Step(jobId, job.locationImageUrl);
       await refreshLocationOnly(jobId, locationResult);
     }
-    if (fromStage <= 3) await runStage3Step(jobId);
+    if (fromStage <= 3) {
+      await runStage3Step(jobId);
+      // Re-running stage 3 means the shot list changed; re-park for approval
+      // before consuming the expensive downstream stages.
+      await setAwaitingShotlistStep(jobId);
+      const hook = createHook<{ approved: true }>({
+        token: SHOTLIST_HOOK(jobId),
+      });
+      await hook;
+    }
     if (fromStage <= 4) await runStage4Step(jobId);
     if (fromStage <= 5) await runStage5Step(jobId);
     await markDone(jobId);

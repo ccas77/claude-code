@@ -29,12 +29,15 @@ export type ConceptResult = {
   notes?: string;
 };
 
-// One parsed storyboard panel. dialogue is the subset of the scene's lines
-// spoken on this shot, in order. May be empty for wordless shots.
+// One parsed storyboard panel. performance is the body-acting direction
+// (weight, posture, hands, micro-expression, physical tension); kept as a
+// dedicated field rather than embedded in action so it can't be lost to
+// regex parsing and is independently editable in the shot list review UI.
 export type Shot = {
   n: number;
   camera: string;
   action: string;
+  performance: string;
   dialogue: DialogueLine[];
 };
 
@@ -69,6 +72,7 @@ export type JobStatus =
   | "char_sheets"
   | "loc_sheet"
   | "shot_list"
+  | "awaiting_shotlist_approval"
   | "storyboard"
   | "video"
   | "done"

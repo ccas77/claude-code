@@ -104,12 +104,18 @@ const shotsBlock = (shots: Shot[]) =>
       const dlg = s.dialogue
         .map((d) => `[${d.speaker}: "${d.line}"]`)
         .join(" ");
-      return `Shot ${s.n}: ${s.camera} | ${s.action}${dlg ? " " + dlg : ""}`;
+      const perf = s.performance ? ` | Performance: ${s.performance}` : "";
+      return `Shot ${s.n}: ${s.camera} | ${s.action}${perf}${dlg ? " " + dlg : ""}`;
     })
     .join("\n");
 
 const performanceBlock = (shots: Shot[]) =>
-  shots.map((s) => `(Shot ${s.n}) ${s.action}`).join("\n");
+  shots
+    .map((s) => {
+      const perf = s.performance ? ` Performance: ${s.performance}` : "";
+      return `(Shot ${s.n}) ${s.action}${perf}`;
+    })
+    .join("\n");
 
 const spokenBlock = (shots: Shot[]) =>
   shots
@@ -221,26 +227,36 @@ Refer to characters BY NAME in actions (e.g. "Mira leans against the door
 while Cal watches"), so the right reference sheet is used for each figure.
 
 PHYSICAL PERFORMANCE PER SHOT (this is what stops the characters looking
-like potatoes). Every shot must include a [Performance: ...] block that
-describes the body acting: weight distribution, posture, where hands and
+like potatoes). Every shot must include a non-empty "performance" field
+describing the body acting: weight distribution, posture, where hands and
 shoulders are, eyeline, breath, micro-expression (jaw clench, lip part,
 swallow, eye flicker), gesture, the energy between bodies in the frame
 (distance, lean-in, restraint, vulnerability). NEVER write a character as
-"standing", "looking", or "facing" without specifying HOW they stand, what
-their weight is doing, what their hands and eyes are doing. If two
-characters share a frame, name the physical tension between them.
+"standing", "looking", or "facing" without specifying HOW. If two
+characters share a frame, name the physical tension between them. Keep
+performance as ONE sentence-or-three of body direction; do not duplicate
+the action.
 
 Distribute the DIALOGUE lines across the 16 shots IN ORDER. Attach each
-line to the shot where it is spoken. If a shot has no dialogue, omit the
-dialogue marker. Every line from the dialogue array must appear on exactly
-one shot.
+line to the shot where it is spoken via the per-shot dialogue array.
+Every line from the supplied dialogue array must appear on exactly one
+shot and nowhere else. Do not paraphrase. Do not duplicate. If a shot is
+wordless, return an empty dialogue array for it.
 
 PUNCTUATION RULE: never use em dashes. Use commas, periods, or sentence
 breaks.
 
-Output EXACTLY this format, one shot per line, nothing else. Separators
-are single vertical bars with one space on each side:
-Shot N: [Camera] | [Action] | [Performance: ...] [Speaker: "line"] [Speaker: "line"]
+OUTPUT FORMAT: return JSON ONLY (no prose, no fences). The top-level
+value is an array of exactly 16 shot objects, each shaped:
+{
+  "n": 1-16 (1-indexed, in order),
+  "camera": "string describing framing/angle/movement",
+  "action": "what happens in the shot; characters by name; no body
+             direction here (that goes in performance)",
+  "performance": "body acting: weight, posture, hands, eyeline, breath,
+                  micro-expression, the physical tension between bodies",
+  "dialogue": [ { "speaker": "Name", "line": "exact quoted speech" }, ... ]
+}
 
 Cast:
 {cast}
@@ -248,7 +264,7 @@ Cast:
 SCENE DESCRIPTION:
 {sceneDescription}
 
-DIALOGUE (in order):
+DIALOGUE (in order, must all appear across the 16 shots):
 {dialogue}`,
 
   stage4: `Professional 9:16 VERTICAL storyboard sheet. 16 panels in a 2

@@ -3,6 +3,13 @@ import { use, useEffect, useState } from "react";
 
 type DialogueLine = { speaker: string; line: string };
 type CharacterSheet = { name: string; url: string };
+type Shot = {
+  n: number;
+  camera: string;
+  action: string;
+  performance?: string;
+  dialogue: DialogueLine[];
+};
 type InflightHiggsfieldJob = {
   hfJobId: string;
   stage: string;
@@ -18,7 +25,7 @@ type StatusResponse = {
     dialogue?: DialogueLine[];
     characterSheets?: CharacterSheet[];
     locationSheetUrl?: string;
-    shotList?: { n: number; camera: string; action: string; dialogue: DialogueLine[] }[];
+    shotList?: Shot[];
     storyboardUrl?: string;
     videoUrl?: string;
     inflightHiggsfieldJobs?: InflightHiggsfieldJob[];
@@ -34,6 +41,7 @@ const STAGE_LABELS: Record<string, string> = {
   char_sheets: "Character sheets",
   loc_sheet: "Location sheet",
   shot_list: "16-shot list",
+  awaiting_shotlist_approval: "Awaiting shot list approval",
   storyboard: "Storyboard grid",
   video: "Final video",
   done: "Done",
@@ -173,6 +181,24 @@ export default function StatusPage({ params }: { params: Promise<{ jobId: string
         ) : null}
       </header>
 
+      {data.status === "awaiting_shotlist_approval" ? (
+        <section className="border border-violet-300 bg-violet-50 rounded-lg p-4 space-y-2">
+          <h2 className="text-sm font-medium text-violet-900">
+            Shot list ready for review
+          </h2>
+          <p className="text-violet-800 text-sm">
+            The 16-shot list draft is waiting on your edits before the
+            storyboard image and the final video render. Open the editor:
+          </p>
+          <a
+            href={`/review-shots/${jobId}`}
+            className="inline-block bg-violet-700 text-white text-sm rounded px-4 py-2"
+          >
+            Review shots
+          </a>
+        </section>
+      ) : null}
+
       {a.inflightHiggsfieldJobs && a.inflightHiggsfieldJobs.length > 0 ? (
         <section className="space-y-2 border border-violet-200 bg-violet-50 rounded-lg p-4">
           <h2 className="text-sm font-medium text-violet-900">
@@ -246,17 +272,25 @@ export default function StatusPage({ params }: { params: Promise<{ jobId: string
       {a.shotList ? (
         <section className="space-y-2">
           <h2 className="text-sm font-medium text-stone-700">Shot list</h2>
-          <ol className="space-y-1 text-sm text-stone-800">
+          <ol className="space-y-3 text-sm text-stone-800">
             {a.shotList.map((s) => (
-              <li key={s.n}>
-                <span className="font-medium">Shot {s.n}:</span>{" "}
-                <span className="text-stone-600">{s.camera}</span> | {s.action}
+              <li key={s.n} className="border-l-2 border-stone-200 pl-3">
+                <div>
+                  <span className="font-medium">Shot {s.n}:</span>{" "}
+                  <span className="text-stone-600">{s.camera}</span> | {s.action}
+                </div>
+                {(s as { performance?: string }).performance ? (
+                  <div className="text-xs text-stone-500 mt-0.5">
+                    <span className="font-medium">Performance:</span>{" "}
+                    {(s as { performance: string }).performance}
+                  </div>
+                ) : null}
                 {s.dialogue.length > 0 ? (
-                  <span className="ml-1 text-violet-700">
+                  <div className="mt-1 text-violet-700">
                     {s.dialogue
                       .map((d) => `[${d.speaker}: "${d.line}"]`)
                       .join(" ")}
-                  </span>
+                  </div>
                 ) : null}
               </li>
             ))}

@@ -9,10 +9,7 @@ import {
   generateImage as hgImage,
   generateVideo as hgVideo,
 } from "./backends/higgsfield";
-import {
-  gatewayGenerateText,
-  gatewayGenerateVideo,
-} from "./backends/gateway";
+import { gatewayGenerateVideo } from "./backends/gateway";
 import { withFallback } from "./backends/withFallback";
 import {
   renderStage1,
@@ -127,7 +124,8 @@ export async function stage3(
     dialogue: args.dialogue,
     characters: args.characters,
   });
-  const text = await gatewayGenerateText({
+  const { gatewayGenerateJSON } = await import("./backends/gateway");
+  const raw = await gatewayGenerateJSON<unknown>({
     prompt,
     imageUrls: [
       ...args.characterSheets.map((s) => s.url),
@@ -135,21 +133,55 @@ export async function stage3(
     ],
     modelId: MODELS.shotList.gateway,
   });
-  const shots = parseShotList(text);
-  if (shots.length !== 16) {
+  const shots = validateShotList(raw, args.dialogue);
+  await writeShotList(jobId, shots);
+  await mergeArtifacts(jobId, { shotList: shots });
+  await recordBackend(jobId, "stage3", "gateway");
+  return shots;
+}
+
+// Validates the JSON the model returned and patches in any missing dialogue
+// lines (best-effort recovery — Stage 5 voices from the shot list, so a
+// dropped line is a silent line). Every captured string runs through
+// stripEmDashes so the speech pipeline downstream stays clean.
+export function validateShotList(
+  raw: unknown,
+  expectedDialogue: DialogueLine[],
+): Shot[] {
+  if (!Array.isArray(raw)) {
     throw new Error(
-      `Stage 3 expected 16 shots, got ${shots.length}. Raw:\n${text}`,
+      `Stage 3: expected JSON array of shots, got ${typeof raw}`,
     );
   }
-  // Sanity check: every dialogue line from Stage 0 should appear somewhere.
-  // Stage 5 prompt re-injects from the shots' dialogue, so any line not
-  // picked up here will not be voiced. Best-effort recovery: append unplaced
-  // lines to the mid shot.
-  const placedLines = new Set(
+  if (raw.length !== 16) {
+    throw new Error(`Stage 3: expected 16 shots, got ${raw.length}`);
+  }
+  const shots: Shot[] = raw.map((r, i) => {
+    const obj = r as Record<string, unknown>;
+    const n = typeof obj.n === "number" ? obj.n : i + 1;
+    const camera = stripEmDashes(String(obj.camera ?? ""));
+    const action = stripEmDashes(String(obj.action ?? ""));
+    const performance = stripEmDashes(String(obj.performance ?? ""));
+    const dialogueIn = Array.isArray(obj.dialogue) ? obj.dialogue : [];
+    const dialogue: DialogueLine[] = dialogueIn
+      .map((d) => {
+        const o = d as Record<string, unknown>;
+        return {
+          speaker: String(o.speaker ?? "").trim(),
+          line: stripEmDashes(String(o.line ?? "")),
+        };
+      })
+      .filter((d) => d.speaker && d.line);
+    return { n, camera, action, performance, dialogue };
+  });
+  shots.sort((a, b) => a.n - b.n);
+  // Recovery: any approved dialogue line that didn't make it into a shot
+  // gets appended to the middle shot so it still gets voiced.
+  const placed = new Set(
     shots.flatMap((s) => s.dialogue.map((d) => `${d.speaker}|${d.line}`)),
   );
-  const missing = args.dialogue.filter(
-    (d) => !placedLines.has(`${d.speaker}|${d.line}`),
+  const missing = expectedDialogue.filter(
+    (d) => !placed.has(`${d.speaker}|${d.line}`),
   );
   if (missing.length > 0) {
     const mid = Math.floor(shots.length / 2);
@@ -158,45 +190,7 @@ export async function stage3(
       dialogue: [...shots[mid].dialogue, ...missing],
     };
   }
-  await writeShotList(jobId, shots);
-  await mergeArtifacts(jobId, { shotList: shots });
-  await recordBackend(jobId, "stage3", "gateway");
   return shots;
-}
-
-// Parses lines like:
-//   Shot 1: Wide low-angle | Mira approaches the doorway. [Mira: "Hello?"]
-// Pipe is the canonical separator (em dashes are banned). Hyphen and em
-// dash are still accepted on parse for resilience against drift, but every
-// captured string is sanitized via stripEmDashes before it leaves the parser.
-export function parseShotList(text: string): Shot[] {
-  const out: Shot[] = [];
-  const lineRe = /^Shot\s+(\d+)\s*:\s*([^|—-]+?)\s*[|—-]\s*(.+)$/i;
-  const dlgRe = /\[([^:\]]+):\s*"([^"]+)"\]/g;
-  for (const raw of text.split(/\r?\n/)) {
-    const line = raw.trim();
-    if (!line) continue;
-    const m = lineRe.exec(line);
-    if (!m) continue;
-    const n = Number(m[1]);
-    const camera = stripEmDashes(m[2]);
-    let action = m[3].trim();
-    const dialogue: DialogueLine[] = [];
-    action = action
-      .replace(dlgRe, (_full, speaker: string, lineText: string) => {
-        dialogue.push({
-          speaker: speaker.trim(),
-          line: stripEmDashes(lineText),
-        });
-        return "";
-      })
-      .replace(/\s+/g, " ")
-      .trim();
-    action = stripEmDashes(action);
-    out.push({ n, camera, action, dialogue });
-  }
-  out.sort((a, b) => a.n - b.n);
-  return out;
 }
 
 // Stage 4: storyboard grid image (2x8 vertical panels). Reference ORDER
