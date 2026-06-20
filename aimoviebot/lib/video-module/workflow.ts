@@ -1,20 +1,15 @@
 import { stage1, stage2, stage3, stage4, stage5 } from "./stages";
-import {
-  mergeArtifacts,
-  readJob,
-  setStatus,
-  updateJob,
-} from "./storage";
-import type { StageName } from "./types";
+import { readJob, setStatus, updateJob } from "./storage";
+import type { Character, StageName } from "./types";
 
 // Each stage is a "use step" function: it runs in a full Node.js context
 // (Blob, fetch, AI SDK all work), it's independently retryable, and the
 // workflow runtime persists the result so a replay doesn't redo the work.
 
-async function runStage1Step(jobId: string, characterImageUrl: string) {
+async function runStage1ForCharacterStep(jobId: string, character: Character) {
   "use step";
-  await setStatus(jobId, "char_sheet");
-  await stage1(jobId, characterImageUrl);
+  await setStatus(jobId, "char_sheets");
+  await stage1(jobId, character);
 }
 
 async function runStage2Step(jobId: string, locationImageUrl: string) {
@@ -28,14 +23,21 @@ async function runStage3Step(jobId: string) {
   await setStatus(jobId, "shot_list");
   const job = await readJob(jobId);
   if (!job) throw new Error(`Job ${jobId} disappeared`);
-  if (!job.artifacts.sceneDescription || !job.artifacts.dialogue)
+  if (!job.artifacts.sceneDescription || !job.artifacts.dialogue) {
     throw new Error("Approved sceneDescription / dialogue missing");
-  if (!job.artifacts.characterSheetUrl || !job.artifacts.locationSheetUrl)
+  }
+  if (
+    !job.artifacts.characterSheets ||
+    job.artifacts.characterSheets.length === 0 ||
+    !job.artifacts.locationSheetUrl
+  ) {
     throw new Error("Stage 1/2 artifacts missing for Stage 3");
+  }
   await stage3(jobId, {
     sceneDescription: job.artifacts.sceneDescription,
     dialogue: job.artifacts.dialogue,
-    characterSheetUrl: job.artifacts.characterSheetUrl,
+    characters: job.characters,
+    characterSheets: job.artifacts.characterSheets,
     locationSheetUrl: job.artifacts.locationSheetUrl,
   });
 }
@@ -47,14 +49,16 @@ async function runStage4Step(jobId: string) {
   if (!job) throw new Error(`Job ${jobId} disappeared`);
   if (
     !job.artifacts.shotList ||
-    !job.artifacts.characterSheetUrl ||
+    !job.artifacts.characterSheets ||
+    job.artifacts.characterSheets.length === 0 ||
     !job.artifacts.locationSheetUrl
   ) {
     throw new Error("Stage 4 missing upstream artifacts");
   }
   await stage4(jobId, {
     shots: job.artifacts.shotList,
-    characterSheetUrl: job.artifacts.characterSheetUrl,
+    characters: job.characters,
+    characterSheets: job.artifacts.characterSheets,
     locationSheetUrl: job.artifacts.locationSheetUrl,
   });
 }
@@ -66,7 +70,8 @@ async function runStage5Step(jobId: string) {
   if (!job) throw new Error(`Job ${jobId} disappeared`);
   if (
     !job.artifacts.shotList ||
-    !job.artifacts.characterSheetUrl ||
+    !job.artifacts.characterSheets ||
+    job.artifacts.characterSheets.length === 0 ||
     !job.artifacts.locationSheetUrl ||
     !job.artifacts.storyboardUrl
   ) {
@@ -74,7 +79,8 @@ async function runStage5Step(jobId: string) {
   }
   await stage5(jobId, {
     shots: job.artifacts.shotList,
-    characterSheetUrl: job.artifacts.characterSheetUrl,
+    characters: job.characters,
+    characterSheets: job.artifacts.characterSheets,
     locationSheetUrl: job.artifacts.locationSheetUrl,
     storyboardUrl: job.artifacts.storyboardUrl,
     durationSec: job.videoDurationSec,
@@ -95,20 +101,27 @@ async function markDone(jobId: string) {
   await setStatus(jobId, "done");
 }
 
+async function readJobStep(jobId: string) {
+  "use step";
+  return readJob(jobId);
+}
+
 // Durable orchestrator. Started by /api/video/approve once the user locks in
 // the edited sceneDescription + dialogue. Each stage persists its own state,
 // so an interruption resumes from the last completed step.
+//
+// Stage 1 runs in parallel ACROSS characters AND in parallel WITH Stage 2.
+// N characters = N independent image gens, all concurrent.
 export async function approvedVideoWorkflow(
   jobId: string,
-  characterImageUrl: string,
+  characters: Character[],
   locationImageUrl: string,
 ) {
   "use workflow";
 
   try {
-    // Stages 1 + 2 are independent; run in parallel for latency.
     await Promise.all([
-      runStage1Step(jobId, characterImageUrl),
+      ...characters.map((c) => runStage1ForCharacterStep(jobId, c)),
       runStage2Step(jobId, locationImageUrl),
     ]);
     await runStage3Step(jobId);
@@ -117,8 +130,7 @@ export async function approvedVideoWorkflow(
     await markDone(jobId);
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    const stage = inferStageFromError(message);
-    await markFailed(jobId, stage, message);
+    await markFailed(jobId, inferStageFromError(message), message);
     throw err;
   }
 }
@@ -133,13 +145,18 @@ function inferStageFromError(message: string): StageName {
 }
 
 // Retry from a specific stage forward, reusing whatever is already persisted.
+// Retrying from stage 1 re-runs every character sheet in parallel.
 export async function retryFromStage(jobId: string, fromStage: 1 | 2 | 3 | 4 | 5) {
   "use workflow";
 
   const job = await readJobStep(jobId);
   if (!job) throw new Error(`Job ${jobId} not found`);
   try {
-    if (fromStage <= 1) await runStage1Step(jobId, job.characterImageUrl);
+    if (fromStage <= 1) {
+      await Promise.all(
+        job.characters.map((c) => runStage1ForCharacterStep(jobId, c)),
+      );
+    }
     if (fromStage <= 2) await runStage2Step(jobId, job.locationImageUrl);
     if (fromStage <= 3) await runStage3Step(jobId);
     if (fromStage <= 4) await runStage4Step(jobId);
@@ -150,9 +167,4 @@ export async function retryFromStage(jobId: string, fromStage: 1 | 2 | 3 | 4 | 5
     await markFailed(jobId, inferStageFromError(message), message);
     throw err;
   }
-}
-
-async function readJobStep(jobId: string) {
-  "use step";
-  return readJob(jobId);
 }

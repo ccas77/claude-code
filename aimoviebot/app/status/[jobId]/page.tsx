@@ -2,6 +2,7 @@
 import { use, useEffect, useState } from "react";
 
 type DialogueLine = { speaker: string; line: string };
+type CharacterSheet = { name: string; url: string };
 
 type StatusResponse = {
   jobId: string;
@@ -9,7 +10,7 @@ type StatusResponse = {
   artifacts: {
     sceneDescription?: string;
     dialogue?: DialogueLine[];
-    characterSheetUrl?: string;
+    characterSheets?: CharacterSheet[];
     locationSheetUrl?: string;
     shotList?: { n: number; camera: string; action: string; dialogue: DialogueLine[] }[];
     storyboardUrl?: string;
@@ -23,7 +24,7 @@ const STAGE_LABELS: Record<string, string> = {
   queued: "Queued",
   concept: "Drafting concept",
   awaiting_approval: "Awaiting approval",
-  char_sheet: "Character sheet",
+  char_sheets: "Character sheets",
   loc_sheet: "Location sheet",
   shot_list: "16-shot list",
   storyboard: "Storyboard grid",
@@ -101,9 +102,29 @@ export default function StatusPage({ params }: { params: Promise<{ jobId: string
       ) : null}
 
       <section className="grid grid-cols-2 gap-4">
-        <ArtifactTile label="Character sheet" url={a.characterSheetUrl} served={data.servedBy?.stage1} />
-        <ArtifactTile label="Location sheet" url={a.locationSheetUrl} served={data.servedBy?.stage2} />
-        <ArtifactTile label="Storyboard" url={a.storyboardUrl} served={data.servedBy?.stage4} />
+        {(a.characterSheets ?? []).map((sheet) => (
+          <ArtifactTile
+            key={sheet.name}
+            label={sheet.name}
+            url={sheet.url}
+            served={data.servedBy?.stage1}
+          />
+        ))}
+        {(!a.characterSheets || a.characterSheets.length === 0) &&
+        data.status !== "done" &&
+        data.status !== "failed" ? (
+          <ArtifactTile label="Character sheets" url={undefined} />
+        ) : null}
+        <ArtifactTile
+          label="Location sheet"
+          url={a.locationSheetUrl}
+          served={data.servedBy?.stage2}
+        />
+        <ArtifactTile
+          label="Storyboard"
+          url={a.storyboardUrl}
+          served={data.servedBy?.stage4}
+        />
       </section>
 
       {a.shotList ? (

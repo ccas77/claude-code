@@ -5,6 +5,19 @@ export type DialogueLine = {
   line: string;
 };
 
+// One member of the cast. name doubles as the dialogue speaker label, so
+// dialogue.speaker strings should match a character name (with the exception
+// of narrators / off-screen voices, which stay free-text).
+export type Character = {
+  name: string;
+  imageUrl: string;
+};
+
+export type CharacterSheet = {
+  name: string;
+  url: string;
+};
+
 // Shared output of Stage 0, regardless of mode A/B/C. dialogue is first-class
 // data; it MUST survive into Stage 3 (attached per shot) and into Stage 5's
 // Seedance prompt verbatim, or the characters won't speak.
@@ -30,7 +43,7 @@ export type ShotList = Shot[]; // length always 16
 export type Artifacts = {
   sceneDescription?: string;
   dialogue?: DialogueLine[];
-  characterSheetUrl?: string;
+  characterSheets?: CharacterSheet[];
   locationSheetUrl?: string;
   shotList?: ShotList;
   storyboardUrl?: string;
@@ -41,7 +54,7 @@ export type JobStatus =
   | "queued"
   | "concept"
   | "awaiting_approval"
-  | "char_sheet"
+  | "char_sheets"
   | "loc_sheet"
   | "shot_list"
   | "storyboard"
@@ -66,7 +79,7 @@ export type StageResult = {
 export type Job = {
   jobId: string;
   status: JobStatus;
-  characterImageUrl: string;
+  characters: Character[]; // 1+ characters
   locationImageUrl: string;
   videoDurationSec?: number;
   artifacts: Artifacts;
@@ -81,7 +94,7 @@ export type ConceptMode = "A" | "B" | "C";
 export type ConceptInput = {
   mode: ConceptMode;
   conceptInput: string;
-  characterImageUrl: string;
+  characters: Character[];
   locationImageUrl: string;
 };
 

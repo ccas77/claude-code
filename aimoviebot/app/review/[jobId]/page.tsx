@@ -3,9 +3,11 @@ import { use, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 type DialogueLine = { speaker: string; line: string };
+type Character = { name: string; imageUrl: string };
 
 type ConceptDraft = {
   status: string;
+  characters?: Character[];
   artifacts: {
     sceneDescription?: string;
     dialogue?: DialogueLine[];
@@ -19,6 +21,7 @@ export default function ReviewPage({ params }: { params: Promise<{ jobId: string
   const [error, setError] = useState<string | null>(null);
   const [scene, setScene] = useState("");
   const [dialogue, setDialogue] = useState<DialogueLine[]>([]);
+  const [cast, setCast] = useState<Character[]>([]);
   const [duration, setDuration] = useState(4);
   const [submitting, setSubmitting] = useState(false);
 
@@ -32,6 +35,7 @@ export default function ReviewPage({ params }: { params: Promise<{ jobId: string
         if (cancelled) return;
         setScene(data.artifacts.sceneDescription ?? "");
         setDialogue(data.artifacts.dialogue ?? []);
+        setCast(data.characters ?? []);
       } catch (e) {
         if (!cancelled) setError(e instanceof Error ? e.message : String(e));
       } finally {
@@ -110,11 +114,28 @@ export default function ReviewPage({ params }: { params: Promise<{ jobId: string
             + Add line
           </button>
         </div>
+        {cast.length > 0 ? (
+          <p className="text-xs text-stone-500">
+            Speakers should match a cast name so the right reference is voiced:{" "}
+            {cast.map((c, i) => (
+              <span key={c.name}>
+                <span className="text-stone-700 font-medium">{c.name}</span>
+                {i < cast.length - 1 ? ", " : ""}
+              </span>
+            ))}
+            . Free text is fine for narrators / off-screen voices.
+          </p>
+        ) : null}
         {dialogue.length === 0 ? (
           <p className="text-stone-500 text-sm">
             No dialogue. This scene will be wordless unless you add lines.
           </p>
         ) : null}
+        <datalist id="cast-names">
+          {cast.map((c) => (
+            <option key={c.name} value={c.name} />
+          ))}
+        </datalist>
         <ul className="space-y-2">
           {dialogue.map((d, i) => (
             <li key={i} className="flex gap-2 items-start">
@@ -122,6 +143,7 @@ export default function ReviewPage({ params }: { params: Promise<{ jobId: string
                 value={d.speaker}
                 onChange={(e) => setLine(i, { speaker: e.target.value })}
                 placeholder="Speaker"
+                list="cast-names"
                 className="w-32 border border-stone-300 rounded p-2 bg-white"
               />
               <input

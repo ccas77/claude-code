@@ -1,15 +1,31 @@
 import { put, head } from "@vercel/blob";
-import type { Artifacts, Backend, Job, JobStatus, StageName } from "./types";
+import type {
+  Artifacts,
+  Backend,
+  CharacterSheet,
+  Job,
+  JobStatus,
+  StageName,
+} from "./types";
 
 // Deterministic Blob keys. One job, one folder; per stage, one artifact.
 // Retries overwrite (addRandomSuffix: false).
 
 const key = (jobId: string, suffix: string) => `jobs/${jobId}/${suffix}`;
 
+// Slug character names so they're safe as filename segments.
+export const slug = (name: string) =>
+  name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "")
+    .slice(0, 40) || "char";
+
 export const keys = {
   job: (jobId: string) => key(jobId, "job.json"),
   upload: (jobId: string, name: string) => key(jobId, `uploads/${name}`),
-  characterSheet: (jobId: string) => key(jobId, "stage1-character.png"),
+  characterSheet: (jobId: string, characterName: string) =>
+    key(jobId, `stage1-character-${slug(characterName)}.png`),
   locationSheet: (jobId: string) => key(jobId, "stage2-location.png"),
   shotList: (jobId: string) => key(jobId, "stage3-shotlist.json"),
   storyboard: (jobId: string) => key(jobId, "stage4-storyboard.png"),
@@ -100,6 +116,22 @@ export async function mergeArtifacts(
     ...j,
     artifacts: { ...j.artifacts, ...patch },
   }));
+}
+
+// Appends/updates one character sheet by name. Idempotent: re-running stage 1
+// for the same character overwrites that character's entry only.
+export async function upsertCharacterSheet(
+  jobId: string,
+  sheet: CharacterSheet,
+): Promise<void> {
+  await updateJob(jobId, (j) => {
+    const existing = j.artifacts.characterSheets ?? [];
+    const without = existing.filter((s) => s.name !== sheet.name);
+    return {
+      ...j,
+      artifacts: { ...j.artifacts, characterSheets: [...without, sheet] },
+    };
+  });
 }
 
 export async function recordBackend(

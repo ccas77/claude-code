@@ -49,7 +49,7 @@ export async function POST(req: Request) {
 
   const run = await start(approvedVideoWorkflow, [
     jobId,
-    job.characterImageUrl,
+    job.characters,
     job.locationImageUrl,
   ]);
   return NextResponse.json({ jobId, runId: run.runId });

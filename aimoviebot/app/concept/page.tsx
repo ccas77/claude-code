@@ -1,39 +1,60 @@
 "use client";
-import { Suspense, useState } from "react";
+import { Suspense, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 type Mode = "A" | "B" | "C";
+type Character = { name: string; imageUrl: string };
 
-const modeLabels: Record<Mode, { title: string; hint: string; placeholder: string }> = {
+const modeLabels: Record<
+  Mode,
+  { title: string; hint: string; placeholder: string }
+> = {
   A: {
     title: "A · Write it",
-    hint: "You write the scene yourself. Include dialogue in quotes if you want it spoken.",
+    hint: "You write the scene yourself. Use the cast names below as dialogue speakers.",
     placeholder:
-      'She steps into the rain-soaked street. He follows.\n"You shouldn\'t have come here."\n"Then why did you call?"',
+      'Mira steps into the rain-soaked street. Cal follows.\nMira: "You shouldn\'t have come here."\nCal: "Then why did you call?"',
   },
   B: {
     title: "B · Adapt an excerpt",
-    hint: "Paste a passage. The model extracts a filmable scene and pulls dialogue from the prose.",
+    hint: "Paste a passage. The model extracts a filmable scene and pulls dialogue from the prose, mapping speakers to your cast.",
     placeholder: "Paste a few paragraphs of prose here…",
   },
   C: {
     title: "C · From a blurb",
-    hint: "Give a title or a one-line idea. The model proposes 2–3 alternates and writes dialogue.",
-    placeholder: "Title or blurb. e.g. A reluctant heir confronts her sister at midnight.",
+    hint: "Give a title or a one-line idea. The model proposes 2–3 alternates and writes dialogue for your cast.",
+    placeholder:
+      "Title or blurb. e.g. A reluctant heir confronts her sister at midnight.",
   },
 };
+
+function parseCast(raw: string | null): Character[] {
+  if (!raw) return [];
+  try {
+    const arr = JSON.parse(raw);
+    if (!Array.isArray(arr)) return [];
+    return arr
+      .filter(
+        (x): x is Character =>
+          typeof x?.name === "string" && typeof x?.imageUrl === "string",
+      )
+      .map((c) => ({ name: c.name.trim(), imageUrl: c.imageUrl }));
+  } catch {
+    return [];
+  }
+}
 
 function ConceptInner() {
   const router = useRouter();
   const params = useSearchParams();
-  const characterImageUrl = params.get("character") ?? "";
+  const characters = useMemo(() => parseCast(params.get("cast")), [params]);
   const locationImageUrl = params.get("location") ?? "";
   const [mode, setMode] = useState<Mode>("A");
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  if (!characterImageUrl || !locationImageUrl) {
+  if (characters.length === 0 || !locationImageUrl) {
     return (
       <p className="text-stone-600">
         Missing uploads.{" "}
@@ -55,7 +76,7 @@ function ConceptInner() {
         body: JSON.stringify({
           mode,
           conceptInput: text,
-          characterImageUrl,
+          characters,
           locationImageUrl,
         }),
       });
@@ -77,6 +98,16 @@ function ConceptInner() {
         <h1 className="text-2xl font-semibold tracking-tight">Concept</h1>
         <p className="text-stone-600 mt-1">{modeLabels[mode].hint}</p>
       </header>
+
+      <div className="text-sm text-stone-600">
+        Cast:{" "}
+        {characters.map((c, i) => (
+          <span key={c.name}>
+            <span className="text-stone-800 font-medium">{c.name}</span>
+            {i < characters.length - 1 ? ", " : ""}
+          </span>
+        ))}
+      </div>
 
       <div className="flex gap-2">
         {(["A", "B", "C"] as Mode[]).map((m) => (

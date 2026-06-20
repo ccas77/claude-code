@@ -28,24 +28,34 @@ import {
   persistArtifact,
   putJSON,
   recordBackend,
+  upsertCharacterSheet,
 } from "./storage";
-import type { Backend, DialogueLine, Shot, ShotList } from "./types";
+import type {
+  Backend,
+  Character,
+  CharacterSheet,
+  DialogueLine,
+  Shot,
+  ShotList,
+} from "./types";
 
-// Stage 1 — character sheet.
+// Stage 1 — one character sheet per character. The orchestrator calls this
+// once per cast member (in parallel) so a re-run of one character's sheet
+// doesn't redo the others.
 export async function stage1(
   jobId: string,
-  characterImageUrl: string,
+  character: Character,
 ): Promise<{ url: string; backend: Backend }> {
+  const prompt = stage1Prompt(character.name);
   const { result, servedBy } = await withFallback(
-    () => hgImage({ prompt: stage1Prompt, imageRefs: [characterImageUrl] }),
-    () =>
-      gatewayGenerateImage({
-        prompt: stage1Prompt,
-        imageRefs: [characterImageUrl],
-      }),
+    () => hgImage({ prompt, imageRefs: [character.imageUrl] }),
+    () => gatewayGenerateImage({ prompt, imageRefs: [character.imageUrl] }),
   );
-  const url = await persistArtifact(keys.characterSheet(jobId), result.url);
-  await mergeArtifacts(jobId, { characterSheetUrl: url });
+  const url = await persistArtifact(
+    keys.characterSheet(jobId, character.name),
+    result.url,
+  );
+  await upsertCharacterSheet(jobId, { name: character.name, url });
   await recordBackend(jobId, "stage1", servedBy);
   return { url, backend: servedBy };
 }
@@ -70,20 +80,26 @@ export async function stage2(
 }
 
 // Stage 3 — shot list, 16 panels, dialogue distributed.
-// Parser asserts exactly 16 shots and that every dialogue line is attached
-// to exactly one shot.
 export async function stage3(
   jobId: string,
   args: {
     sceneDescription: string;
     dialogue: DialogueLine[];
-    characterSheetUrl: string;
+    characters: Character[];
+    characterSheets: CharacterSheet[];
     locationSheetUrl: string;
   },
 ): Promise<ShotList> {
   const text = await gatewayGenerateText({
-    prompt: stage3Prompt(args.sceneDescription, args.dialogue),
-    imageUrls: [args.characterSheetUrl, args.locationSheetUrl],
+    prompt: stage3Prompt({
+      sceneDescription: args.sceneDescription,
+      dialogue: args.dialogue,
+      characters: args.characters,
+    }),
+    imageUrls: [
+      ...args.characterSheets.map((s) => s.url),
+      args.locationSheetUrl,
+    ],
     modelId: MODELS.shotList.gateway,
   });
   const shots = parseShotList(text);
@@ -93,8 +109,9 @@ export async function stage3(
     );
   }
   // Sanity check: every dialogue line from Stage 0 should appear somewhere.
-  // We log mismatches but don't throw — Stage 5 prompt re-injects from the
-  // shots' dialogue, so any line not picked up here will not be voiced.
+  // Stage 5 prompt re-injects from the shots' dialogue, so any line not
+  // picked up here will not be voiced. Best-effort recovery: append unplaced
+  // lines to the mid shot.
   const placedLines = new Set(
     shots.flatMap((s) => s.dialogue.map((d) => `${d.speaker}|${d.line}`)),
   );
@@ -102,7 +119,6 @@ export async function stage3(
     (d) => !placedLines.has(`${d.speaker}|${d.line}`),
   );
   if (missing.length > 0) {
-    // Best-effort recovery: append unplaced lines to the closest mid shot.
     const mid = Math.floor(shots.length / 2);
     shots[mid] = {
       ...shots[mid],
@@ -116,9 +132,8 @@ export async function stage3(
 }
 
 // Parses lines like:
-//   Shot 1: Wide low-angle — She approaches the doorway. [Mira: "Hello?"]
-// Returns Shot[]. Tolerant of em-dash variants, missing dialogue, multi
-// dialogue markers.
+//   Shot 1: Wide low-angle — Mira approaches the doorway. [Mira: "Hello?"]
+// Tolerant of em-dash variants, missing dialogue, multi dialogue markers.
 export function parseShotList(text: string): Shot[] {
   const out: Shot[] = [];
   const lineRe = /^Shot\s+(\d+)\s*:\s*([^—-]+?)\s*[—-]\s*(.+)$/i;
@@ -132,27 +147,39 @@ export function parseShotList(text: string): Shot[] {
     const camera = m[2].trim();
     let action = m[3].trim();
     const dialogue: DialogueLine[] = [];
-    action = action.replace(dlgRe, (_full, speaker: string, lineText: string) => {
-      dialogue.push({ speaker: speaker.trim(), line: lineText.trim() });
-      return "";
-    }).replace(/\s+/g, " ").trim();
+    action = action
+      .replace(dlgRe, (_full, speaker: string, lineText: string) => {
+        dialogue.push({ speaker: speaker.trim(), line: lineText.trim() });
+        return "";
+      })
+      .replace(/\s+/g, " ")
+      .trim();
     out.push({ n, camera, action, dialogue });
   }
   out.sort((a, b) => a.n - b.n);
   return out;
 }
 
-// Stage 4 — storyboard grid image (2x8 vertical panels).
+// Stage 4 — storyboard grid image (2x8 vertical panels). References = all
+// character sheets + the location sheet, so each panel can correctly draw
+// whichever character is on screen.
 export async function stage4(
   jobId: string,
   args: {
     shots: ShotList;
-    characterSheetUrl: string;
+    characters: Character[];
+    characterSheets: CharacterSheet[];
     locationSheetUrl: string;
   },
 ): Promise<{ url: string; backend: Backend }> {
-  const prompt = stage4Prompt(args.shots);
-  const refs = [args.characterSheetUrl, args.locationSheetUrl];
+  const prompt = stage4Prompt({
+    shots: args.shots,
+    characters: args.characters,
+  });
+  const refs = [
+    ...args.characterSheets.map((s) => s.url),
+    args.locationSheetUrl,
+  ];
   const { result, servedBy } = await withFallback(
     () => hgImage({ prompt, imageRefs: refs }),
     () => gatewayGenerateImage({ prompt, imageRefs: refs }),
@@ -172,7 +199,8 @@ export async function stage5(
   jobId: string,
   args: {
     shots: ShotList;
-    characterSheetUrl: string;
+    characters: Character[];
+    characterSheets: CharacterSheet[];
     locationSheetUrl: string;
     storyboardUrl: string;
     durationSec?: number;
@@ -205,10 +233,15 @@ export async function stage5(
     );
   }
 
-  const prompt = stage5Prompt(args.shots);
+  const prompt = stage5Prompt({
+    shots: args.shots,
+    characters: args.characters,
+  });
+  // Storyboard first (primary source of truth per the spec), then every
+  // character sheet, then location. Seedance reads medias in order.
   const refs = [
     args.storyboardUrl,
-    args.characterSheetUrl,
+    ...args.characterSheets.map((s) => s.url),
     args.locationSheetUrl,
   ];
 
