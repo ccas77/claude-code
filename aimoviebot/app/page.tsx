@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 type Uploaded = { url: string };
@@ -10,6 +10,14 @@ export default function UploadPage() {
   const [location, setLocation] = useState<Uploaded | null>(null);
   const [busy, setBusy] = useState<"character" | "location" | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [connected, setConnected] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    fetch("/api/oauth/higgsfield/status")
+      .then((r) => r.json())
+      .then((d) => setConnected(Boolean(d.connected)))
+      .catch(() => setConnected(false));
+  }, []);
 
   async function upload(kind: "character" | "location", file: File) {
     setError(null);
@@ -41,6 +49,32 @@ export default function UploadPage() {
           character image and a location image.
         </p>
       </header>
+
+      <div
+        className={`rounded-lg px-4 py-3 text-sm border ${
+          connected
+            ? "bg-violet-50 border-violet-200 text-violet-900"
+            : "bg-stone-50 border-stone-200 text-stone-700"
+        }`}
+      >
+        {connected === null ? (
+          "Checking Higgsfield connection…"
+        ) : connected ? (
+          <>Higgsfield connected. Renders will use nano_banana_pro + seedance_2_0.</>
+        ) : (
+          <>
+            Higgsfield not connected. The app still works via the Gateway
+            fallback, but to use the higher-quality primary path,{" "}
+            <a
+              href="/api/oauth/higgsfield"
+              className="underline font-medium"
+            >
+              connect Higgsfield
+            </a>
+            .
+          </>
+        )}
+      </div>
 
       <section className="grid grid-cols-1 sm:grid-cols-2 gap-6">
         <UploadCard

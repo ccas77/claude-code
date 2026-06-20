@@ -25,36 +25,25 @@ export const VIDEO_DEFAULTS = {
   genre: "auto" as const,
 };
 
-// Model catalog. Primary = Higgsfield REST; fallback = Vercel AI Gateway.
-// Stage 0 + Stage 3 are text-only and have no Higgsfield primary.
+// Model catalog. Primary = Higgsfield via MCP-over-HTTP (OAuth); fallback =
+// Vercel AI Gateway. Stage 0 + Stage 3 are text-only, Gateway-direct.
 //
-// Higgsfield model IDs use slash form per their REST API (e.g.
-// "higgsfield-ai/soul/standard"). The MCP-side aliases "nano_banana_pro" and
-// "seedance_2_0" do not appear verbatim in the public REST docs, so the slugs
-// below are best-guess. If the Higgsfield primary 404s, withFallback drops to
-// the Gateway transparently and the pipeline still completes. Adjust these
-// after the first deploy if Higgsfield surfaces a different canonical slug.
+// Higgsfield model IDs are the underscored ones the MCP `generate_image`/
+// `generate_video` tools accept in `params.model`. Gateway slugs are
+// verified live against ai-gateway.vercel.sh/v1/models.
 export const MODELS = {
   concept: { gateway: "anthropic/claude-sonnet-4.6" },
   image: {
-    higgsfield: "higgsfield-ai/nano-banana/pro",
+    higgsfield: "nano_banana_pro",
     gateway: "google/gemini-3-pro-image",
   },
   shotList: { gateway: "anthropic/claude-sonnet-4.6" },
   video: {
-    higgsfield: "bytedance/seedance/2.0",
-    // Gateway slug verified against ai-gateway.vercel.sh/v1/models.
-    // The "-fast" variant matches our default mode: "fast".
+    higgsfield: "seedance_2_0",
+    // The "-fast" Gateway variant matches our default mode: "fast".
     gateway: "bytedance/seedance-2.0-fast",
   },
 } as const;
-
-// Higgsfield REST API. Base URL per
-// https://docs.higgsfield.ai/docs/how-to/introduction. Auth is the composite
-// "Key {API_KEY}:{API_SECRET}" form, NOT a bearer token.
-export const HIGGSFIELD = {
-  baseUrl: "https://platform.higgsfield.ai",
-};
 
 // Gateway fetch needs an Undici Agent with an extended timeout for the video
 // call. Node's default is 5 min and Seedance can take longer. 10 min headroom.

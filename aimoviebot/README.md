@@ -5,11 +5,13 @@
 ## Deploy
 
 1. Push this branch to GitHub.
-2. Create a Vercel project pointing at this repo.
+2. Create a Vercel project pointing at `aimoviebot/` as the root directory.
 3. Storage → Create → Blob (token auto-injects, no env var needed).
 4. AI → enable AI Gateway (OIDC auto-auth, no env var needed in production).
-5. Set env vars in the project: `HIGGSFIELD_API_KEY`, `HIGGSFIELD_API_SECRET` (grab both from the Higgsfield dashboard → Account → API keys).
-6. Deploy.
+5. Deploy.
+6. Visit `https://<your-prod-url>/api/oauth/higgsfield` once to connect Higgsfield via OAuth. Tokens persist in Blob; the connection is reused across renders and refreshed automatically.
+
+No API keys to manage. The Higgsfield client uses MCP-over-HTTP with the OAuth access token. If the OAuth flow isn't connected, the pipeline still completes via the AI Gateway fallback (Gemini 3 Pro Image + Seedance 2.0 Fast).
 
 ## How it works
 

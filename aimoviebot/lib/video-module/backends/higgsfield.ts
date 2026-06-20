@@ -1,27 +1,12 @@
+import { ASPECT_RATIO, GENERATE_AUDIO, MODELS } from "../config";
 import {
-  ASPECT_RATIO,
-  HIGGSFIELD,
-  MODELS,
-  GENERATE_AUDIO,
-} from "../config";
+  MCP_URL,
+  getValidAccessToken,
+  HiggsfieldNotConnected,
+} from "./higgsfield-oauth";
 
-// Higgsfield REST API client. Documented at
-// https://docs.higgsfield.ai/docs/how-to/introduction.
-//
-// Auth header is the composite "Key {API_KEY}:{API_SECRET}" form, NOT Bearer.
-// Requests are async: POST returns {request_id, status_url}, then you poll
-// GET /requests/{request_id}/status until status == "completed" or "failed".
-
-const authHeader = () => {
-  const key = process.env.HIGGSFIELD_API_KEY;
-  const secret = process.env.HIGGSFIELD_API_SECRET;
-  if (!key || !secret) {
-    throw new HiggsfieldUnavailable(
-      "HIGGSFIELD_API_KEY / HIGGSFIELD_API_SECRET not set",
-    );
-  }
-  return `Key ${key}:${secret}`;
-};
+// Higgsfield via MCP-over-HTTP (Streamable HTTP / JSON-RPC). Auth is the
+// OAuth access token from the Connect flow; calls are JSON-RPC tools/call.
 
 export class HiggsfieldError extends Error {
   constructor(message: string, public status?: number) {
@@ -30,9 +15,8 @@ export class HiggsfieldError extends Error {
   }
 }
 
-// Signals to withFallback that the primary path is genuinely unavailable
-// (missing creds, wrong base URL). Treated the same as a transient failure:
-// fall straight to Gateway.
+// Signals to withFallback that the primary is unavailable (not connected,
+// missing tokens). Treated the same as a transient failure: fall to Gateway.
 export class HiggsfieldUnavailable extends HiggsfieldError {
   constructor(message: string) {
     super(message);
@@ -40,168 +24,267 @@ export class HiggsfieldUnavailable extends HiggsfieldError {
   }
 }
 
-type QueuedResponse = {
-  status: "queued" | "in_progress";
-  request_id: string;
-  status_url?: string;
-};
-
-type CompletedResponse = {
-  status: "completed";
-  request_id: string;
-  images?: { url: string }[];
-  video?: { url: string };
-};
-
-type FailedResponse = {
-  status: "failed" | "cancelled" | "nsfw" | "ip_detected";
-  request_id: string;
-  error?: string;
-};
-
-type StatusResponse = QueuedResponse | CompletedResponse | FailedResponse;
-
-const isTerminal = (r: StatusResponse) =>
-  r.status === "completed" ||
-  r.status === "failed" ||
-  r.status === "cancelled" ||
-  r.status === "nsfw" ||
-  r.status === "ip_detected";
-
-async function pollJob(
-  requestId: string,
-  opts: { intervalMs?: number; timeoutMs?: number } = {},
-): Promise<CompletedResponse> {
-  const intervalMs = opts.intervalMs ?? 5_000;
-  const timeoutMs = opts.timeoutMs ?? 10 * 60 * 1000;
-  const start = Date.now();
-  while (true) {
-    const res = await fetch(
-      `${HIGGSFIELD.baseUrl}/requests/${requestId}/status`,
-      { headers: { Authorization: authHeader() } },
-    );
-    if (!res.ok) {
-      throw new HiggsfieldError(
-        `status poll ${res.status} ${await res.text()}`,
-        res.status,
-      );
-    }
-    const body = (await res.json()) as StatusResponse;
-    if (isTerminal(body)) {
-      if (body.status !== "completed") {
-        throw new HiggsfieldError(
-          `Higgsfield job ${requestId} ended in status ${body.status}`,
-        );
+// MCP server may return SSE OR application/json even for a single result.
+// Pull the JSON payload out of either envelope.
+function parseSseEnvelope(body: string): unknown {
+  let payload: unknown = null;
+  for (const line of body.split(/\r?\n/)) {
+    if (line.startsWith("data:")) {
+      const raw = line.slice(5).trim();
+      if (!raw) continue;
+      try {
+        payload = JSON.parse(raw);
+      } catch {
+        // multi-line data: not used here
       }
-      return body;
     }
-    if (Date.now() - start > timeoutMs) {
-      throw new HiggsfieldError(
-        `Higgsfield job ${requestId} timed out after ${timeoutMs}ms`,
-      );
-    }
-    await new Promise((r) => setTimeout(r, intervalMs));
   }
+  return payload;
 }
 
-async function submit(modelId: string, body: Record<string, unknown>) {
-  const res = await fetch(`${HIGGSFIELD.baseUrl}/${modelId}`, {
+let _id = 0;
+async function jsonRpc<T>(
+  token: string,
+  method: string,
+  params?: unknown,
+): Promise<T> {
+  const res = await fetch(MCP_URL, {
     method: "POST",
     headers: {
-      Authorization: authHeader(),
       "Content-Type": "application/json",
+      Accept: "application/json, text/event-stream",
+      Authorization: `Bearer ${token}`,
     },
-    body: JSON.stringify(body),
+    body: JSON.stringify({ jsonrpc: "2.0", id: ++_id, method, params }),
   });
   if (!res.ok) {
     throw new HiggsfieldError(
-      `submit ${modelId} -> ${res.status} ${await res.text()}`,
+      `MCP ${method} ${res.status}: ${await res.text()}`,
       res.status,
     );
   }
-  return (await res.json()) as QueuedResponse | CompletedResponse;
+  const ct = res.headers.get("content-type") ?? "";
+  const text = await res.text();
+  let body: { result?: T; error?: unknown };
+  if (ct.includes("text/event-stream") || text.startsWith("event:") || text.startsWith("data:")) {
+    const parsed = parseSseEnvelope(text);
+    if (!parsed) {
+      throw new HiggsfieldError(`MCP ${method}: empty SSE payload`);
+    }
+    body = parsed as { result?: T; error?: unknown };
+  } else {
+    try {
+      body = JSON.parse(text);
+    } catch {
+      throw new HiggsfieldError(
+        `MCP ${method}: response not JSON or SSE (ct=${ct}): ${text.slice(0, 200)}`,
+      );
+    }
+  }
+  if (body.error) {
+    throw new HiggsfieldError(`MCP ${method} error: ${JSON.stringify(body.error)}`);
+  }
+  return body.result as T;
 }
 
-// importMedia: the spec describes a media_id flow (media_import_url ->
-// media_confirm -> media_id). The public REST docs don't document this
-// endpoint with a stable shape; the MCP-side equivalent expects an HTTPS URL
-// and returns a media_id. Vercel Blob URLs are public HTTPS, so for the REST
-// path we pass them straight through as image_urls. If a future Higgsfield
-// REST endpoint requires media_id, only this helper changes.
+// Wrap MCP tools/call and unwrap the standard {content, structuredContent}
+// envelope so callers see the tool's actual payload.
+async function toolCall<T>(
+  token: string,
+  name: string,
+  args: Record<string, unknown>,
+): Promise<T> {
+  const wrapped = await jsonRpc<{
+    content?: Array<{ type: string; text?: string }>;
+    structuredContent?: T;
+    isError?: boolean;
+  }>(token, "tools/call", { name, arguments: args });
+
+  if (wrapped.isError) {
+    const txt = wrapped.content?.find((c) => c.type === "text")?.text ?? "(no detail)";
+    throw new HiggsfieldError(`MCP tool ${name} reported error: ${txt}`);
+  }
+  if (wrapped.structuredContent !== undefined) return wrapped.structuredContent;
+  const textBlock = wrapped.content?.find((c) => c.type === "text");
+  if (textBlock?.text) {
+    try {
+      return JSON.parse(textBlock.text) as T;
+    } catch {
+      return textBlock.text as unknown as T;
+    }
+  }
+  return wrapped as unknown as T;
+}
+
+async function authToken(): Promise<string> {
+  try {
+    return await getValidAccessToken();
+  } catch (err) {
+    if (err instanceof HiggsfieldNotConnected) {
+      throw new HiggsfieldUnavailable(err.message);
+    }
+    throw err;
+  }
+}
+
+// ---- Public surface ----
+
 export async function importMedia(blobUrl: string): Promise<string> {
-  return blobUrl;
-}
-
-// Image gen. References (character/location sheets, etc.) are passed as
-// medias[] with role "image". If the Higgsfield REST API rejects this shape,
-// HiggsfieldError surfaces and withFallback routes to Gateway.
-export async function generateImage(args: {
-  prompt: string;
-  imageRefs: string[]; // public HTTPS URLs (Blob)
-}): Promise<{ url: string }> {
-  const modelId = MODELS.image.higgsfield;
-  const medias = await Promise.all(args.imageRefs.map(importMedia));
-  const submitted = await submit(modelId, {
-    prompt: args.prompt,
-    aspect_ratio: ASPECT_RATIO,
-    medias: medias.map((value) => ({ value, role: "image" })),
-  });
-  const final =
-    submitted.status === "completed"
-      ? submitted
-      : await pollJob(submitted.request_id, { timeoutMs: 3 * 60 * 1000 });
-  const url = final.images?.[0]?.url;
-  if (!url) {
+  const token = await authToken();
+  const res = await toolCall<{ media_id?: string; id?: string }>(
+    token,
+    "media_import_url",
+    { url: blobUrl, type: "auto" },
+  );
+  const mediaId = res.media_id ?? res.id;
+  if (!mediaId) {
     throw new HiggsfieldError(
-      `Higgsfield image completed without a URL: ${JSON.stringify(final)}`,
+      `media_import_url returned no media_id: ${JSON.stringify(res)}`,
     );
   }
-  return { url };
+  return mediaId;
 }
 
-// Video gen. The hard product constants (9:16, generate_audio: true) are
-// asserted here so they can't drift even if a caller forgets them.
+type JobSubmitResponse = {
+  results?: Array<{ id?: string; status?: string; url?: string }>;
+  notice?: {
+    data?: {
+      retry_literal_with?: { declined_preset_id?: string };
+    };
+  };
+};
+
+type JobStatusResponse = {
+  status?: string;
+  poll_after_seconds?: number;
+  results?: Array<{ url?: string; type?: string }>;
+  urls?: string[];
+  error?: string;
+};
+
+async function pollJob(
+  token: string,
+  jobId: string,
+  opts: { timeoutMs: number },
+): Promise<JobStatusResponse> {
+  const start = Date.now();
+  let interval = 5_000;
+  while (true) {
+    const status = await toolCall<JobStatusResponse>(token, "job_status", {
+      jobId,
+    });
+    const s = (status.status ?? "").toLowerCase();
+    if (s === "completed") return status;
+    if (s === "failed" || s === "cancelled" || s === "nsfw" || s === "ip_detected") {
+      throw new HiggsfieldError(
+        `Higgsfield job ${jobId} ended in status ${status.status}: ${status.error ?? "(no detail)"}`,
+      );
+    }
+    if (Date.now() - start > opts.timeoutMs) {
+      throw new HiggsfieldError(
+        `Higgsfield job ${jobId} timed out after ${opts.timeoutMs}ms`,
+      );
+    }
+    if (typeof status.poll_after_seconds === "number") {
+      interval = Math.max(2_000, status.poll_after_seconds * 1000);
+    }
+    await new Promise((r) => setTimeout(r, interval));
+  }
+}
+
+function extractUrl(status: JobStatusResponse): string {
+  const url = status.results?.[0]?.url ?? status.urls?.[0];
+  if (!url) {
+    throw new HiggsfieldError(
+      `Higgsfield completed without a URL: ${JSON.stringify(status).slice(0, 400)}`,
+    );
+  }
+  return url;
+}
+
+export async function generateImage(args: {
+  prompt: string;
+  imageRefs: string[]; // public HTTPS URLs (Blob); converted to media_ids
+}): Promise<{ url: string }> {
+  const token = await authToken();
+  const mediaIds = await Promise.all(args.imageRefs.map((u) => importMedia(u)));
+  const submitted = await toolCall<JobSubmitResponse>(token, "generate_image", {
+    params: {
+      model: MODELS.image.higgsfield,
+      prompt: args.prompt,
+      aspect_ratio: ASPECT_RATIO,
+      count: 1,
+      medias: mediaIds.map((value) => ({ value, role: "image" })),
+    },
+  });
+  const jobId = submitted.results?.[0]?.id;
+  if (!jobId) {
+    throw new HiggsfieldError(
+      `generate_image returned no job id: ${JSON.stringify(submitted).slice(0, 300)}`,
+    );
+  }
+  const final = await pollJob(token, jobId, { timeoutMs: 3 * 60 * 1000 });
+  return { url: extractUrl(final) };
+}
+
 export async function generateVideo(args: {
   prompt: string;
-  imageRefs: string[]; // storyboard + character + location URLs
+  imageRefs: string[]; // storyboard + character + location
   resolution: "480p" | "720p" | "1080p";
   mode: "std" | "fast";
   duration: number;
-  genre?: string;
   startImageUrl?: string;
 }): Promise<{ url: string }> {
   if (!GENERATE_AUDIO) {
-    throw new Error(
-      "generate_audio guard tripped: AI Movie Bot requires audio ON",
-    );
+    throw new Error("generate_audio guard tripped: AI Movie Bot requires audio ON");
   }
-  const modelId = MODELS.video.higgsfield;
-  const medias = await Promise.all(args.imageRefs.map(importMedia));
+  const token = await authToken();
+  const mediaIds = await Promise.all(args.imageRefs.map((u) => importMedia(u)));
   const startMedia = args.startImageUrl
     ? await importMedia(args.startImageUrl)
     : undefined;
-  const submitted = await submit(modelId, {
-    prompt: args.prompt,
-    aspect_ratio: ASPECT_RATIO,
-    resolution: args.resolution,
-    mode: args.mode,
-    duration: args.duration,
-    genre: args.genre ?? "auto",
-    generate_audio: true,
-    medias: [
-      ...medias.map((value) => ({ value, role: "image" })),
-      ...(startMedia ? [{ value: startMedia, role: "start_image" }] : []),
-    ],
+
+  const buildParams = (declined?: string) => {
+    const p: Record<string, unknown> = {
+      model: MODELS.video.higgsfield,
+      prompt: args.prompt,
+      aspect_ratio: ASPECT_RATIO,
+      resolution: args.resolution,
+      mode: args.mode,
+      duration: args.duration,
+      generate_audio: true,
+      count: 1,
+      medias: [
+        ...mediaIds.map((value) => ({ value, role: "image" })),
+        ...(startMedia ? [{ value: startMedia, role: "start_image" }] : []),
+      ],
+    };
+    if (declined) p.declined_preset_id = declined;
+    return p;
+  };
+
+  // Higgsfield's MCP may suggest a preset instead of running the literal
+  // prompt. Decline that recommendation and retry literally so our scene
+  // prompt actually runs.
+  let submitted = await toolCall<JobSubmitResponse>(token, "generate_video", {
+    params: buildParams(),
   });
-  const final =
-    submitted.status === "completed"
-      ? submitted
-      : await pollJob(submitted.request_id, { timeoutMs: 12 * 60 * 1000 });
-  const url = final.video?.url;
-  if (!url) {
+  const decline = submitted.notice?.data?.retry_literal_with?.declined_preset_id;
+  if (
+    !submitted.results?.[0]?.id &&
+    typeof decline === "string"
+  ) {
+    submitted = await toolCall<JobSubmitResponse>(token, "generate_video", {
+      params: buildParams(decline),
+    });
+  }
+
+  const jobId = submitted.results?.[0]?.id;
+  if (!jobId) {
     throw new HiggsfieldError(
-      `Higgsfield video completed without a URL: ${JSON.stringify(final)}`,
+      `generate_video returned no job id: ${JSON.stringify(submitted).slice(0, 300)}`,
     );
   }
-  return { url };
+  const final = await pollJob(token, jobId, { timeoutMs: 12 * 60 * 1000 });
+  return { url: extractUrl(final) };
 }
