@@ -25,17 +25,21 @@ export const VIDEO_DEFAULTS = {
   genre: "auto" as const,
 };
 
-// Model catalog. Primary = Higgsfield via MCP-over-HTTP (OAuth); fallback =
-// Vercel AI Gateway. Stage 0 + Stage 3 are text-only, Gateway-direct.
+// Model catalog. Stage 0 + Stage 3 are text-only via Gateway. Images go
+// straight through Gateway (gpt-image-2) — Higgsfield's nano_banana_pro
+// path was producing generic stock-style scenery and ignoring the user's
+// uploaded reference, so it's been pulled. Video still uses Seedance
+// (Higgsfield primary, Gateway fallback) because Seedance bakes the
+// spoken dialogue into the MP4, which is non-negotiable.
 //
-// Higgsfield model IDs are the underscored ones the MCP `generate_image`/
-// `generate_video` tools accept in `params.model`. Gateway slugs are
-// verified live against ai-gateway.vercel.sh/v1/models.
+// All Gateway slugs are verified live against ai-gateway.vercel.sh/v1/models.
 export const MODELS = {
   concept: { gateway: "anthropic/claude-sonnet-4.6" },
   image: {
-    higgsfield: "nano_banana_pro",
-    gateway: "google/gemini-3-pro-image",
+    // Single backend for images. gpt-image-2 follows reference photos
+    // faithfully (preserves character identity and uses the supplied
+    // location as the literal setting, not as inspiration).
+    gateway: "openai/gpt-image-2",
   },
   shotList: { gateway: "anthropic/claude-sonnet-4.6" },
   video: {

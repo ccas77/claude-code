@@ -110,6 +110,16 @@ sprawling landscape vistas. Vary shot sizes (EWS to ECU) and angles
 Refer to characters BY NAME in actions (e.g. "Mira leans against the door
 while Cal watches"), so the right reference sheet is used for each figure.
 
+PHYSICAL PERFORMANCE PER SHOT (this is what stops the characters looking
+like potatoes). Every shot must include a [Performance: ...] block that
+describes the body acting: weight distribution, posture, where hands and
+shoulders are, eyeline, breath, micro-expression (jaw clench, lip part,
+swallow, eye flicker), gesture, the energy between bodies in the frame
+(distance, lean-in, restraint, vulnerability). NEVER write a character as
+"standing", "looking", or "facing" without specifying HOW they stand, what
+their weight is doing, what their hands and eyes are doing. If two
+characters share a frame, name the physical tension between them.
+
 Distribute the DIALOGUE lines across the 16 shots IN ORDER. Attach each line
 to the shot where it is spoken. If a shot has no dialogue, omit the dialogue
 marker. Every line from the dialogue array must appear on exactly one shot.
@@ -117,9 +127,9 @@ marker. Every line from the dialogue array must appear on exactly one shot.
 PUNCTUATION RULE: never use em dashes. Use commas, periods, or sentence
 breaks.
 
-Output EXACTLY this format, one shot per line, nothing else. The separator
-between camera and action is a vertical bar with single spaces around it:
-Shot N: [Camera] | [Action] [Speaker: "line"] [Speaker: "line"]
+Output EXACTLY this format, one shot per line, nothing else. Separators are
+single vertical bars with one space on each side:
+Shot N: [Camera] | [Action] | [Performance: ...] [Speaker: "line"] [Speaker: "line"]
 
 Cast:
 ${castBlock(args.characters)}
@@ -131,22 +141,39 @@ DIALOGUE (in order):
 ${dialogueBlock(args.dialogue)}`;
 
 // ---- Stage 4 (storyboard grid image) ----
+// Reference image ORDER matters for gpt-image-2: location first (because
+// it's the literal setting every panel renders inside), then each character
+// sheet in cast order (so identity is preserved). The prompt repeats this
+// hierarchy so the model can't freelance a different environment.
 export const stage4Prompt = (args: {
   shots: Shot[];
   characters: Character[];
-}) => `Professional storyboard sheet in 9:16 VERTICAL format. 16 panels. Each
-individual panel is framed 9:16 vertical (portrait shots, this is what the
-final video inherits, so panels must compose for vertical). Use a 2 columns ×
-8 rows layout so portrait panels are not squashed (NOT a 4×4 grid of
-landscape cells). Thin black borders, bold frame number top-left of each
-panel, short caption under each. The character reference sheets (one per
-named character) and the location sheet are the sole sources of truth.
+}) => `Professional 9:16 VERTICAL storyboard sheet. 16 panels in a 2 columns
+× 8 rows layout (NOT a 4×4 grid of landscape cells). Every individual panel
+is framed 9:16 vertical so the panels compose well for the portrait video
+this becomes. Thin black borders, bold frame number top-left of each panel,
+short caption under each panel.
 
-Cast (each has its own reference sheet; keep faces, hair, clothing consistent
-with whichever sheet corresponds to the named character on each shot):
+REFERENCE HIERARCHY (strict, do not freelance):
+1. The FIRST attached image is the LOCATION. It is the literal setting.
+   Every single panel must render INSIDE that exact environment. Do not
+   invent a different location, do not substitute a beach or studio or
+   generic backdrop. If a shot is a close-up, the bits of environment that
+   peek into the frame must still match the location image.
+2. The remaining attached images are CHARACTER REFERENCE SHEETS, one per
+   named character. Match face, hair, body type, clothing, and accessories
+   exactly to whichever sheet corresponds to the named character on each
+   shot. Do not blend, swap, or invent looks.
+
+BODY ACTING: every panel must show physical performance, not stiff figures.
+Honor each shot's [Performance: ...] direction below: weight distribution,
+posture, where hands and shoulders are, eyeline, micro-expression. No
+character standing flat-footed or staring with neutral expression.
+
+Cast:
 ${castBlock(args.characters)}
 
-Insert the 16 shots below:
+Insert the 16 shots below (separators are single vertical bars):
 ${args.shots
   .map((s) => {
     const dlg = s.dialogue
@@ -166,18 +193,34 @@ export const stage5Prompt = (args: {
       s.dialogue.map((d) => `(Shot ${s.n}) ${d.speaker}: "${d.line}"`),
     )
     .join("\n");
-  return `Use the storyboard sheet as the primary source of truth. Each
-character has their own reference sheet (named below). Keep face, hair,
-clothing, and proportions consistent with the right sheet on every shot. The
-location sheet defines the environment. Follow the storyboard's sequence,
-angles, compositions, actions. High-end cinematic animation, smooth motion,
-natural camera movement.
+  const performance = args.shots
+    .map((s) => `(Shot ${s.n}) ${s.action}`)
+    .join("\n");
+  return `Cinematic 9:16 vertical clip. The storyboard sheet is the primary
+source of truth for camera, framing, and sequence. Each character has their
+own reference sheet (named below). Keep face, hair, clothing, and
+proportions consistent with the right sheet on every shot. The location
+sheet defines the environment.
+
+PERFORMANCE (load-bearing): the characters must MOVE LIKE PEOPLE, not pose
+like mannequins. Render natural body weight, shifting balance, breath,
+micro-expressions (eye flicker, lip part, swallow, jaw set), small
+involuntary gestures (a hand at the collar, fingers brushing a sleeve, a
+glance away then back). When two characters share a frame, render the
+physical relationship between them: distance, lean-in, restraint, the gap
+that closes or opens between bodies. Camera movement is motivated by the
+performance, not the other way around. Do NOT animate anyone standing
+flat-footed or staring with a neutral expression at the camera.
 
 Cast (each name corresponds to its own reference sheet image):
 ${castBlock(args.characters)}
 
-The characters SPEAK the following dialogue aloud, in order, matched to the
-shots indicated. The spoken words must be audible in the video; voice each
-named character with the appearance and demeanor from their reference sheet:
+SHOT ACTIONS (in order, each line carries the directed body acting and
+camera intent for that shot):
+${performance}
+
+DIALOGUE (the characters SPEAK these lines aloud, in order, matched to the
+shots indicated, voiced by the named character using the look and demeanor
+from their reference sheet):
 ${spoken || "(no dialogue; wordless scene)"}`;
 };

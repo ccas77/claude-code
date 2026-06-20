@@ -5,10 +5,7 @@ import {
   MODELS,
   VIDEO_DEFAULTS,
 } from "./config";
-import {
-  generateImage as hgImage,
-  generateVideo as hgVideo,
-} from "./backends/higgsfield";
+import { generateVideo as hgVideo } from "./backends/higgsfield";
 import {
   gatewayGenerateImage,
   gatewayGenerateText,
@@ -38,26 +35,25 @@ import type {
   ShotList,
 } from "./types";
 
-// Stage 1: one character sheet per character. Generates the image and
-// persists it to a deterministic Blob key, but DOES NOT touch job.json.
-// The orchestrator runs multiple stage1 calls concurrently (one per cast
-// member) and writes the aggregated results to job.json in a single
-// updateJob call afterward, so concurrent stage1 calls don't race each
-// other on the characterSheets array.
+// Stage 1: one character sheet per character. Generates via gpt-image-2 on
+// Gateway (no Higgsfield primary for images: nano_banana_pro was producing
+// generic stock-style output that ignored the reference). Persists to a
+// deterministic Blob key but defers the job.json write to the orchestrator
+// so concurrent character calls can't race on the characterSheets array.
 export async function stage1(
   jobId: string,
   character: Character,
 ): Promise<{ name: string; url: string; backend: Backend }> {
   const prompt = stage1Prompt(character.name);
-  const { result, servedBy } = await withFallback(
-    () => hgImage({ prompt, imageRefs: [character.imageUrl] }),
-    () => gatewayGenerateImage({ prompt, imageRefs: [character.imageUrl] }),
-  );
+  const result = await gatewayGenerateImage({
+    prompt,
+    imageRefs: [character.imageUrl],
+  });
   const url = await persistArtifact(
     keys.characterSheet(jobId, character.name),
     result.url,
   );
-  return { name: character.name, url, backend: servedBy };
+  return { name: character.name, url, backend: "gateway" };
 }
 
 // Stage 2: location sheet. Same shape as stage1: generate + persist to Blob,
@@ -66,16 +62,12 @@ export async function stage2(
   jobId: string,
   locationImageUrl: string,
 ): Promise<{ url: string; backend: Backend }> {
-  const { result, servedBy } = await withFallback(
-    () => hgImage({ prompt: stage2Prompt, imageRefs: [locationImageUrl] }),
-    () =>
-      gatewayGenerateImage({
-        prompt: stage2Prompt,
-        imageRefs: [locationImageUrl],
-      }),
-  );
+  const result = await gatewayGenerateImage({
+    prompt: stage2Prompt,
+    imageRefs: [locationImageUrl],
+  });
   const url = await persistArtifact(keys.locationSheet(jobId), result.url);
-  return { url, backend: servedBy };
+  return { url, backend: "gateway" };
 }
 
 // Stage 3: shot list, 16 panels, dialogue distributed.
@@ -175,9 +167,9 @@ export function parseShotList(text: string): Shot[] {
   return out;
 }
 
-// Stage 4: storyboard grid image (2x8 vertical panels). References = all
-// character sheets + the location sheet, so each panel can correctly draw
-// whichever character is on screen.
+// Stage 4: storyboard grid image (2x8 vertical panels). Reference ORDER
+// matters: location FIRST so gpt-image-2 anchors the literal setting before
+// the characters are placed inside it. Then character sheets in cast order.
 export async function stage4(
   jobId: string,
   args: {
@@ -192,17 +184,14 @@ export async function stage4(
     characters: args.characters,
   });
   const refs = [
-    ...args.characterSheets.map((s) => s.url),
     args.locationSheetUrl,
+    ...args.characterSheets.map((s) => s.url),
   ];
-  const { result, servedBy } = await withFallback(
-    () => hgImage({ prompt, imageRefs: refs }),
-    () => gatewayGenerateImage({ prompt, imageRefs: refs }),
-  );
+  const result = await gatewayGenerateImage({ prompt, imageRefs: refs });
   const url = await persistArtifact(keys.storyboard(jobId), result.url);
   await mergeArtifacts(jobId, { storyboardUrl: url });
-  await recordBackend(jobId, "stage4", servedBy);
-  return { url, backend: servedBy };
+  await recordBackend(jobId, "stage4", "gateway");
+  return { url, backend: "gateway" };
 }
 
 // Stage 5: video, with dialogue baked in.

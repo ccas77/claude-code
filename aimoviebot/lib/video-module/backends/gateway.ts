@@ -115,71 +115,98 @@ export async function gatewayGenerateJSON<T>(args: {
 }
 
 // ---- image gen ----
-// AI SDK v6's `gateway.imageModel(...)` registry doesn't include the Gemini
-// `-image` chat models (it errors "No such imageModel"). Use Gemini's chat
-// API directly with image-modal output: generateText with the chat-image
-// model returns generated image bytes in the experimental file attachments.
+// gpt-image-2 via the OpenAI-compatible image API on Vercel AI Gateway.
+// This model preserves character identity and uses the supplied reference
+// images as the literal subject/setting, not as inspiration. For multi-ref
+// input (character sheets + location), we collect the references into the
+// images[] field of /v1/images/edits.
 export async function gatewayGenerateImage(args: {
   prompt: string;
   imageRefs: string[]; // public URLs of reference images
 }): Promise<{ url: string }> {
   const modelId = MODELS.image.gateway;
-
-  // Reference images: download + sniff so the media type is honest before
-  // we hand them to the chat API.
-  const userContent: Array<
-    | { type: "text"; text: string }
-    | { type: "image"; image: Uint8Array; mediaType: string }
-  > = [
-    {
-      type: "text",
-      text: `${args.prompt}\n\nOutput a single image, 9:16 vertical (portrait). Do not output any text response; produce only the image.`,
-    },
-  ];
-  for (const url of args.imageRefs) {
-    const { data, mediaType } = await fetchImageWithCorrectMediaType(url);
-    userContent.push({ type: "image", image: data, mediaType });
-  }
-
-  const result = await generateText({
-    model: gateway(modelId),
-    messages: [{ role: "user", content: userContent }],
-    // Image-capable Gemini models stream both text and image parts; we just
-    // want the image part.
-    providerOptions: {
-      gateway: {},
-    },
-  });
-
-  // The image arrives in result.files (AI SDK v6) as a file part with
-  // mediaType "image/..." and a base64 / Uint8Array payload. Walk every
-  // shape we might see so a v6 minor-version bump doesn't break this.
-  const files = (result as unknown as {
-    files?: Array<{
-      mediaType?: string;
-      base64?: string;
-      uint8Array?: Uint8Array;
-      url?: string;
-    }>;
-  }).files;
-  const file = files?.find((f) => (f.mediaType ?? "").startsWith("image/"));
-  if (!file) {
+  const apiKey =
+    process.env.AI_GATEWAY_API_KEY ?? process.env.VERCEL_OIDC_TOKEN;
+  if (!apiKey) {
     throw new Error(
-      `Gateway chat image: no image part in response. Text: ${(result as { text?: string }).text?.slice(0, 200) ?? "(none)"}`,
+      "Gateway image needs AI_GATEWAY_API_KEY locally or VERCEL_OIDC_TOKEN in production",
     );
   }
-  if (file.url) return { url: file.url };
-  if (file.base64) {
-    return {
-      url: `data:${file.mediaType ?? "image/png"};base64,${file.base64}`,
-    };
+
+  // Image input as multipart/form-data: gpt-image-2's edits endpoint takes
+  // one or more image files plus a prompt. We download each reference,
+  // sniff its real media type (extensions lie), and append it as image[].
+  const form = new FormData();
+  form.set("model", modelId);
+  form.set("prompt", args.prompt);
+  // 1024x1792 is the OpenAI image size closest to 9:16. Other sizes either
+  // crop the frame or render landscape.
+  form.set("size", "1024x1792");
+  form.set("n", "1");
+
+  if (args.imageRefs.length === 0) {
+    // Pure text-to-image fallback. /v1/images/generations is the right
+    // endpoint when there are no reference images.
+    const res = await fetch(
+      "https://ai-gateway.vercel.sh/v1/images/generations",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: modelId,
+          prompt: args.prompt,
+          size: "1024x1792",
+          n: 1,
+        }),
+      },
+    );
+    return readOpenAIImageResponse(res);
   }
-  if (file.uint8Array) {
-    const b64 = Buffer.from(file.uint8Array).toString("base64");
-    return { url: `data:${file.mediaType ?? "image/png"};base64,${b64}` };
+
+  for (let i = 0; i < args.imageRefs.length; i++) {
+    const { data, mediaType } = await fetchImageWithCorrectMediaType(
+      args.imageRefs[i],
+    );
+    const ext = mediaType.split("/")[1] ?? "png";
+    form.append(
+      "image[]",
+      new Blob([data], { type: mediaType }),
+      `ref-${i}.${ext}`,
+    );
+  }
+
+  const res = await fetch("https://ai-gateway.vercel.sh/v1/images/edits", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}` },
+    body: form,
+  });
+  return readOpenAIImageResponse(res);
+}
+
+async function readOpenAIImageResponse(
+  res: Response,
+): Promise<{ url: string }> {
+  if (!res.ok) {
+    throw new Error(`Gateway image ${res.status}: ${await res.text()}`);
+  }
+  const json = (await res.json()) as {
+    data?: Array<{ b64_json?: string; url?: string }>;
+  };
+  const item = json.data?.[0];
+  if (!item) {
+    throw new Error(
+      `Gateway image returned no data: ${JSON.stringify(json).slice(0, 400)}`,
+    );
+  }
+  if (item.url) return { url: item.url };
+  if (item.b64_json) {
+    return { url: `data:image/png;base64,${item.b64_json}` };
   }
   throw new Error(
-    `Gateway chat image: file part has no payload (${JSON.stringify(file).slice(0, 200)})`,
+    `Gateway image data has no url or b64_json: ${JSON.stringify(item).slice(0, 200)}`,
   );
 }
 
