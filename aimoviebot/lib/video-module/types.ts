@@ -88,12 +88,18 @@ export type StageResult = {
   backend?: Backend;
 };
 
+// Optional per-job override of the Higgsfield image model. When set, image
+// stages call generate_image with this slug instead of MODELS.image.higgsfield.
+// Used to switch between gpt_image_2 (default, faithful identity but
+// content-moderation-sensitive) and nano_banana_pro (more permissive) on
+// retry when one model rejects an upload.
 export type Job = {
   jobId: string;
   status: JobStatus;
   characters: Character[]; // 1+ characters
   locationImageUrl: string;
   videoDurationSec?: number;
+  imageModelOverride?: string;
   artifacts: Artifacts;
   servedBy?: Partial<Record<StageName, Backend>>;
   error?: { stage: StageName; message: string };

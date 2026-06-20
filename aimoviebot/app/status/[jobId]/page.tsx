@@ -80,14 +80,16 @@ export default function StatusPage({ params }: { params: Promise<{ jobId: string
     };
   }, [jobId]);
 
-  async function retry(fromStage: 1 | 2 | 3 | 4 | 5) {
+  async function retry(fromStage: 1 | 2 | 3 | 4 | 5, imageModel?: string) {
     setRetrying(true);
     setError(null);
     try {
+      const body: Record<string, unknown> = { jobId, fromStage };
+      if (imageModel) body.imageModel = imageModel;
       const res = await fetch("/api/video/retry", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ jobId, fromStage }),
+        body: JSON.stringify(body),
       });
       const json = (await res.json()) as { error?: string };
       if (!res.ok) throw new Error(json.error ?? `HTTP ${res.status}`);
@@ -121,7 +123,7 @@ export default function StatusPage({ params }: { params: Promise<{ jobId: string
             <p className="text-red-600 text-sm">
               Failed at {data.error.stage}: {data.error.message}
             </p>
-            <div className="flex gap-2 flex-wrap">
+            <div className="flex gap-2 flex-wrap items-center">
               {failedStage ? (
                 <button
                   onClick={() => retry(failedStage)}
@@ -138,6 +140,34 @@ export default function StatusPage({ params }: { params: Promise<{ jobId: string
               >
                 Retry from stage 1
               </button>
+              {failedStage && failedStage <= 4 ? (
+                <details className="text-sm">
+                  <summary className="cursor-pointer text-stone-600 hover:text-violet-700">
+                    Retry with a different image model
+                  </summary>
+                  <div className="mt-2 flex gap-2 flex-wrap">
+                    <button
+                      onClick={() => retry(failedStage, "nano_banana_pro")}
+                      disabled={retrying}
+                      className="text-violet-700 text-sm border border-violet-300 rounded px-3 py-1.5 disabled:text-stone-400 disabled:border-stone-200"
+                    >
+                      Retry with nano_banana_pro
+                    </button>
+                    <button
+                      onClick={() => retry(failedStage, "gpt_image_2")}
+                      disabled={retrying}
+                      className="text-violet-700 text-sm border border-violet-300 rounded px-3 py-1.5 disabled:text-stone-400 disabled:border-stone-200"
+                    >
+                      Retry with gpt_image_2
+                    </button>
+                  </div>
+                  <p className="mt-1 text-xs text-stone-500">
+                    gpt_image_2 preserves identity better but rejects more
+                    portraits on content moderation. nano_banana_pro is more
+                    permissive but follows the reference image looser.
+                  </p>
+                </details>
+              ) : null}
             </div>
           </div>
         ) : null}

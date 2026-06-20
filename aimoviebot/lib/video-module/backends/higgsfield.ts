@@ -298,8 +298,11 @@ export async function generateImage(args: {
   // caller persist the in-flight jobId so the UI can show "Higgsfield is
   // working on this" with a link, instead of "pending" with no detail.
   onSubmit?: (hfJobId: string) => Promise<void>;
+  // Per-call model override (used by retry-with-different-model). Falls back
+  // to the configured default (MODELS.image.higgsfield) when not provided.
+  modelOverride?: string;
 }): Promise<{ url: string; hfJobId?: string }> {
-  const model = MODELS.image.higgsfield;
+  const model = args.modelOverride ?? MODELS.image.higgsfield;
   const mediaIds = await Promise.all(args.imageRefs.map((u) => importMedia(u)));
   const submitted = await callGenerate("generate_image", {
     model,

@@ -26,6 +26,7 @@ import {
   keys,
   mergeArtifacts,
   persistArtifact,
+  readJob,
   recordBackend,
   trackInflightHiggsfieldJob,
   writeShotList,
@@ -43,14 +44,21 @@ import type {
 // gpt-image-2 (model configurable in MODELS.image.higgsfield). Persists to
 // a deterministic Blob key but defers the job.json write to the orchestrator
 // so concurrent character calls can't race on the characterSheets array.
+async function loadImageModelOverride(jobId: string): Promise<string | undefined> {
+  const job = await readJob(jobId);
+  return job?.imageModelOverride;
+}
+
 export async function stage1(
   jobId: string,
   character: Character,
 ): Promise<{ name: string; url: string; backend: Backend }> {
   const prompt = await renderStage1(character.name);
+  const modelOverride = await loadImageModelOverride(jobId);
   const result = await hgImage({
     prompt,
     imageRefs: [character.imageUrl],
+    modelOverride,
     onSubmit: (hfJobId) =>
       trackInflightHiggsfieldJob(jobId, {
         hfJobId,
@@ -74,9 +82,11 @@ export async function stage2(
   locationImageUrl: string,
 ): Promise<{ url: string; backend: Backend }> {
   const prompt = await renderStage2();
+  const modelOverride = await loadImageModelOverride(jobId);
   const result = await hgImage({
     prompt,
     imageRefs: [locationImageUrl],
+    modelOverride,
     onSubmit: (hfJobId) =>
       trackInflightHiggsfieldJob(jobId, {
         hfJobId,
@@ -208,9 +218,11 @@ export async function stage4(
     args.locationSheetUrl,
     ...args.characterSheets.map((s) => s.url),
   ];
+  const modelOverride = await loadImageModelOverride(jobId);
   const result = await hgImage({
     prompt,
     imageRefs: refs,
+    modelOverride,
     onSubmit: (hfJobId) =>
       trackInflightHiggsfieldJob(jobId, {
         hfJobId,
