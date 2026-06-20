@@ -29,6 +29,7 @@ import {
   readJob,
   recordBackend,
   trackInflightHiggsfieldJob,
+  updateJob,
   writeShotList,
 } from "./storage";
 import type {
@@ -232,9 +233,23 @@ export async function stage4(
       }),
   });
   const url = await persistArtifact(keys.storyboard(jobId), result.url);
-  if (result.hfJobId) await clearInflightHiggsfieldJob(jobId, result.hfJobId);
-  await mergeArtifacts(jobId, { storyboardUrl: url });
-  await recordBackend(jobId, "stage4", "higgsfield");
+  // ONE updateJob call: persist storyboardUrl + clear inflight + record
+  // backend together. Three separate read-modify-writes would race on
+  // Blob's sub-second uploadedAt resolution and could lose state.
+  await updateJob(jobId, (j) => {
+    const existing = j.artifacts.inflightHiggsfieldJobs ?? [];
+    return {
+      ...j,
+      artifacts: {
+        ...j.artifacts,
+        storyboardUrl: url,
+        inflightHiggsfieldJobs: result.hfJobId
+          ? existing.filter((e) => e.hfJobId !== result.hfJobId)
+          : existing,
+      },
+      servedBy: { ...(j.servedBy ?? {}), stage4: "higgsfield" },
+    };
+  });
   return { url, backend: "higgsfield" };
 }
 
@@ -321,10 +336,23 @@ export async function stage5(
       }),
   );
   const url = await persistArtifact(keys.video(jobId), result.url, "video/mp4");
-  if ("hfJobId" in result && result.hfJobId) {
-    await clearInflightHiggsfieldJob(jobId, result.hfJobId);
-  }
-  await mergeArtifacts(jobId, { videoUrl: url });
-  await recordBackend(jobId, "stage5", servedBy);
+  // ONE updateJob: persist videoUrl + clear inflight + record backend
+  // together. Sequential read-modify-writes on Blob race within a second.
+  const hfJobId =
+    "hfJobId" in result && result.hfJobId ? result.hfJobId : undefined;
+  await updateJob(jobId, (j) => {
+    const existing = j.artifacts.inflightHiggsfieldJobs ?? [];
+    return {
+      ...j,
+      artifacts: {
+        ...j.artifacts,
+        videoUrl: url,
+        inflightHiggsfieldJobs: hfJobId
+          ? existing.filter((e) => e.hfJobId !== hfJobId)
+          : existing,
+      },
+      servedBy: { ...(j.servedBy ?? {}), stage5: servedBy },
+    };
+  });
   return { url, backend: servedBy };
 }
