@@ -2,6 +2,7 @@ import { put, head, list } from "@vercel/blob";
 import type {
   Artifacts,
   Backend,
+  InflightHiggsfieldJob,
   Job,
   JobStatus,
   StageName,
@@ -157,6 +158,39 @@ export async function recordBackend(
     ...j,
     servedBy: { ...(j.servedBy ?? {}), [stage]: backend },
   }));
+}
+
+export async function trackInflightHiggsfieldJob(
+  jobId: string,
+  entry: InflightHiggsfieldJob,
+): Promise<void> {
+  await updateJob(jobId, (j) => {
+    const existing = j.artifacts.inflightHiggsfieldJobs ?? [];
+    const without = existing.filter((e) => e.hfJobId !== entry.hfJobId);
+    return {
+      ...j,
+      artifacts: {
+        ...j.artifacts,
+        inflightHiggsfieldJobs: [...without, entry],
+      },
+    };
+  });
+}
+
+export async function clearInflightHiggsfieldJob(
+  jobId: string,
+  hfJobId: string,
+): Promise<void> {
+  await updateJob(jobId, (j) => {
+    const existing = j.artifacts.inflightHiggsfieldJobs ?? [];
+    return {
+      ...j,
+      artifacts: {
+        ...j.artifacts,
+        inflightHiggsfieldJobs: existing.filter((e) => e.hfJobId !== hfJobId),
+      },
+    };
+  });
 }
 
 // Compat alias for older call sites in stages.ts that used putJSON for the
