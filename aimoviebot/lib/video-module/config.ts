@@ -25,6 +25,16 @@ export const VIDEO_DEFAULTS = {
   genre: "auto" as const,
 };
 
+// Multi-clip rendering. Seedance degrades quality at the upper end of its
+// 4-15s range (character drift, weird motion, dropped lip-sync). We split
+// the 16-shot story into N chunks of M seconds each, render each chunk as
+// its own Seedance call in parallel, then concat the MP4s with ffmpeg.
+// Defaults: 4 chunks × 4 seconds = 16s final video, 4 shots per chunk.
+export const VIDEO_CHUNKS = {
+  count: 4,
+  secondsPerChunk: 4,
+};
+
 // Model catalog. Stage 0 + Stage 3 are text-only via Gateway. Images route
 // through Higgsfield with model=gpt_image_2 (single backend, uses the
 // existing OAuth connection, no extra auth surface). Video uses Seedance

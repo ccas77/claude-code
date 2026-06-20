@@ -3,6 +3,7 @@ import {
   ASPECT_RATIO,
   GENERATE_AUDIO,
   MODELS,
+  VIDEO_CHUNKS,
   VIDEO_DEFAULTS,
 } from "./config";
 import {
@@ -205,49 +206,79 @@ export async function stage4(
     locationSheetUrl: string;
   },
 ): Promise<{ url: string; backend: Backend }> {
-  const prompt = await renderStage4({
-    shots: args.shots,
-    characters: args.characters,
-  });
+  const modelOverride = await loadImageModelOverride(jobId);
   const refs = [
     args.locationSheetUrl,
     ...args.characterSheets.map((s) => s.url),
   ];
-  const modelOverride = await loadImageModelOverride(jobId);
-  const result = await hgImage({
-    prompt,
-    imageRefs: refs,
-    modelOverride,
-    onSubmit: (hfJobId) =>
-      trackInflightHiggsfieldJob(jobId, {
-        hfJobId,
-        stage: "stage4",
-        label: "Storyboard",
-        submittedAt: new Date().toISOString(),
-      }),
-  });
-  const url = await persistArtifact(keys.storyboard(jobId), result.url);
-  // ONE updateJob call: persist storyboardUrl + clear inflight + record
-  // backend together. Three separate read-modify-writes would race on
-  // Blob's sub-second uploadedAt resolution and could lose state.
+  // Split the 16-shot list into N chunks. Each chunk gets its OWN
+  // mini-storyboard image (typically 4 panels) so gpt_image_2 isn't
+  // trying to draw 16 panels in one go (which it does poorly).
+  const chunks = chunkShots(args.shots, VIDEO_CHUNKS.count);
+  const total = chunks.length;
+  const results = await Promise.all(
+    chunks.map(async (chunkShots, i) => {
+      const prompt = await renderStage4({
+        shots: chunkShots,
+        characters: args.characters,
+      });
+      const r = await hgImage({
+        prompt,
+        imageRefs: refs,
+        modelOverride,
+        onSubmit: (hfJobId) =>
+          trackInflightHiggsfieldJob(jobId, {
+            hfJobId,
+            stage: "stage4",
+            label: `Storyboard ${i + 1}/${total}`,
+            submittedAt: new Date().toISOString(),
+          }),
+      });
+      const url = await persistArtifact(
+        keys.storyboardChunk(jobId, i + 1),
+        r.url,
+      );
+      return { url, hfJobId: r.hfJobId };
+    }),
+  );
+  const storyboardUrls = results.map((r) => r.url);
+  const burnedHfJobIds = results
+    .map((r) => r.hfJobId)
+    .filter((x): x is string => Boolean(x));
   await updateJob(jobId, (j) => {
     const existing = j.artifacts.inflightHiggsfieldJobs ?? [];
     return {
       ...j,
       artifacts: {
         ...j.artifacts,
-        storyboardUrl: url,
-        inflightHiggsfieldJobs: result.hfJobId
-          ? existing.filter((e) => e.hfJobId !== result.hfJobId)
-          : existing,
+        storyboardUrls,
+        inflightHiggsfieldJobs: existing.filter(
+          (e) => !burnedHfJobIds.includes(e.hfJobId),
+        ),
       },
       servedBy: { ...(j.servedBy ?? {}), stage4: "higgsfield" },
     };
   });
-  return { url, backend: "higgsfield" };
+  return { url: storyboardUrls[0], backend: "higgsfield" };
 }
 
-// Stage 5: video, with dialogue baked in.
+// Helper for chunked render: splits a flat shot list into N approximately
+// equal chunks. With the default 16 shots and 4 chunks, that's 4 shots
+// per chunk.
+function chunkShots(shots: ShotList, n: number): ShotList[] {
+  if (n <= 1) return [shots];
+  const out: ShotList[] = [];
+  const perChunk = Math.ceil(shots.length / n);
+  for (let i = 0; i < shots.length; i += perChunk) {
+    out.push(shots.slice(i, i + perChunk));
+  }
+  return out;
+}
+
+// Stage 5: multi-clip video render. Splits the 16 shots into N chunks,
+// renders each as its OWN short Seedance call (against its own
+// mini-storyboard from stage 4) in parallel, then persists the raw clip
+// URLs. Stage 6 concatenates and burns captions.
 // Hard guards:
 //   - aspect ratio must be 9:16 (config const)
 //   - 1080p banned unless ALLOW_1080P flips
@@ -259,15 +290,14 @@ export async function stage5(
     characters: Character[];
     characterSheets: CharacterSheet[];
     locationSheetUrl: string;
-    storyboardUrl: string;
-    durationSec?: number;
+    storyboardUrls: string[];
     resolution?: "480p" | "720p" | "1080p";
     mode?: "std" | "fast";
   },
-): Promise<{ url: string; backend: Backend }> {
+): Promise<{ clipUrls: string[]; backend: Backend }> {
   const resolution = args.resolution ?? VIDEO_DEFAULTS.resolution;
   const mode = args.mode ?? VIDEO_DEFAULTS.mode;
-  const duration = args.durationSec ?? VIDEO_DEFAULTS.duration;
+  const secondsPerChunk = VIDEO_CHUNKS.secondsPerChunk;
 
   if (resolution === "1080p" && !ALLOW_1080P) {
     throw new Error(
@@ -284,69 +314,133 @@ export async function stage5(
       "Stage 5 refused: ASPECT_RATIO drifted from 9:16. Aborting render.",
     );
   }
-  if (duration < 4 || duration > 15) {
+  if (secondsPerChunk < 4 || secondsPerChunk > 15) {
     throw new Error(
-      `Stage 5 refused: duration ${duration}s outside Seedance's 4-15s range.`,
+      `Stage 5 refused: secondsPerChunk ${secondsPerChunk}s outside Seedance's 4-15s range.`,
     );
   }
 
-  const prompt = await renderStage5({
-    shots: args.shots,
-    characters: args.characters,
-  });
-  // Storyboard first (primary source of truth per the spec), then every
-  // character sheet, then location. Seedance reads medias in order.
-  const refs = [
-    args.storyboardUrl,
+  const chunks = chunkShots(args.shots, VIDEO_CHUNKS.count);
+  if (chunks.length !== args.storyboardUrls.length) {
+    throw new Error(
+      `Stage 5 refused: ${chunks.length} shot chunks but ${args.storyboardUrls.length} storyboards. They must match.`,
+    );
+  }
+  const total = chunks.length;
+
+  // Each chunk gets: its own mini-storyboard (primary visual reference),
+  // all character sheets (identity), the location sheet (environment).
+  const sharedRefs = [
     ...args.characterSheets.map((s) => s.url),
     args.locationSheetUrl,
   ];
 
-  const { result, servedBy } = await withFallback(
-    () =>
-      hgVideo({
-        prompt,
-        imageRefs: refs,
-        resolution,
-        mode,
-        duration,
-        startImageUrl: args.storyboardUrl,
-        onSubmit: (hfJobId) =>
-          trackInflightHiggsfieldJob(jobId, {
-            hfJobId,
-            stage: "stage5",
-            label: "Video",
-            submittedAt: new Date().toISOString(),
+  const clipResults = await Promise.all(
+    chunks.map(async (chunkShotList, i) => {
+      const chunkPrompt = await renderStage5({
+        shots: chunkShotList,
+        characters: args.characters,
+      });
+      const refs = [args.storyboardUrls[i], ...sharedRefs];
+      const { result, servedBy } = await withFallback(
+        () =>
+          hgVideo({
+            prompt: chunkPrompt,
+            imageRefs: refs,
+            resolution,
+            mode,
+            duration: secondsPerChunk,
+            startImageUrl: args.storyboardUrls[i],
+            onSubmit: (hfJobId) =>
+              trackInflightHiggsfieldJob(jobId, {
+                hfJobId,
+                stage: "stage5",
+                label: `Video clip ${i + 1}/${total}`,
+                submittedAt: new Date().toISOString(),
+              }),
           }),
-      }),
-    () =>
-      gatewayGenerateVideo({
-        prompt,
-        imageRefs: refs,
-        resolution,
-        mode,
-        duration,
-        startImageUrl: args.storyboardUrl,
-      }),
+        () =>
+          gatewayGenerateVideo({
+            prompt: chunkPrompt,
+            imageRefs: refs,
+            resolution,
+            mode,
+            duration: secondsPerChunk,
+            startImageUrl: args.storyboardUrls[i],
+          }),
+      );
+      // Persist the raw clip to its own deterministic Blob key so we can
+      // re-run stage 6 (concat + captions) without re-firing Seedance.
+      const persistedUrl = await persistArtifact(
+        keys.videoClip(jobId, i + 1),
+        result.url,
+        "video/mp4",
+      );
+      return { url: persistedUrl, servedBy, hfJobId: result.hfJobId };
+    }),
   );
-  const url = await persistArtifact(keys.video(jobId), result.url, "video/mp4");
-  // ONE updateJob: persist videoUrl + clear inflight + record backend
-  // together. Sequential read-modify-writes on Blob race within a second.
-  const hfJobId =
-    "hfJobId" in result && result.hfJobId ? result.hfJobId : undefined;
+
+  const clipUrls = clipResults.map((r) => r.url);
+  const overallServedBy = clipResults[0]?.servedBy ?? "higgsfield";
+  const burnedHfJobIds = clipResults
+    .map((r) => r.hfJobId)
+    .filter((x): x is string => Boolean(x));
   await updateJob(jobId, (j) => {
     const existing = j.artifacts.inflightHiggsfieldJobs ?? [];
     return {
       ...j,
       artifacts: {
         ...j.artifacts,
-        videoUrl: url,
-        inflightHiggsfieldJobs: hfJobId
-          ? existing.filter((e) => e.hfJobId !== hfJobId)
-          : existing,
+        clipUrls,
+        inflightHiggsfieldJobs: existing.filter(
+          (e) => !burnedHfJobIds.includes(e.hfJobId),
+        ),
       },
-      servedBy: { ...(j.servedBy ?? {}), stage5: servedBy },
+      servedBy: { ...(j.servedBy ?? {}), stage5: overallServedBy },
     };
   });
-  return { url, backend: servedBy };
+  return { clipUrls, backend: overallServedBy };
 }
+
+// Stage 6: ffmpeg concat + caption burn-in. Cheap local ops (no Seedance,
+// no Higgsfield). Reads the clip URLs from job state, concatenates with
+// -c copy, transcribes the result via Whisper for caption timing, burns
+// the captions on, and persists the final mp4.
+export async function stage6(
+  jobId: string,
+  args: { clipUrls: string[]; dialogue: DialogueLine[] },
+): Promise<{ url: string }> {
+  const { concatVideos, burnCaptionsOnto } = await import("./ffmpeg");
+  const { whisperCaptionCues } = await import("./captions");
+  // 1. Concat all the raw clips into one mp4 (in /tmp; no re-encode).
+  const concatBuf = await concatVideos(args.clipUrls);
+  // 2. Whisper-transcribe the audio for timing; falls back to estimated
+  //    cue distribution if no OPENAI_API_KEY is set.
+  const totalSeconds = VIDEO_CHUNKS.count * VIDEO_CHUNKS.secondsPerChunk;
+  const cues = await whisperCaptionCues(
+    concatBuf,
+    args.dialogue,
+    totalSeconds,
+  );
+  // 3. Burn the cues onto the video as ASS subtitles. Re-encodes the
+  //    video stream (subtitles filter requires it) but copies the audio.
+  const captionedBuf = await burnCaptionsOnto(concatBuf, cues);
+  // 4. Persist as the final video.
+  const { put } = await import("@vercel/blob");
+  const finalBlob = new Blob([Uint8Array.from(captionedBuf)], {
+    type: "video/mp4",
+  });
+  const upload = await put(keys.video(jobId), finalBlob, {
+    access: "public",
+    addRandomSuffix: false,
+    allowOverwrite: true,
+    contentType: "video/mp4",
+  });
+  await updateJob(jobId, (j) => ({
+    ...j,
+    artifacts: { ...j.artifacts, videoUrl: upload.url },
+    servedBy: { ...(j.servedBy ?? {}), stage6: "gateway" },
+  }));
+  return { url: upload.url };
+}
+

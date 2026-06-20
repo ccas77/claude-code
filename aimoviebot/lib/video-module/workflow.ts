@@ -136,7 +136,8 @@ async function runStage5Step(jobId: string) {
     !job.artifacts.characterSheets ||
     job.artifacts.characterSheets.length === 0 ||
     !job.artifacts.locationSheetUrl ||
-    !job.artifacts.storyboardUrl
+    !job.artifacts.storyboardUrls ||
+    job.artifacts.storyboardUrls.length === 0
   ) {
     throw new Error("Stage 5 missing upstream artifacts");
   }
@@ -146,8 +147,25 @@ async function runStage5Step(jobId: string) {
       characters: job.characters,
       characterSheets: job.artifacts.characterSheets!,
       locationSheetUrl: job.artifacts.locationSheetUrl!,
-      storyboardUrl: job.artifacts.storyboardUrl!,
-      durationSec: job.videoDurationSec,
+      storyboardUrls: job.artifacts.storyboardUrls!,
+    }),
+  );
+}
+
+async function runStage6Step(jobId: string) {
+  "use step";
+  const { setStatus, readJob } = await import("./storage");
+  const { stage6 } = await import("./stages");
+  await setStatus(jobId, "captioning");
+  const job = await readJob(jobId);
+  if (!job) throw new Error(`Job ${jobId} disappeared`);
+  if (!job.artifacts.clipUrls || job.artifacts.clipUrls.length === 0) {
+    throw new Error("Stage 6 missing clip URLs");
+  }
+  await fatal(() =>
+    stage6(jobId, {
+      clipUrls: job.artifacts.clipUrls!,
+      dialogue: job.artifacts.dialogue ?? [],
     }),
   );
 }
@@ -236,6 +254,7 @@ export async function approvedVideoWorkflow(
     await hook;
     await runStage4Step(jobId);
     await runStage5Step(jobId);
+    await runStage6Step(jobId);
     await markDone(jobId);
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
@@ -245,6 +264,7 @@ export async function approvedVideoWorkflow(
 }
 
 function inferStageFromError(message: string): StageName {
+  if (/stage 6|caption|ffmpeg|concat|whisper/i.test(message)) return "stage6";
   if (/stage 5|video/i.test(message)) return "stage5";
   if (/stage 4|storyboard/i.test(message)) return "stage4";
   if (/stage 3|shot/i.test(message)) return "stage3";
@@ -287,6 +307,7 @@ export async function retryFromStage(jobId: string, fromStage: 1 | 2 | 3 | 4 | 5
     }
     if (fromStage <= 4) await runStage4Step(jobId);
     if (fromStage <= 5) await runStage5Step(jobId);
+    await runStage6Step(jobId);
     await markDone(jobId);
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);

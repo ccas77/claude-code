@@ -49,8 +49,8 @@ export type ShotList = Shot[]; // length always 16
 // directly if a job hangs or needs manual ip approval).
 export type InflightHiggsfieldJob = {
   hfJobId: string;
-  stage: "stage1" | "stage2" | "stage4" | "stage5";
-  label: string; // e.g. "Character: Mira" or "Location" or "Storyboard" or "Video"
+  stage: "stage1" | "stage2" | "stage4" | "stage5" | "stage6";
+  label: string; // e.g. "Character: Mira" or "Location" or "Storyboard 2/4" or "Clip 3/4"
   submittedAt: string;
 };
 
@@ -60,8 +60,14 @@ export type Artifacts = {
   characterSheets?: CharacterSheet[];
   locationSheetUrl?: string;
   shotList?: ShotList;
-  storyboardUrl?: string;
-  videoUrl?: string;
+  // Multi-clip rendering (architecture B): the 16-shot list is partitioned
+  // into N chunks (default 4 chunks × 4 shots each). Each chunk gets its
+  // own mini-storyboard image (4 panels) and its own short Seedance video
+  // clip (4s). Stage 6 ffmpeg-concatenates the clips into the final video
+  // and burns captions in.
+  storyboardUrls?: string[]; // one mini-storyboard per chunk
+  clipUrls?: string[]; // one Seedance clip per chunk, before concat
+  videoUrl?: string; // final concatenated + captioned mp4
   inflightHiggsfieldJobs?: InflightHiggsfieldJob[];
 };
 
@@ -75,6 +81,7 @@ export type JobStatus =
   | "awaiting_shotlist_approval"
   | "storyboard"
   | "video"
+  | "captioning"
   | "done"
   | "failed";
 
@@ -84,7 +91,8 @@ export type StageName =
   | "stage2"
   | "stage3"
   | "stage4"
-  | "stage5";
+  | "stage5"
+  | "stage6";
 
 export type StageResult = {
   url?: string;

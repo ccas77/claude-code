@@ -26,7 +26,8 @@ type StatusResponse = {
     characterSheets?: CharacterSheet[];
     locationSheetUrl?: string;
     shotList?: Shot[];
-    storyboardUrl?: string;
+    storyboardUrls?: string[];
+    clipUrls?: string[];
     videoUrl?: string;
     inflightHiggsfieldJobs?: InflightHiggsfieldJob[];
   };
@@ -42,8 +43,9 @@ const STAGE_LABELS: Record<string, string> = {
   loc_sheet: "Location sheet",
   shot_list: "16-shot list",
   awaiting_shotlist_approval: "Awaiting shot list approval",
-  storyboard: "Storyboard grid",
-  video: "Final video",
+  storyboard: "Storyboards",
+  video: "Rendering clips",
+  captioning: "Stitching + captions",
   done: "Done",
   failed: "Failed",
 };
@@ -54,6 +56,7 @@ const STAGE_FROM: Record<string, 1 | 2 | 3 | 4 | 5> = {
   stage3: 3,
   stage4: 4,
   stage5: 5,
+  stage6: 5, // stage6 failure retries from clip render forward
 };
 
 export default function StatusPage({ params }: { params: Promise<{ jobId: string }> }) {
@@ -262,11 +265,19 @@ export default function StatusPage({ params }: { params: Promise<{ jobId: string
           url={a.locationSheetUrl}
           served={data.servedBy?.stage2}
         />
-        <ArtifactTile
-          label="Storyboard"
-          url={a.storyboardUrl}
-          served={data.servedBy?.stage4}
-        />
+        {(a.storyboardUrls ?? []).map((url, i) => (
+          <ArtifactTile
+            key={`sb-${i}`}
+            label={`Storyboard ${i + 1}/${(a.storyboardUrls ?? []).length}`}
+            url={url}
+            served={data.servedBy?.stage4}
+          />
+        ))}
+        {(!a.storyboardUrls || a.storyboardUrls.length === 0) &&
+        data.status !== "done" &&
+        data.status !== "failed" ? (
+          <ArtifactTile label="Storyboards" url={undefined} />
+        ) : null}
       </section>
 
       {a.shotList ? (

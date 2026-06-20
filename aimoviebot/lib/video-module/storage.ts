@@ -28,8 +28,13 @@ export const keys = {
   characterSheet: (jobId: string, characterName: string) =>
     key(jobId, `stage1-character-${slug(characterName)}.png`),
   locationSheet: (jobId: string) => key(jobId, "stage2-location.png"),
-  storyboard: (jobId: string) => key(jobId, "stage4-storyboard.png"),
-  video: (jobId: string) => key(jobId, "stage5-video.mp4"),
+  // Per-chunk artifacts (i is 1-indexed for human-readable filenames).
+  storyboardChunk: (jobId: string, i: number) =>
+    key(jobId, `stage4-storyboard-${i}.png`),
+  videoClip: (jobId: string, i: number) =>
+    key(jobId, `stage5-clip-${i}.mp4`),
+  // Final stitched + captioned video.
+  video: (jobId: string) => key(jobId, "stage6-final.mp4"),
 };
 
 // Put for IMMUTABLE artifacts (character sheets, location, storyboard, video).
