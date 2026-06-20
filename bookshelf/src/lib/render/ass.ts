@@ -51,6 +51,35 @@ const SILENCE_BREAK_SEC = 0.45;
 const SENTENCE_END_RE = /[.!?]["')\]]*$/;
 const FORCED_BREAK_TOKENS = new Set(['/', '|']);
 
+// Whisper labels instrumental / non-vocal sections with placeholder tokens
+// instead of transcribing nothing. Without filtering, a music-only clip ends
+// up with subtitles that read "🎶 Music 🎶". Drop these from the cue stream
+// (they still occupy a row in the words array, but never render).
+const NON_SPEECH_TOKEN_RE = /^[\p{Extended_Pictographic}\p{So}\s]+$/u;
+const NON_SPEECH_WORDS = new Set([
+  'music',
+  'intro',
+  'outro',
+  'instrumental',
+  'applause',
+  'laughter',
+  'silence',
+  'chorus',
+  'verse',
+  'bridge',
+]);
+const NON_SPEECH_BRACKETED_RE = /^[(\[][^)\]]+[)\]]$/; // (Music), [Music], etc.
+
+function isNonSpeech(text: string): boolean {
+  const t = text.trim();
+  if (!t) return true;
+  if (NON_SPEECH_TOKEN_RE.test(t)) return true;
+  if (NON_SPEECH_BRACKETED_RE.test(t)) return true;
+  const lowered = t.toLowerCase().replace(/[^a-z]/g, '');
+  if (NON_SPEECH_WORDS.has(lowered)) return true;
+  return false;
+}
+
 const MIN_CUE_DURATION_SEC = 0.4;
 const POST_LAST_LINGER_SEC = 0.35;
 const MAX_SILENT_GAP_BEFORE_CLEAR_SEC = 0.8;
@@ -116,6 +145,11 @@ function buildCues(words: CaptionWord[]): Cue[] {
   const expanded: CaptionWord[] = [];
   for (const w of words) {
     const text = w.text.trim();
+    // Drop Whisper's non-vocal annotations entirely. If a whole clip is just
+    // these (music-only audio), the cue list ends up empty and nothing
+    // renders - which is the desired behaviour, beats "🎶 Music 🎶" on
+    // screen.
+    if (isNonSpeech(text)) continue;
     if (FORCED_BREAK_TOKENS.has(text)) {
       expanded.push(w);
       continue;
