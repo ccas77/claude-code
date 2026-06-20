@@ -1,0 +1,163 @@
+import { generateText, experimental_generateImage } from "ai";
+import { gateway } from "@ai-sdk/gateway";
+import {
+  ASPECT_RATIO,
+  GATEWAY_VIDEO_TIMEOUT_MS,
+  GENERATE_AUDIO,
+  MODELS,
+} from "../config";
+
+// Vercel AI Gateway client. On Vercel, OIDC auto-auth handles credentials
+// (no AI_GATEWAY_API_KEY env var needed in production). For local dev set
+// AI_GATEWAY_API_KEY to a Gateway API key.
+
+// ---- text ----
+export async function gatewayGenerateText(args: {
+  prompt: string;
+  system?: string;
+  imageUrls?: string[]; // vision input for Mode B/C and Stage 3
+  modelId?: string;
+}): Promise<string> {
+  const modelId = args.modelId ?? MODELS.concept.gateway;
+  const userContent: Array<
+    { type: "text"; text: string } | { type: "image"; image: URL }
+  > = [{ type: "text", text: args.prompt }];
+  for (const url of args.imageUrls ?? []) {
+    userContent.push({ type: "image", image: new URL(url) });
+  }
+  const { text } = await generateText({
+    model: gateway(modelId),
+    ...(args.system ? { system: args.system } : {}),
+    messages: [{ role: "user", content: userContent }],
+  });
+  return text;
+}
+
+// ---- text -> JSON (concept output) ----
+// Done via generateText + JSON parse rather than generateObject so the
+// schema/instructions live in the prompt and we don't depend on a particular
+// AI SDK helper signature.
+export async function gatewayGenerateJSON<T>(args: {
+  prompt: string;
+  system?: string;
+  imageUrls?: string[];
+  modelId?: string;
+}): Promise<T> {
+  const text = await gatewayGenerateText(args);
+  const stripped = text
+    .trim()
+    .replace(/^```(?:json)?\s*/i, "")
+    .replace(/```\s*$/i, "")
+    .trim();
+  try {
+    return JSON.parse(stripped) as T;
+  } catch (e) {
+    throw new Error(
+      `Gateway JSON parse failed. Raw text:\n${text}\n\nError: ${String(e)}`,
+    );
+  }
+}
+
+// ---- image gen ----
+export async function gatewayGenerateImage(args: {
+  prompt: string;
+  imageRefs: string[]; // URLs
+}): Promise<{ url: string }> {
+  const modelId = MODELS.image.gateway;
+  // Embed reference image URLs inline in the prompt. Gemini image models on
+  // the Gateway accept image inputs via the unified messages content; the
+  // experimental_generateImage signature varies, so this keeps the call shape
+  // minimal and adds the refs as URLs the model can resolve.
+  const promptWithRefs =
+    args.imageRefs.length === 0
+      ? args.prompt
+      : `${args.prompt}\n\nReference images (use as sole source of truth):\n${args.imageRefs.map((u, i) => `${i + 1}. ${u}`).join("\n")}`;
+
+  const result = await experimental_generateImage({
+    model: gateway.imageModel(modelId),
+    prompt: promptWithRefs,
+    aspectRatio: ASPECT_RATIO,
+  });
+  // experimental_generateImage returns { image: { base64, mediaType, ... } }
+  // OR { images: [...] } depending on the version. The Blob upload layer
+  // accepts a base64 string or a URL; pass back a data: URL.
+  const img = (result as { image?: { base64?: string; mediaType?: string } })
+    .image;
+  if (!img?.base64) {
+    throw new Error(
+      `Gateway image returned no base64 payload: ${JSON.stringify(result).slice(0, 500)}`,
+    );
+  }
+  const mediaType = img.mediaType ?? "image/png";
+  return { url: `data:${mediaType};base64,${img.base64}` };
+}
+
+// ---- video gen ----
+// Gateway video for Seedance. The AI SDK doesn't (as of 6.x) expose a stable
+// experimental_generateVideo for all providers, so we call the Gateway
+// directly with an extended-timeout fetch. The Gateway-prefixed model slug
+// for Seedance is bytedance/seedance-2.0-fast (verified against
+// ai-gateway.vercel.sh/v1/models on build).
+export async function gatewayGenerateVideo(args: {
+  prompt: string;
+  imageRefs: string[];
+  resolution: "480p" | "720p" | "1080p";
+  mode: "std" | "fast";
+  duration: number;
+  startImageUrl?: string;
+}): Promise<{ url: string }> {
+  if (!GENERATE_AUDIO) {
+    throw new Error(
+      "generate_audio guard tripped: AI Movie Bot requires audio ON",
+    );
+  }
+  const modelId = MODELS.video.gateway;
+  const apiKey = process.env.AI_GATEWAY_API_KEY ?? process.env.VERCEL_OIDC_TOKEN;
+  if (!apiKey) {
+    throw new Error(
+      "Gateway video needs AI_GATEWAY_API_KEY locally or VERCEL_OIDC_TOKEN in production",
+    );
+  }
+
+  const body = {
+    prompt: args.prompt,
+    aspect_ratio: ASPECT_RATIO,
+    resolution: args.resolution,
+    mode: args.mode,
+    duration: args.duration,
+    generate_audio: true,
+    image: args.startImageUrl ?? args.imageRefs[0],
+    image_refs: args.imageRefs,
+  };
+
+  const ctrl = new AbortController();
+  const to = setTimeout(() => ctrl.abort(), GATEWAY_VIDEO_TIMEOUT_MS);
+  try {
+    const res = await fetch(`https://ai-gateway.vercel.sh/v1/${modelId}`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+      signal: ctrl.signal,
+    });
+    if (!res.ok) {
+      throw new Error(`Gateway video ${res.status}: ${await res.text()}`);
+    }
+    const json = (await res.json()) as {
+      video?: { url?: string };
+      url?: string;
+      output?: { url?: string };
+    };
+    const url = json.video?.url ?? json.output?.url ?? json.url;
+    if (!url) {
+      throw new Error(
+        `Gateway video returned no URL: ${JSON.stringify(json).slice(0, 500)}`,
+      );
+    }
+    return { url };
+  } finally {
+    clearTimeout(to);
+  }
+}
