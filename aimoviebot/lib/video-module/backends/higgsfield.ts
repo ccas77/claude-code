@@ -223,7 +223,9 @@ export async function generateImage(args: {
       `generate_image returned no job id: ${JSON.stringify(submitted).slice(0, 300)}`,
     );
   }
-  const final = await pollJob(token, jobId, { timeoutMs: 3 * 60 * 1000 });
+  // Higgsfield image gen can sit in queue 2-3 min. Be generous before
+  // bailing to the Gateway fallback so we don't pay for compute twice.
+  const final = await pollJob(token, jobId, { timeoutMs: 5 * 60 * 1000 });
   return { url: extractUrl(final) };
 }
 

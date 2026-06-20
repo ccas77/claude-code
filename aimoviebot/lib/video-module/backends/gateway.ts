@@ -1,4 +1,4 @@
-import { generateText, experimental_generateImage } from "ai";
+import { generateText } from "ai";
 import { gateway } from "@ai-sdk/gateway";
 import {
   ASPECT_RATIO,
@@ -115,37 +115,72 @@ export async function gatewayGenerateJSON<T>(args: {
 }
 
 // ---- image gen ----
+// AI SDK v6's `gateway.imageModel(...)` registry doesn't include the Gemini
+// `-image` chat models (it errors "No such imageModel"). Use Gemini's chat
+// API directly with image-modal output: generateText with the chat-image
+// model returns generated image bytes in the experimental file attachments.
 export async function gatewayGenerateImage(args: {
   prompt: string;
-  imageRefs: string[]; // URLs
+  imageRefs: string[]; // public URLs of reference images
 }): Promise<{ url: string }> {
   const modelId = MODELS.image.gateway;
-  // Embed reference image URLs inline in the prompt. Gemini image models on
-  // the Gateway accept image inputs via the unified messages content; the
-  // experimental_generateImage signature varies, so this keeps the call shape
-  // minimal and adds the refs as URLs the model can resolve.
-  const promptWithRefs =
-    args.imageRefs.length === 0
-      ? args.prompt
-      : `${args.prompt}\n\nReference images (use as sole source of truth):\n${args.imageRefs.map((u, i) => `${i + 1}. ${u}`).join("\n")}`;
 
-  const result = await experimental_generateImage({
-    model: gateway.imageModel(modelId),
-    prompt: promptWithRefs,
-    aspectRatio: ASPECT_RATIO,
+  // Reference images: download + sniff so the media type is honest before
+  // we hand them to the chat API.
+  const userContent: Array<
+    | { type: "text"; text: string }
+    | { type: "image"; image: Uint8Array; mediaType: string }
+  > = [
+    {
+      type: "text",
+      text: `${args.prompt}\n\nOutput a single image, 9:16 vertical (portrait). Do not output any text response; produce only the image.`,
+    },
+  ];
+  for (const url of args.imageRefs) {
+    const { data, mediaType } = await fetchImageWithCorrectMediaType(url);
+    userContent.push({ type: "image", image: data, mediaType });
+  }
+
+  const result = await generateText({
+    model: gateway(modelId),
+    messages: [{ role: "user", content: userContent }],
+    // Image-capable Gemini models stream both text and image parts; we just
+    // want the image part.
+    providerOptions: {
+      gateway: {},
+    },
   });
-  // experimental_generateImage returns { image: { base64, mediaType, ... } }
-  // OR { images: [...] } depending on the version. The Blob upload layer
-  // accepts a base64 string or a URL; pass back a data: URL.
-  const img = (result as { image?: { base64?: string; mediaType?: string } })
-    .image;
-  if (!img?.base64) {
+
+  // The image arrives in result.files (AI SDK v6) as a file part with
+  // mediaType "image/..." and a base64 / Uint8Array payload. Walk every
+  // shape we might see so a v6 minor-version bump doesn't break this.
+  const files = (result as unknown as {
+    files?: Array<{
+      mediaType?: string;
+      base64?: string;
+      uint8Array?: Uint8Array;
+      url?: string;
+    }>;
+  }).files;
+  const file = files?.find((f) => (f.mediaType ?? "").startsWith("image/"));
+  if (!file) {
     throw new Error(
-      `Gateway image returned no base64 payload: ${JSON.stringify(result).slice(0, 500)}`,
+      `Gateway chat image: no image part in response. Text: ${(result as { text?: string }).text?.slice(0, 200) ?? "(none)"}`,
     );
   }
-  const mediaType = img.mediaType ?? "image/png";
-  return { url: `data:${mediaType};base64,${img.base64}` };
+  if (file.url) return { url: file.url };
+  if (file.base64) {
+    return {
+      url: `data:${file.mediaType ?? "image/png"};base64,${file.base64}`,
+    };
+  }
+  if (file.uint8Array) {
+    const b64 = Buffer.from(file.uint8Array).toString("base64");
+    return { url: `data:${file.mediaType ?? "image/png"};base64,${b64}` };
+  }
+  throw new Error(
+    `Gateway chat image: file part has no payload (${JSON.stringify(file).slice(0, 200)})`,
+  );
 }
 
 // ---- video gen ----
