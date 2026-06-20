@@ -64,19 +64,28 @@ export async function putJSON(key: string, data: unknown): Promise<string> {
 export async function getJSON<T>(key: string): Promise<T | null> {
   try {
     const meta = await head(key);
-    // Vercel Blob's `url` is the public, CDN-cached URL — Vercel Functions
-    // hit a stale layer of that cache that public clients don't. Use
-    // `downloadUrl` instead, which is the un-cached origin path.
+    console.log(
+      `[getJSON ${key}] meta=${JSON.stringify({
+        url: meta.url,
+        downloadUrl: meta.downloadUrl,
+        size: meta.size,
+        cacheControl: meta.cacheControl,
+        uploadedAt: meta.uploadedAt,
+      })}`,
+    );
     const base = meta.downloadUrl ?? meta.url;
     const url = `${base}${base.includes("?") ? "&" : "?"}_t=${Date.now()}`;
-    const res = await fetch(url, { cache: "no-store" });
+    const res = await fetch(url, {
+      cache: "no-store",
+      headers: { "Cache-Control": "no-cache" },
+    });
     if (!res.ok) {
       console.log(`[getJSON ${key}] fetch !ok status=${res.status}`);
       return null;
     }
     const text = await res.text();
     console.log(
-      `[getJSON ${key}] blobSize=${meta.size} bodyLen=${text.length}`,
+      `[getJSON ${key}] blobSize=${meta.size} bodyLen=${text.length} cfCache=${res.headers.get("x-vercel-cache") ?? "(none)"} age=${res.headers.get("age") ?? "(none)"}`,
     );
     return JSON.parse(text) as T;
   } catch (e) {
