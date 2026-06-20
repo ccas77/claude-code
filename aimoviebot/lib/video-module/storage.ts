@@ -32,25 +32,43 @@ export const keys = {
   video: (jobId: string) => key(jobId, "stage5-video.mp4"),
 };
 
-const putBlob = async (k: string, body: Blob | ArrayBuffer | string, contentType?: string) => {
+const putBlob = async (
+  k: string,
+  body: Blob | ArrayBuffer | string,
+  contentType?: string,
+  mutable?: boolean,
+) => {
   const blob = await put(k, body, {
     access: "public",
     addRandomSuffix: false,
     ...(contentType ? { contentType } : {}),
     allowOverwrite: true,
+    // Mutable keys (job.json, shotList JSON) get cacheControlMaxAge: 0 so the
+    // CDN never serves stale content after an overwrite. Without this, a
+    // read-modify-write sequence can clobber newer state with older state.
+    ...(mutable ? { cacheControlMaxAge: 0 } : {}),
   });
   return blob.url;
 };
 
 // putJSON / getJSON — used for job state, concept result, shot list, etc.
+// These keys mutate, so they're written with cache-control: max-age=0.
 export async function putJSON(key: string, data: unknown): Promise<string> {
-  return putBlob(key, JSON.stringify(data, null, 2), "application/json");
+  return putBlob(
+    key,
+    JSON.stringify(data, null, 2),
+    "application/json",
+    true,
+  );
 }
 
 export async function getJSON<T>(key: string): Promise<T | null> {
   try {
     const meta = await head(key);
-    const res = await fetch(meta.url);
+    // Cache-bust on the GET too: belt-and-suspenders since CDN cache headers
+    // can be ignored by intermediate caches.
+    const url = `${meta.url}${meta.url.includes("?") ? "&" : "?"}_t=${Date.now()}`;
+    const res = await fetch(url, { cache: "no-store" });
     if (!res.ok) return null;
     return (await res.json()) as T;
   } catch {

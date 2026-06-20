@@ -4,8 +4,8 @@ import { randomUUID } from "node:crypto";
 import { runConcept } from "@/lib/video-module/concept";
 import {
   writeJob,
-  mergeArtifacts,
   setStatus,
+  updateJob,
 } from "@/lib/video-module/storage";
 import type { Job } from "@/lib/video-module/types";
 
@@ -56,11 +56,18 @@ export async function POST(req: Request) {
 
   try {
     const result = await runConcept(input);
-    await mergeArtifacts(jobId, {
-      sceneDescription: result.sceneDescription,
-      dialogue: result.dialogue,
-    });
-    await setStatus(jobId, "awaiting_approval");
+    // Collapse artifacts+status into one write. Two sequential
+    // read-modify-write ops on the same Blob key race with CDN propagation
+    // and can clobber each other.
+    await updateJob(jobId, (j) => ({
+      ...j,
+      status: "awaiting_approval",
+      artifacts: {
+        ...j.artifacts,
+        sceneDescription: result.sceneDescription,
+        dialogue: result.dialogue,
+      },
+    }));
     return NextResponse.json({
       jobId,
       sceneDescription: result.sceneDescription,
