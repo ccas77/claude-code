@@ -131,7 +131,7 @@ export async function gatewayGenerateVideo(args: {
   mode: "std" | "fast";
   duration: number;
   startImageUrl?: string;
-}): Promise<{ url: string }> {
+}): Promise<{ url: string; hfJobId?: string }> {
   if (!GENERATE_AUDIO) {
     throw new Error(
       "generate_audio guard tripped: AI Movie Bot requires audio ON",
