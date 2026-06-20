@@ -33,6 +33,26 @@ export async function POST(
       );
     }
 
+    // Race guard: refuse if the linked music clip is still in the middle of
+    // a transcription. Without this, hitting Re-render right after kicking
+    // off a re-transcribe runs the render against the OLD captions and the
+    // burned-in subtitles end up wrong (or empty, if the non-vocal filter
+    // strips the placeholder tokens).
+    if (card!.musicClipId) {
+      const clip = await db.query.musicClips.findFirst({
+        where: eq(schema.musicClips.id, card!.musicClipId),
+      });
+      if (
+        clip &&
+        (clip.transcriptionStatus === 'pending' ||
+          clip.transcriptionStatus === 'processing')
+      ) {
+        throw new ForbiddenError(
+          `Music clip is still being transcribed (status: ${clip.transcriptionStatus}). Wait for it to finish, then re-render.`,
+        );
+      }
+    }
+
     // Preserve only stamps the scheduler/publish flow put on the card (the
     // post-bridge account assignment). Drop the render-step rows so the new
     // run's image/cover-check/video stamps land cleanly.
