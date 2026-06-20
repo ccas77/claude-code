@@ -1,4 +1,4 @@
-import { and, eq, gte, inArray, lte, sql, type SQL } from 'drizzle-orm';
+import { and, eq, gte, lte, sql } from 'drizzle-orm';
 import { db, schema } from '../db/client';
 import type { IntervalWindow, ProviderUsage } from '../db/schema';
 import { enqueue, JOB_NAMES } from '../queue';
@@ -302,12 +302,11 @@ function currentWindow(intervals: IntervalWindow[], minutesOfDay: number): Inter
 type MusicPick = {
   musicId: string | null;
   diag: {
-    selectedCount: number;
     ownedClips: number;
     bookSpecificClips: number;
     sameGenreClips: number;
     anyGenreClips: number;
-    poolPicked: 'book-specific' | 'same-genre' | 'any-genre' | 'all-selected' | 'none';
+    poolPicked: 'book-specific' | 'same-genre' | 'any-genre' | 'all-owned' | 'none';
     poolSize: number;
   };
 };
@@ -317,14 +316,11 @@ async function pickMusic(
   bookId: string,
   bookGenreId: string | null,
 ): Promise<MusicPick> {
-  const selected = await db
-    .select({ musicClipId: schema.automationMusicSelections.musicClipId })
-    .from(schema.automationMusicSelections)
-    .where(eq(schema.automationMusicSelections.configId, cfg.id))
-    .orderBy(schema.automationMusicSelections.position);
-
+  // Music routing lives at the BOOK level, not the automation level. The
+  // pool of candidate clips is just everything the owner owns; the
+  // priority filter (book-pinned > same-genre > any-genre) then narrows
+  // by the book's eligibility rules.
   const diagBase = {
-    selectedCount: selected.length,
     ownedClips: 0,
     bookSpecificClips: 0,
     sameGenreClips: 0,
@@ -333,22 +329,15 @@ async function pickMusic(
     poolSize: 0,
   };
 
-  if (selected.length === 0) return { musicId: null, diag: diagBase };
-
-  const selectedIds = selected.map((s) => s.musicClipId);
-
-  const candidatesQuery: SQL[] = [
-    inArray(schema.musicClips.id, selectedIds),
-    eq(schema.musicClips.ownerId, cfg.ownerId),
-  ];
   const clips = await db
     .select({
       id: schema.musicClips.id,
       anyGenre: schema.musicClips.anyGenre,
     })
     .from(schema.musicClips)
-    .where(and(...candidatesQuery));
+    .where(eq(schema.musicClips.ownerId, cfg.ownerId));
   diagBase.ownedClips = clips.length;
+  if (clips.length === 0) return { musicId: null, diag: diagBase };
 
   const bookLinks = await db
     .select({ musicClipId: schema.musicClipBooks.musicClipId })
@@ -383,10 +372,9 @@ async function pickMusic(
     pool = anyGenre;
     poolPicked = 'any-genre';
   }
-  if (pool.length === 0) {
-    pool = clips;
-    poolPicked = 'all-selected';
-  }
+  // No "all-owned" fallback: if nothing matches the book's rules (no pinned
+  // clips, no genre match, no any-genre), refuse rather than dropping in a
+  // random clip the book wouldn't allow.
   diagBase.poolPicked = pool.length === 0 ? 'none' : poolPicked;
   diagBase.poolSize = pool.length;
 

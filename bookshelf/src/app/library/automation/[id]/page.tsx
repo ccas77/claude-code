@@ -21,10 +21,8 @@ type Config = {
 type Selection = { id: string; title?: string | null; name?: string | null; position: number };
 
 type BookOption = { id: string; title: string; genreId: string | null };
-type MusicOption = { id: string; name: string; anyGenre: boolean; genreIds: string[] };
 type GenreOption = { id: string; name: string };
 
-const ANY_GENRE_KEY = '__any_genre__';
 const NO_GENRE_KEY = '__no_genre__';
 
 export default function AutomationConfigPage({
@@ -37,15 +35,12 @@ export default function AutomationConfigPage({
 
   const [server, setServer] = useState<Config | null>(null);
   const [serverBookIds, setServerBookIds] = useState<string[]>([]);
-  const [serverMusicIds, setServerMusicIds] = useState<string[]>([]);
 
   const [draftEnabled, setDraftEnabled] = useState(false);
   const [draftIntervals, setDraftIntervals] = useState<Interval[]>([]);
   const [draftBookIds, setDraftBookIds] = useState<string[]>([]);
-  const [draftMusicIds, setDraftMusicIds] = useState<string[]>([]);
 
   const [allBooks, setAllBooks] = useState<BookOption[]>([]);
-  const [allMusic, setAllMusic] = useState<MusicOption[]>([]);
   const [allGenres, setAllGenres] = useState<GenreOption[]>([]);
 
   const [saving, setSaving] = useState(false);
@@ -53,10 +48,9 @@ export default function AutomationConfigPage({
   const [error, setError] = useState<string | null>(null);
 
   const load = async () => {
-    const [cfgRes, booksRes, musicRes, genresRes] = await Promise.all([
+    const [cfgRes, booksRes, genresRes] = await Promise.all([
       fetch(`/api/automation/configs/${id}`),
       fetch('/api/books'),
-      fetch('/api/music'),
       fetch('/api/genres'),
     ]);
     if (!cfgRes.ok) {
@@ -66,22 +60,15 @@ export default function AutomationConfigPage({
     const d = await cfgRes.json();
     setServer(d.config);
     const bookIds = (d.books ?? []).map((b: Selection) => b.id);
-    const musicIds = (d.music ?? []).map((m: Selection) => m.id);
     setServerBookIds(bookIds);
-    setServerMusicIds(musicIds);
 
     setDraftEnabled(d.config.enabled);
     setDraftIntervals(d.config.intervals);
     setDraftBookIds(bookIds);
-    setDraftMusicIds(musicIds);
 
     if (booksRes.ok) {
       const b = await booksRes.json();
       setAllBooks(b.books ?? []);
-    }
-    if (musicRes.ok) {
-      const m = await musicRes.json();
-      setAllMusic(m.musicClips ?? []);
     }
     if (genresRes.ok) {
       const g = await genresRes.json();
@@ -99,9 +86,8 @@ export default function AutomationConfigPage({
     if (draftEnabled !== server.enabled) return true;
     if (JSON.stringify(draftIntervals) !== JSON.stringify(server.intervals)) return true;
     if (draftBookIds.join('|') !== serverBookIds.join('|')) return true;
-    if (draftMusicIds.join('|') !== serverMusicIds.join('|')) return true;
     return false;
-  }, [server, draftEnabled, draftIntervals, draftBookIds, draftMusicIds, serverBookIds, serverMusicIds]);
+  }, [server, draftEnabled, draftIntervals, draftBookIds, serverBookIds]);
 
   const save = async () => {
     setSaving(true);
@@ -114,7 +100,6 @@ export default function AutomationConfigPage({
           enabled: draftEnabled,
           intervals: draftIntervals,
           bookIds: draftBookIds,
-          musicClipIds: draftMusicIds,
         }),
       });
       if (!res.ok) throw new Error((await res.json()).error ?? 'failed');
@@ -131,7 +116,6 @@ export default function AutomationConfigPage({
     setDraftEnabled(server.enabled);
     setDraftIntervals(server.intervals);
     setDraftBookIds(serverBookIds);
-    setDraftMusicIds(serverMusicIds);
   };
 
   const remove = async () => {
@@ -258,14 +242,16 @@ export default function AutomationConfigPage({
         emptyMessage="No books yet."
       />
 
-      <BulkPickSection
-        title="Music clips eligible for use"
-        subtitle="The cron prefers clips matching the chosen book's genre, falls back to any-genre, then any."
-        groups={groupMusicByGenre(allMusic, allGenres)}
-        selectedIds={new Set(draftMusicIds)}
-        onChange={(ids) => setDraftMusicIds(ids)}
-        emptyMessage="No music clips yet."
-      />
+      <div className="rounded-md border border-stone-200 bg-stone-50 p-3 text-sm text-stone-700">
+        <p className="font-medium">Music is chosen automatically.</p>
+        <p className="mt-1 text-xs text-stone-600">
+          The scheduler picks a clip for each posted card based on the book&apos;s
+          own rules: clips pinned to that book win, otherwise clips tagged with
+          that book&apos;s genre, otherwise free-for-all clips. Edit a clip&apos;s
+          eligibility on the music page (Restrict to: Free for all / Specific
+          genres / Specific books).
+        </p>
+      </div>
 
       {error && (
         <div className="rounded border border-red-200 bg-red-50 p-3 text-sm text-red-700">
@@ -306,54 +292,6 @@ function groupBooksByGenre(
     });
   }
   groups.sort((a, b) => {
-    if (a.key === NO_GENRE_KEY) return 1;
-    if (b.key === NO_GENRE_KEY) return -1;
-    return a.title.localeCompare(b.title);
-  });
-  return groups;
-}
-
-function groupMusicByGenre(
-  clips: MusicOption[],
-  genres: GenreOption[],
-): PickGroup[] {
-  const genreNameById = new Map(genres.map((g) => [g.id, g.name]));
-  const buckets = new Map<string, PickItem[]>();
-  for (const c of clips) {
-    if (c.anyGenre) {
-      const arr = buckets.get(ANY_GENRE_KEY) ?? [];
-      arr.push({ id: c.id, label: c.name });
-      buckets.set(ANY_GENRE_KEY, arr);
-      continue;
-    }
-    if (c.genreIds.length === 0) {
-      const arr = buckets.get(NO_GENRE_KEY) ?? [];
-      arr.push({ id: c.id, label: c.name });
-      buckets.set(NO_GENRE_KEY, arr);
-      continue;
-    }
-    // A clip can appear under multiple genre groups it's tagged with.
-    for (const gid of c.genreIds) {
-      const arr = buckets.get(gid) ?? [];
-      arr.push({ id: c.id, label: c.name });
-      buckets.set(gid, arr);
-    }
-  }
-  const groups: PickGroup[] = [];
-  for (const [key, items] of buckets.entries()) {
-    items.sort((a, b) => a.label.localeCompare(b.label));
-    const title =
-      key === ANY_GENRE_KEY
-        ? 'Any genre'
-        : key === NO_GENRE_KEY
-          ? 'No genre'
-          : genreNameById.get(key) ?? 'Unknown genre';
-    groups.push({ key, title, items });
-  }
-  groups.sort((a, b) => {
-    // Any-genre first, no-genre last, the rest alphabetically.
-    if (a.key === ANY_GENRE_KEY) return -1;
-    if (b.key === ANY_GENRE_KEY) return 1;
     if (a.key === NO_GENRE_KEY) return 1;
     if (b.key === NO_GENRE_KEY) return -1;
     return a.title.localeCompare(b.title);

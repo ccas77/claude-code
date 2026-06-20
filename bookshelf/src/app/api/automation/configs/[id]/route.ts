@@ -16,7 +16,6 @@ const PatchSchema = z.object({
   enabled: z.boolean().optional(),
   intervals: z.array(IntervalSchema).max(10).optional(),
   bookIds: z.array(z.string().uuid()).optional(),
-  musicClipIds: z.array(z.string().uuid()).optional(),
   dailyRenderCap: z.number().int().min(1).max(200).optional(),
 });
 
@@ -36,32 +35,17 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   try {
     const { id } = await params;
     const config = await loadOwned(id);
-    const [books, music] = await Promise.all([
-      db
-        .select({
-          id: schema.automationBookSelections.bookId,
-          title: schema.books.title,
-          position: schema.automationBookSelections.position,
-        })
-        .from(schema.automationBookSelections)
-        .leftJoin(schema.books, eq(schema.books.id, schema.automationBookSelections.bookId))
-        .where(eq(schema.automationBookSelections.configId, id))
-        .orderBy(schema.automationBookSelections.position),
-      db
-        .select({
-          id: schema.automationMusicSelections.musicClipId,
-          name: schema.musicClips.name,
-          position: schema.automationMusicSelections.position,
-        })
-        .from(schema.automationMusicSelections)
-        .leftJoin(
-          schema.musicClips,
-          eq(schema.musicClips.id, schema.automationMusicSelections.musicClipId),
-        )
-        .where(eq(schema.automationMusicSelections.configId, id))
-        .orderBy(schema.automationMusicSelections.position),
-    ]);
-    return NextResponse.json({ config, books, music });
+    const books = await db
+      .select({
+        id: schema.automationBookSelections.bookId,
+        title: schema.books.title,
+        position: schema.automationBookSelections.position,
+      })
+      .from(schema.automationBookSelections)
+      .leftJoin(schema.books, eq(schema.books.id, schema.automationBookSelections.bookId))
+      .where(eq(schema.automationBookSelections.configId, id))
+      .orderBy(schema.automationBookSelections.position);
+    return NextResponse.json({ config, books });
   } catch (e) {
     const { status, body } = mapError(e);
     return NextResponse.json(body, { status });
@@ -101,21 +85,6 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
           input.bookIds.map((bookId, position) => ({
             configId: id,
             bookId,
-            position,
-          })),
-        );
-      }
-    }
-
-    if (input.musicClipIds !== undefined) {
-      await db
-        .delete(schema.automationMusicSelections)
-        .where(eq(schema.automationMusicSelections.configId, id));
-      if (input.musicClipIds.length) {
-        await db.insert(schema.automationMusicSelections).values(
-          input.musicClipIds.map((musicClipId, position) => ({
-            configId: id,
-            musicClipId,
             position,
           })),
         );
