@@ -1,9 +1,15 @@
 "use client";
-import { Suspense, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 type Mode = "A" | "B" | "C";
 type Character = { name: string; imageUrl: string };
+type SavedScene = {
+  id: string;
+  label: string;
+  mode: Mode;
+  conceptInput: string;
+};
 
 const modeLabels: Record<
   Mode,
@@ -22,7 +28,7 @@ const modeLabels: Record<
   },
   C: {
     title: "C · From a blurb",
-    hint: "Give a title or a one-line idea. The model proposes 2–3 alternates and writes dialogue for your cast.",
+    hint: "Give a title or a one-line idea. The model proposes 2-3 alternates and writes dialogue for your cast.",
     placeholder:
       "Title or blurb. e.g. A reluctant heir confronts her sister at midnight.",
   },
@@ -53,6 +59,14 @@ function ConceptInner() {
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [savedScenes, setSavedScenes] = useState<SavedScene[]>([]);
+
+  useEffect(() => {
+    fetch("/api/library")
+      .then((r) => r.json())
+      .then((d) => setSavedScenes(d.scenes ?? []))
+      .catch(() => {});
+  }, []);
 
   if (characters.length === 0 || !locationImageUrl) {
     return (
@@ -66,10 +80,35 @@ function ConceptInner() {
     );
   }
 
+  function loadSavedScene(s: SavedScene) {
+    setMode(s.mode);
+    setText(s.conceptInput);
+  }
+
+  async function removeSavedScene(id: string) {
+    try {
+      await fetch(`/api/library?type=scenes&id=${id}`, { method: "DELETE" });
+      setSavedScenes((xs) => xs.filter((x) => x.id !== id));
+    } catch {
+      // ignore
+    }
+  }
+
   async function submit() {
     setBusy(true);
     setError(null);
     try {
+      // Autosave the typed scene to the library BEFORE drafting. Fire and
+      // forget; failure here shouldn't block the render flow.
+      fetch("/api/library", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "scenes",
+          item: { mode, conceptInput: text },
+        }),
+      }).catch(() => {});
+
       const res = await fetch("/api/video/concept", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -108,6 +147,39 @@ function ConceptInner() {
           </span>
         ))}
       </div>
+
+      {savedScenes.length > 0 ? (
+        <section className="space-y-2">
+          <h2 className="text-sm font-medium text-stone-700">Saved scenes</h2>
+          <ul className="space-y-1">
+            {savedScenes.map((s) => (
+              <li
+                key={s.id}
+                className="flex items-center gap-2 border border-stone-200 rounded px-3 py-2 bg-white"
+              >
+                <span className="text-xs uppercase text-stone-400 font-medium w-5">
+                  {s.mode}
+                </span>
+                <button
+                  onClick={() => loadSavedScene(s)}
+                  className="flex-1 text-left text-sm text-stone-800 hover:text-violet-700 truncate"
+                  title={s.conceptInput}
+                >
+                  {s.label || s.conceptInput.slice(0, 80)}
+                </button>
+                <button
+                  onClick={() => removeSavedScene(s.id)}
+                  className="text-stone-400 hover:text-red-600 text-xs"
+                  aria-label="Remove from library"
+                  title="Remove from library"
+                >
+                  ×
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
 
       <div className="flex gap-2">
         {(["A", "B", "C"] as Mode[]).map((m) => (
