@@ -64,13 +64,21 @@ export async function putJSON(key: string, data: unknown): Promise<string> {
 export async function getJSON<T>(key: string): Promise<T | null> {
   try {
     const meta = await head(key);
-    // Cache-bust on the GET too: belt-and-suspenders since CDN cache headers
-    // can be ignored by intermediate caches.
     const url = `${meta.url}${meta.url.includes("?") ? "&" : "?"}_t=${Date.now()}`;
     const res = await fetch(url, { cache: "no-store" });
-    if (!res.ok) return null;
-    return (await res.json()) as T;
-  } catch {
+    if (!res.ok) {
+      console.log(`[getJSON ${key}] fetch !ok status=${res.status}`);
+      return null;
+    }
+    const text = await res.text();
+    console.log(
+      `[getJSON ${key}] blobSize=${meta.size} bodyLen=${text.length} bodyHead=${text.slice(0, 180)}`,
+    );
+    return JSON.parse(text) as T;
+  } catch (e) {
+    console.log(
+      `[getJSON ${key}] threw: ${e instanceof Error ? e.message : String(e)}`,
+    );
     return null;
   }
 }
