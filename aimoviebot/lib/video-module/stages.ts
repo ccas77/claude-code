@@ -222,18 +222,22 @@ export async function stage4(
         shots: chunkShots,
         characters: args.characters,
       });
-      const r = await hgImage({
-        prompt,
-        imageRefs: refs,
+      const r = await tryWithNsfwFallback(
         modelOverride,
-        onSubmit: (hfJobId) =>
-          trackInflightHiggsfieldJob(jobId, {
-            hfJobId,
-            stage: "stage4",
-            label: `Storyboard ${i + 1}/${total}`,
-            submittedAt: new Date().toISOString(),
+        async (model) =>
+          hgImage({
+            prompt,
+            imageRefs: refs,
+            modelOverride: model,
+            onSubmit: (hfJobId) =>
+              trackInflightHiggsfieldJob(jobId, {
+                hfJobId,
+                stage: "stage4",
+                label: `Storyboard ${i + 1}/${total}`,
+                submittedAt: new Date().toISOString(),
+              }),
           }),
-      });
+      );
       const url = await persistArtifact(
         keys.storyboardChunk(jobId, i + 1),
         r.url,
@@ -273,6 +277,30 @@ function chunkShots(shots: ShotList, n: number): ShotList[] {
     out.push(shots.slice(i, i + perChunk));
   }
   return out;
+}
+
+// gpt_image_2 trips Higgsfield's NSFW moderation more aggressively than
+// nano_banana_pro (especially on stylized character art with implied
+// contact). If a single chunk fails with status=nsfw we retry just that
+// chunk with nano_banana_pro instead of failing the whole stage. The
+// other chunks (which may have succeeded already with gpt_image_2) keep
+// their default-model results.
+async function tryWithNsfwFallback<T>(
+  preferredOverride: string | undefined,
+  call: (model: string | undefined) => Promise<T>,
+): Promise<T> {
+  try {
+    return await call(preferredOverride);
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    const isNsfwOrIp = /\bnsfw\b|ip_detected/i.test(msg);
+    // If the user explicitly chose a model and it failed for moderation,
+    // honor that choice — don't silently switch.
+    if (!isNsfwOrIp || preferredOverride) {
+      throw e;
+    }
+    return await call("nano_banana_pro");
+  }
 }
 
 // Stage 5: multi-clip video render. Splits the 16 shots into N chunks,

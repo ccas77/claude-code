@@ -19,12 +19,15 @@ const SHOTLIST_HOOK = (jobId: string) => `approve-shotlist:${jobId}`;
 // retries regular Errors up to 3 times by default; for image generation
 // steps that means three new Higgsfield job submissions per failure, which
 // drains paid credits when the underlying model is hung. FatalError stops
-// the step at the first failure.
-async function fatal<T>(fn: () => Promise<T>): Promise<T> {
+// the step at the first failure. The label is prepended to the message so
+// inferStageFromError can route the failure to the correct stage's retry
+// button in the UI.
+async function fatal<T>(label: string, fn: () => Promise<T>): Promise<T> {
   try {
     return await fn();
   } catch (e) {
-    throw new FatalError(e instanceof Error ? e.message : String(e));
+    const msg = e instanceof Error ? e.message : String(e);
+    throw new FatalError(`${label}: ${msg}`);
   }
 }
 
@@ -34,7 +37,7 @@ async function runStage1ForCharacterStep(
 ): Promise<{ name: string; url: string; backend: Backend }> {
   "use step";
   const { stage1 } = await import("./stages");
-  return fatal(() => stage1(jobId, character));
+  return fatal("Stage 1", () => stage1(jobId, character));
 }
 
 async function runStage2Step(
@@ -43,7 +46,7 @@ async function runStage2Step(
 ): Promise<{ url: string; backend: Backend }> {
   "use step";
   const { stage2 } = await import("./stages");
-  return fatal(() => stage2(jobId, locationImageUrl));
+  return fatal("Stage 2", () => stage2(jobId, locationImageUrl));
 }
 
 async function persistStage1And2Step(
@@ -88,7 +91,7 @@ async function runStage3Step(jobId: string) {
   ) {
     throw new Error("Stage 1/2 artifacts missing for Stage 3");
   }
-  await fatal(() =>
+  await fatal("Stage 3", () =>
     stage3(jobId, {
       sceneDescription: job.artifacts.sceneDescription!,
       dialogue: job.artifacts.dialogue!,
@@ -114,7 +117,7 @@ async function runStage4Step(jobId: string) {
   ) {
     throw new Error("Stage 4 missing upstream artifacts");
   }
-  await fatal(() =>
+  await fatal("Stage 4", () =>
     stage4(jobId, {
       shots: job.artifacts.shotList!,
       characters: job.characters,
@@ -141,7 +144,7 @@ async function runStage5Step(jobId: string) {
   ) {
     throw new Error("Stage 5 missing upstream artifacts");
   }
-  await fatal(() =>
+  await fatal("Stage 5", () =>
     stage5(jobId, {
       shots: job.artifacts.shotList!,
       characters: job.characters,
@@ -162,7 +165,7 @@ async function runStage6Step(jobId: string) {
   if (!job.artifacts.clipUrls || job.artifacts.clipUrls.length === 0) {
     throw new Error("Stage 6 missing clip URLs");
   }
-  await fatal(() =>
+  await fatal("Stage 6", () =>
     stage6(jobId, {
       clipUrls: job.artifacts.clipUrls!,
       dialogue: job.artifacts.dialogue ?? [],
@@ -264,10 +267,18 @@ export async function approvedVideoWorkflow(
 }
 
 function inferStageFromError(message: string): StageName {
-  if (/stage 6|caption|ffmpeg|concat|whisper/i.test(message)) return "stage6";
-  if (/stage 5|video/i.test(message)) return "stage5";
-  if (/stage 4|storyboard/i.test(message)) return "stage4";
-  if (/stage 3|shot/i.test(message)) return "stage3";
+  // Check stage labels FIRST (most reliable; fatal() prefixes every error
+  // with "Stage N:"). Fall back to keyword sniffing.
+  if (/\bStage 6\b/.test(message)) return "stage6";
+  if (/\bStage 5\b/.test(message)) return "stage5";
+  if (/\bStage 4\b/.test(message)) return "stage4";
+  if (/\bStage 3\b/.test(message)) return "stage3";
+  if (/\bStage 2\b/.test(message)) return "stage2";
+  if (/\bStage 1\b/.test(message)) return "stage1";
+  if (/caption|ffmpeg|concat|whisper/i.test(message)) return "stage6";
+  if (/video/i.test(message)) return "stage5";
+  if (/storyboard/i.test(message)) return "stage4";
+  if (/shot/i.test(message)) return "stage3";
   if (/location/i.test(message)) return "stage2";
   if (/character/i.test(message)) return "stage1";
   return "stage1";
