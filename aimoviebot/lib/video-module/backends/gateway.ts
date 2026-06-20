@@ -11,19 +11,75 @@ import {
 // (no AI_GATEWAY_API_KEY env var needed in production). For local dev set
 // AI_GATEWAY_API_KEY to a Gateway API key.
 
+// Sniff the real media type from an image's first bytes. Anthropic (and most
+// vision providers) reject when the declared content-type doesn't match the
+// actual file bytes. URL extensions and HTTP content-type headers lie all
+// the time, so we always sniff.
+function sniffImageMediaType(bytes: Uint8Array): string | null {
+  if (bytes.length < 12) return null;
+  if (bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) {
+    return "image/jpeg";
+  }
+  if (
+    bytes[0] === 0x89 &&
+    bytes[1] === 0x50 &&
+    bytes[2] === 0x4e &&
+    bytes[3] === 0x47
+  ) {
+    return "image/png";
+  }
+  if (bytes[0] === 0x47 && bytes[1] === 0x49 && bytes[2] === 0x46) {
+    return "image/gif";
+  }
+  if (
+    bytes[0] === 0x52 &&
+    bytes[1] === 0x49 &&
+    bytes[2] === 0x46 &&
+    bytes[3] === 0x46 &&
+    bytes[8] === 0x57 &&
+    bytes[9] === 0x45 &&
+    bytes[10] === 0x42 &&
+    bytes[11] === 0x50
+  ) {
+    return "image/webp";
+  }
+  return null;
+}
+
+async function fetchImageWithCorrectMediaType(
+  url: string,
+): Promise<{ data: Uint8Array; mediaType: string }> {
+  const res = await fetch(url);
+  if (!res.ok) {
+    throw new Error(`Failed to fetch image ${url}: ${res.status}`);
+  }
+  const data = new Uint8Array(await res.arrayBuffer());
+  const sniffed = sniffImageMediaType(data);
+  const headerCt = res.headers.get("content-type") ?? "";
+  const mediaType =
+    sniffed ??
+    (headerCt.startsWith("image/") ? headerCt.split(";")[0] : "image/jpeg");
+  return { data, mediaType };
+}
+
 // ---- text ----
+// Vision images: always download + sniff. Passing a URL directly trusts the
+// extension/content-type, which lies for files uploaded with the wrong
+// extension and gets rejected by Anthropic with a media-type mismatch error.
 export async function gatewayGenerateText(args: {
   prompt: string;
   system?: string;
-  imageUrls?: string[]; // vision input for Mode B/C and Stage 3
+  imageUrls?: string[];
   modelId?: string;
 }): Promise<string> {
   const modelId = args.modelId ?? MODELS.concept.gateway;
   const userContent: Array<
-    { type: "text"; text: string } | { type: "image"; image: URL }
+    | { type: "text"; text: string }
+    | { type: "image"; image: Uint8Array; mediaType: string }
   > = [{ type: "text", text: args.prompt }];
   for (const url of args.imageUrls ?? []) {
-    userContent.push({ type: "image", image: new URL(url) });
+    const { data, mediaType } = await fetchImageWithCorrectMediaType(url);
+    userContent.push({ type: "image", image: data, mediaType });
   }
   const { text } = await generateText({
     model: gateway(modelId),
