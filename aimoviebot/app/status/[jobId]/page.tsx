@@ -410,11 +410,11 @@ export default function StatusPage({ params }: { params: Promise<{ jobId: string
       ? STAGE_FROM[data.error.stage] ?? 1
       : null;
 
-  // Clip-centric DONE view. Hides everything that's noise once a render
-  // is finished. Each clip is one tile with Edit Storyboard (expander
-  // showing chunk shots + current storyboard image + Regenerate
-  // storyboard button) and Regenerate video (duration picker + Send).
-  if (data.status === "done" && a.clipUrls && a.clipUrls.length > 0) {
+  // Clip-centric DONE view. Gates on artifacts (videoUrl + clipUrls)
+  // rather than status === "done": the workflow occasionally lands
+  // both artifacts but doesn't flip status. From the user's perspective
+  // the render IS finished, so show the finished UI.
+  if (a.videoUrl && a.clipUrls && a.clipUrls.length > 0) {
     const cc = a.clipUrls.length;
     const shotChunks = chunksOf<Shot>((a.shotList ?? []) as Shot[], cc);
     const shotIndexesByChunk: number[][] = [];
@@ -488,87 +488,85 @@ export default function StatusPage({ params }: { params: Promise<{ jobId: string
                   key={`clip-${i}`}
                   className="border border-stone-200 rounded-lg p-3 bg-white space-y-3"
                 >
-                  <div className="grid grid-cols-2 gap-3 items-start">
-                    <video
-                      key={`${clipUrl}-${assetVersion}`}
-                      controls
-                      src={`${clipUrl}?v=${assetVersion}`}
-                      className="w-full aspect-[9/16] bg-black rounded"
-                    />
-                    <div className="space-y-2 text-xs">
-                      <div className="font-medium text-stone-800">
-                        Clip {i + 1}
-                      </div>
-                      <a
-                        href={clipUrl}
-                        download
-                        className="block text-violet-700 underline"
-                      >
-                        Download
-                      </a>
-                      <button
-                        onClick={() => {
-                          if (expanded) {
-                            setExpandedTile(null);
-                            setDraftShots(null);
-                          } else {
-                            setExpandedTile(i);
-                            const seed: Record<number, Shot> = {};
-                            for (const idx of shotIdxs) {
-                              const s = (a.shotList ?? [])[idx];
-                              if (s) seed[idx] = { ...s };
+                  <div className="flex items-center justify-between gap-3 text-sm">
+                    <span className="font-medium text-stone-800">
+                      Clip {i + 1}
+                    </span>
+                    <a
+                      href={clipUrl}
+                      download
+                      className="text-violet-700 underline text-xs"
+                    >
+                      Download
+                    </a>
+                  </div>
+                  <video
+                    key={`${clipUrl}-${assetVersion}`}
+                    controls
+                    src={`${clipUrl}?v=${assetVersion}`}
+                    className="w-full max-w-sm mx-auto aspect-[9/16] bg-black rounded"
+                  />
+                  <div className="space-y-2 text-sm">
+                    <button
+                      onClick={() => {
+                        if (expanded) {
+                          setExpandedTile(null);
+                          setDraftShots(null);
+                        } else {
+                          setExpandedTile(i);
+                          const seed: Record<number, Shot> = {};
+                          for (const idx of shotIdxs) {
+                            const s = (a.shotList ?? [])[idx];
+                            if (s) seed[idx] = { ...s };
+                          }
+                          setDraftShots(seed);
+                        }
+                      }}
+                      className="w-full text-violet-700 border border-violet-200 rounded px-3 py-2 hover:bg-violet-50"
+                    >
+                      {expanded ? "Close storyboard" : "Edit storyboard"}
+                    </button>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-xs uppercase tracking-wide text-stone-500">
+                        New clip length:
+                      </span>
+                      {[4, 8, 12, 15].map((d) => {
+                        const active = chosenDur === d;
+                        return (
+                          <button
+                            key={d}
+                            type="button"
+                            onClick={() =>
+                              setClipDurationByChunk((c) => ({
+                                ...c,
+                                [i]: d,
+                              }))
                             }
-                            setDraftShots(seed);
-                          }
-                        }}
-                        className="w-full text-violet-700 border border-violet-200 rounded px-2 py-1 hover:bg-violet-50"
-                      >
-                        {expanded ? "Close storyboard" : "Edit storyboard"}
-                      </button>
-                      <div className="space-y-1 pt-1 border-t border-stone-100">
-                        <div className="flex items-center gap-1 flex-wrap">
-                          <span className="text-[10px] uppercase tracking-wide text-stone-500">
-                            New clip length:
-                          </span>
-                          {[4, 8, 12, 15].map((d) => {
-                            const active = chosenDur === d;
-                            return (
-                              <button
-                                key={d}
-                                type="button"
-                                onClick={() =>
-                                  setClipDurationByChunk((c) => ({
-                                    ...c,
-                                    [i]: d,
-                                  }))
-                                }
-                                className={`text-xs px-2 py-0.5 rounded border ${
-                                  active
-                                    ? "bg-violet-700 text-white border-violet-700"
-                                    : "bg-white text-stone-700 border-stone-300 hover:border-violet-400"
-                                }`}
-                              >
-                                {d}s
-                              </button>
-                            );
-                          })}
-                        </div>
-                        <button
-                          onClick={() =>
-                            regenerateAsset("clip", i, {
-                              durationSec: chosenDur,
-                            })
-                          }
-                          disabled={clipBusy}
-                          className="w-full bg-amber-600 hover:bg-amber-700 text-white rounded px-2 py-1 disabled:bg-stone-300"
-                          title="Render a fresh Seedance clip at the selected length. Does NOT auto-restitch — use the Restitch button on the final video when done."
-                        >
-                          {clipBusy
-                            ? `Sending ${regenElapsed}s…`
-                            : `Regenerate video (${chosenDur}s)`}
-                        </button>
-                      </div>
+                            className={`text-xs px-2 py-1 rounded border ${
+                              active
+                                ? "bg-violet-700 text-white border-violet-700"
+                                : "bg-white text-stone-700 border-stone-300 hover:border-violet-400"
+                            }`}
+                          >
+                            {d}s
+                          </button>
+                        );
+                      })}
                     </div>
+                    <button
+                      onClick={() =>
+                        regenerateAsset("clip", i, {
+                          durationSec: chosenDur,
+                        })
+                      }
+                      disabled={clipBusy}
+                      className="w-full bg-amber-600 hover:bg-amber-700 text-white rounded px-3 py-2 disabled:bg-stone-300"
+                      title="Render a fresh Seedance clip at the selected length. Does NOT auto-restitch — use the Restitch button on the final video when done."
+                    >
+                      {clipBusy
+                        ? `Sending ${regenElapsed}s…`
+                        : `Regenerate video (${chosenDur}s)`}
+                    </button>
                   </div>
 
                   {expanded && draftShots ? (
