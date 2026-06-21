@@ -392,15 +392,22 @@ export function validateShotList(
 export async function stage4OneStoryboard(
   jobId: string,
   chunkIndex: number,
+  opts: { force?: boolean } = {},
 ): Promise<{ url: string; backend: Backend }> {
   const perJobKey = keys.storyboardChunk(jobId, chunkIndex + 1);
-  // Idempotency via head() — if the blob already exists, reuse.
-  try {
-    const { head } = await import("@vercel/blob");
-    const existing = await head(perJobKey);
-    return { url: existing.url, backend: "higgsfield" };
-  } catch {
-    // fall through
+  // Idempotency via head() — if the blob already exists, reuse. Skipped
+  // when force=true (per-asset regenerate path): Vercel Blob's del()
+  // has eventual consistency, so head() might still report a freshly
+  // deleted blob for a beat, causing the regen to silently return the
+  // old URL. force=true makes the regen actually happen.
+  if (!opts.force) {
+    try {
+      const { head } = await import("@vercel/blob");
+      const existing = await head(perJobKey);
+      return { url: existing.url, backend: "higgsfield" };
+    } catch {
+      // fall through
+    }
   }
 
   const job = await readJob(jobId);
@@ -598,18 +605,24 @@ async function tryWithNsfwFallback<T>(
 export async function stage5OneClip(
   jobId: string,
   chunkIndex: number,
+  opts: { force?: boolean } = {},
 ): Promise<{ url: string; backend: Backend }> {
   const blobKey = keys.videoClip(jobId, chunkIndex + 1);
 
   // 1. Idempotency: if the persisted clip already exists, reuse it. A
   //    workflow retry of this step (after a sibling clip's step crashed)
-  //    must NOT re-submit Seedance.
-  try {
-    const { head } = await import("@vercel/blob");
-    const existing = await head(blobKey);
-    return { url: existing.url, backend: "higgsfield" };
-  } catch {
-    // not found — fall through to generate
+  //    must NOT re-submit Seedance. Skipped when force=true (per-asset
+  //    regenerate path): Blob's del() has eventual consistency, so the
+  //    head() check can return the just-deleted blob and silently
+  //    return the old clip instead of generating a new one.
+  if (!opts.force) {
+    try {
+      const { head } = await import("@vercel/blob");
+      const existing = await head(blobKey);
+      return { url: existing.url, backend: "higgsfield" };
+    } catch {
+      // not found — fall through to generate
+    }
   }
 
   const job = await readJob(jobId);

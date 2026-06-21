@@ -62,7 +62,9 @@ export async function POST(req: Request) {
     }
 
     if (kind === "storyboard") {
-      const result = await stage4OneStoryboard(jobId, chunkIndex);
+      const result = await stage4OneStoryboard(jobId, chunkIndex, {
+        force: true,
+      });
       // Splice the new URL into the array at chunkIndex; leave siblings
       // untouched.
       await updateJob(jobId, (j) => {
@@ -78,7 +80,7 @@ export async function POST(req: Request) {
 
     // kind === "clip"
     await setStatus(jobId, "video");
-    const result = await stage5OneClip(jobId, chunkIndex);
+    const result = await stage5OneClip(jobId, chunkIndex, { force: true });
     await updateJob(jobId, (j) => {
       const arr = [...(j.artifacts.clipUrls ?? [])];
       arr[chunkIndex] = result.url;

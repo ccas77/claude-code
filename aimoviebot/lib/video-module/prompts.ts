@@ -199,19 +199,26 @@ Cast:
 INPUT:
 {input}`,
 
-  stage1: `Character design reference sheet for {characterName}, based
-entirely on the provided input character image. 9:16 vertical. NO
+  stage1: `PHOTOREALISTIC character design reference sheet for
+{characterName}, based entirely on the provided input character image.
+Photorealistic skin texture, realistic lighting, real-camera depth of
+field. NO cartoon, anime, illustration, painting, comic, sketch, 3D
+render, or stylised look — strictly photographic. 9:16 vertical. NO
 text/labels anywhere. Preserve exact face, hair, proportions, clothing,
 accessories, colors with maximum fidelity. The input image is the sole
 source of truth for this character. Include front/side/back large views,
 facial close-ups, and isolated prop/accessory breakouts. White/neutral
 background. Studio turnaround quality.`,
 
-  stage2: `Environment turnaround based entirely on the provided location
-image. 9:16 vertical. NO text. Four opposing views (front/rear/left/right)
-like a character turnaround, plus 45° angles, top-down, ground-level. Each
-panel reveals new information; no duplicate angles. Reconstruct a full
-360° understanding. The provided image is the sole source of truth.`,
+  stage2: `PHOTOREALISTIC environment reference based entirely on the
+provided location image. Photorealistic textures, real-camera lighting,
+real-world depth and atmosphere. NO cartoon, anime, illustration,
+painting, comic, sketch, 3D render, or stylised look — strictly
+photographic. 9:16 vertical. NO text. Four opposing views (front/rear/
+left/right) like a character turnaround, plus 45° angles, top-down,
+ground-level. Each panel reveals new information; no duplicate angles.
+Reconstruct a full 360° understanding. The provided image is the sole
+source of truth.`,
 
   stage3: `Convert the SCENE DESCRIPTION into exactly 8 storyboard panels.
 Each panel is one ~4-second shot in a short vertical film. The final
@@ -287,13 +294,17 @@ SCENE DESCRIPTION:
 DIALOGUE (in order, must all appear across the 8 shots):
 {dialogue}`,
 
-  stage4: `Professional 9:16 VERTICAL storyboard sheet. Render exactly
-the number of panels listed below — typically 1-4 panels for one of
-the four mini-storyboards in a 16-second film. Lay them out in a
-SINGLE vertical column (one panel above the next) so each individual
-panel is framed 9:16 vertical, matching the portrait video this
-becomes. Thin black borders, bold frame number top-left of each
-panel, short caption under each panel.
+  stage4: `PHOTOREALISTIC 9:16 VERTICAL storyboard sheet. Each panel
+is a photographic still frame — real-camera depth of field, real
+lighting, real skin and fabric texture. NO cartoon, anime,
+illustration, painting, comic, sketch, watercolour, ink wash, 3D
+render, or stylised look — strictly photographic film stills.
+Render exactly the number of panels listed below — typically 1-4
+panels for one of the four mini-storyboards in a 16-second film.
+Lay them out in a SINGLE vertical column (one panel above the next)
+so each individual panel is framed 9:16 vertical, matching the
+portrait video this becomes. Thin black borders, bold frame number
+top-left of each panel, short caption under each panel.
 
 REFERENCE HIERARCHY (strict, do not freelance):
 1. The FIRST attached image is the LOCATION. It is the literal setting.
