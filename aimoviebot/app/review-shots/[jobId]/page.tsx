@@ -219,15 +219,16 @@ export default function ReviewShotsPage({
             key={i}
             className="border border-stone-200 rounded-lg p-3 bg-white space-y-2"
           >
-            <div className="flex items-baseline gap-2">
-              <span className="text-xs text-stone-500 font-mono w-16">
+            <div className="flex items-start gap-2">
+              <span className="text-xs text-stone-500 font-mono w-16 pt-2">
                 Shot {i + 1}
               </span>
-              <input
+              <textarea
                 value={s.camera}
                 onChange={(e) => setShot(i, { camera: e.target.value })}
                 placeholder="Camera / framing / angle"
-                className="flex-1 border border-stone-300 rounded p-2 bg-white text-sm"
+                rows={2}
+                className="flex-1 border border-stone-300 rounded p-2 bg-white text-sm resize-y"
               />
               <button
                 type="button"
