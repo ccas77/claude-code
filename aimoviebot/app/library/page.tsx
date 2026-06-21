@@ -1,6 +1,20 @@
 "use client";
 import { useEffect, useState } from "react";
 
+type ImportedVideo = {
+  source: "higgsfield";
+  id: string;
+  videoUrl: string;
+  thumbnailUrl?: string;
+  prompt?: string;
+  model?: string;
+  durationSec?: number;
+  createdAtIso?: string;
+  sourceUrl?: string;
+  shortTitle: string;
+  dateBucket: string;
+};
+
 type ProjectVideo = {
   source: "project";
   jobId: string;
@@ -11,12 +25,14 @@ type ProjectVideo = {
 };
 
 type Resp = {
+  imported: ImportedVideo[];
   projectClips: ProjectVideo[];
 };
 
 export default function LibraryPage() {
   const [data, setData] = useState<Resp | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const [tab, setTab] = useState<"projects" | "imports">("projects");
 
   useEffect(() => {
     fetch("/api/library/videos", { cache: "no-store" })
@@ -28,11 +44,70 @@ export default function LibraryPage() {
   if (err) return <p className="text-red-600">{err}</p>;
   if (!data) return <p>Loading…</p>;
 
-  // Group clips by jobId so each project's chunks sit together. The
-  // stitched final is the lead artifact within each group; raw chunks
-  // follow in numeric order.
+  return (
+    <main className="space-y-6">
+      <header className="space-y-2">
+        <h1 className="text-2xl font-semibold tracking-tight">Library</h1>
+        <p className="text-stone-600 text-sm">
+          Two collections. <strong>Projects</strong> = videos this app
+          rendered, grouped by render and arranged in clip order.{" "}
+          <strong>Imports</strong> = videos pulled in from your Higgsfield
+          account, grouped by date.
+        </p>
+      </header>
+
+      <div className="flex gap-2 border-b border-stone-200">
+        <Tab
+          active={tab === "projects"}
+          label={`Projects (${countProjects(data.projectClips)})`}
+          onClick={() => setTab("projects")}
+        />
+        <Tab
+          active={tab === "imports"}
+          label={`Imports (${data.imported.length})`}
+          onClick={() => setTab("imports")}
+        />
+      </div>
+
+      {tab === "projects" ? (
+        <ProjectsSection clips={data.projectClips} />
+      ) : (
+        <ImportsSection items={data.imported} />
+      )}
+    </main>
+  );
+}
+
+function Tab({
+  active,
+  label,
+  onClick,
+}: {
+  active: boolean;
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`px-3 py-2 text-sm border-b-2 -mb-px ${
+        active
+          ? "border-violet-700 text-violet-700 font-medium"
+          : "border-transparent text-stone-500 hover:text-violet-700"
+      }`}
+    >
+      {label}
+    </button>
+  );
+}
+
+function countProjects(clips: ProjectVideo[]): number {
+  return new Set(clips.map((c) => c.jobId)).size;
+}
+
+function ProjectsSection({ clips }: { clips: ProjectVideo[] }) {
   const groups = new Map<string, ProjectVideo[]>();
-  for (const c of data.projectClips) {
+  for (const c of clips) {
     const list = groups.get(c.jobId) ?? [];
     list.push(c);
     groups.set(c.jobId, list);
@@ -43,7 +118,7 @@ export default function LibraryPage() {
       return a.kind === "final" ? -1 : 1;
     });
   }
-  const orderedJobIds = Array.from(groups.keys()).sort((a, b) => {
+  const jobIds = Array.from(groups.keys()).sort((a, b) => {
     const at = Math.max(
       ...(groups.get(a) ?? []).map((x) => new Date(x.createdAtIso).getTime()),
     );
@@ -53,52 +128,76 @@ export default function LibraryPage() {
     return bt - at;
   });
 
+  if (jobIds.length === 0) {
+    return (
+      <p className="text-stone-500 text-sm">
+        No project videos yet. Renders auto-save here as Stage 5 clips
+        complete.
+      </p>
+    );
+  }
   return (
-    <main className="space-y-8">
-      <header className="space-y-2">
-        <h1 className="text-2xl font-semibold tracking-tight">Library</h1>
-        <p className="text-stone-600 text-sm">
-          Every video this app has produced, grouped by project. Final
-          stitched + captioned video first, then the raw 4-second chunks
-          that make it up.
-        </p>
-      </header>
-
-      {orderedJobIds.length === 0 ? (
-        <p className="text-stone-500 text-sm">
-          No project videos yet. Start a render from the Render page and the
-          clips will appear here as soon as Stage 5 finishes any chunk.
-        </p>
-      ) : (
-        orderedJobIds.map((jobId) => (
-          <section key={jobId} className="space-y-3">
-            <h2 className="text-sm font-medium text-stone-700">
-              <a
-                href={`/status/${jobId}`}
-                className="hover:text-violet-700"
-              >
-                Project{" "}
-                <span className="font-mono text-xs text-stone-500">
-                  {jobId}
-                </span>
-              </a>
-            </h2>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-              {(groups.get(jobId) ?? []).map((c) => (
-                <ProjectClipTile key={c.videoUrl} c={c} />
-              ))}
-            </div>
-          </section>
-        ))
-      )}
-    </main>
+    <div className="space-y-8">
+      {jobIds.map((jobId) => (
+        <section key={jobId} className="space-y-3">
+          <h2 className="text-sm font-medium text-stone-700">
+            <a href={`/status/${jobId}`} className="hover:text-violet-700">
+              Project{" "}
+              <span className="font-mono text-xs text-stone-500">{jobId}</span>
+            </a>
+          </h2>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+            {(groups.get(jobId) ?? []).map((c) => (
+              <ProjectTile key={c.videoUrl} c={c} />
+            ))}
+          </div>
+        </section>
+      ))}
+    </div>
   );
 }
 
-function ProjectClipTile({ c }: { c: ProjectVideo }) {
+function ImportsSection({ items }: { items: ImportedVideo[] }) {
+  if (items.length === 0)
+    return (
+      <p className="text-stone-500 text-sm">
+        No imported videos. Anything you've previously rendered in
+        Higgsfield shows up here.
+      </p>
+    );
+  // Group by date bucket, in the order they first appear (already
+  // newest-first from the API).
+  const groups = new Map<string, ImportedVideo[]>();
+  for (const v of items) {
+    const list = groups.get(v.dateBucket) ?? [];
+    list.push(v);
+    groups.set(v.dateBucket, list);
+  }
+  return (
+    <div className="space-y-8">
+      {Array.from(groups.entries()).map(([bucket, vs]) => (
+        <section key={bucket} className="space-y-3">
+          <h2 className="text-sm font-medium text-stone-700">
+            {bucket}{" "}
+            <span className="text-stone-400 font-normal text-xs">
+              ({vs.length})
+            </span>
+          </h2>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+            {vs.map((v) => (
+              <ImportedTile key={v.id} v={v} />
+            ))}
+          </div>
+        </section>
+      ))}
+    </div>
+  );
+}
+
+function ProjectTile({ c }: { c: ProjectVideo }) {
   const label =
     c.kind === "final"
-      ? "Final stitched video"
+      ? "Final stitched"
       : `Clip ${c.index} (raw chunk)`;
   return (
     <div className="border border-stone-200 rounded-lg overflow-hidden bg-white">
@@ -109,7 +208,7 @@ function ProjectClipTile({ c }: { c: ProjectVideo }) {
         preload="metadata"
       />
       <div className="p-2 space-y-1">
-        <p className="text-[11px] text-stone-700">{label}</p>
+        <p className="text-[11px] font-medium text-stone-700">{label}</p>
         <p className="text-[10px] text-stone-500">{fmt(c.createdAtIso)}</p>
         <a
           href={c.videoUrl}
@@ -123,12 +222,73 @@ function ProjectClipTile({ c }: { c: ProjectVideo }) {
   );
 }
 
+function ImportedTile({ v }: { v: ImportedVideo }) {
+  return (
+    <div className="border border-stone-200 rounded-lg overflow-hidden bg-white">
+      {v.thumbnailUrl ? (
+        <img
+          src={v.thumbnailUrl}
+          alt=""
+          className="w-full aspect-[9/16] object-cover bg-stone-100"
+        />
+      ) : (
+        <video
+          src={v.videoUrl}
+          className="w-full aspect-[9/16] object-cover bg-black"
+          muted
+          preload="metadata"
+        />
+      )}
+      <div className="p-2 space-y-1">
+        <p
+          className="text-[11px] font-medium text-stone-800 line-clamp-2"
+          title={v.prompt}
+        >
+          {v.shortTitle}
+        </p>
+        <p className="text-[10px] text-stone-500">
+          {v.model ?? "—"} · {v.durationSec ?? "?"}s
+          {v.createdAtIso ? ` · ${fmtTimeOnly(v.createdAtIso)}` : ""}
+        </p>
+        <div className="flex gap-2 text-[11px]">
+          <a
+            href={v.videoUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="text-violet-700 underline"
+          >
+            Play
+          </a>
+          <a
+            href={v.videoUrl}
+            download
+            className="text-violet-700 underline"
+          >
+            Download
+          </a>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function fmt(iso: string): string {
   try {
     return new Date(iso).toLocaleString("en-GB", {
       timeZone: "Europe/London",
       day: "numeric",
       month: "short",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  } catch {
+    return iso;
+  }
+}
+function fmtTimeOnly(iso: string): string {
+  try {
+    return new Date(iso).toLocaleTimeString("en-GB", {
+      timeZone: "Europe/London",
       hour: "2-digit",
       minute: "2-digit",
     });
