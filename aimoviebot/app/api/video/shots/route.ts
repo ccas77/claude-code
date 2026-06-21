@@ -19,7 +19,9 @@ const shotSchema = z.object({
   n: z.number().int().min(1),
   camera: z.string().min(1),
   action: z.string().min(1),
-  performance: z.string().min(1),
+  // Optional / empty allowed for legacy jobs whose shotList pre-dates
+  // the performance field.
+  performance: z.string().optional().default(""),
   dialogue: z.array(dialogueLineSchema),
 });
 
