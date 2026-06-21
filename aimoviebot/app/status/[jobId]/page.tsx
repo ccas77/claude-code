@@ -46,6 +46,7 @@ const STAGE_LABELS: Record<string, string> = {
   shot_list: "16-shot list",
   awaiting_shotlist_approval: "Awaiting shot list approval",
   storyboard: "Storyboards",
+  awaiting_storyboard_approval: "Awaiting storyboard approval",
   video: "Rendering clips",
   captioning: "Stitching + captions",
   done: "Done",
@@ -142,6 +143,10 @@ export default function StatusPage({ params }: { params: Promise<{ jobId: string
         setData(json);
         if (json.status === "awaiting_shotlist_approval") {
           router.push(`/review-shots/${jobId}`);
+          return;
+        }
+        if (json.status === "awaiting_storyboard_approval") {
+          router.push(`/review-storyboards/${jobId}`);
           return;
         }
         if (json.status !== "done" && json.status !== "failed") {

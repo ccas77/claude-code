@@ -23,6 +23,7 @@ const STAGE_LABEL: Record<string, string> = {
   shot_list: "16-shot list",
   awaiting_shotlist_approval: "Awaiting shot list approval",
   storyboard: "Storyboards",
+  awaiting_storyboard_approval: "Awaiting storyboard approval",
   video: "Rendering clips",
   captioning: "Stitching + captions",
   done: "Done",
@@ -34,6 +35,7 @@ const STAGE_TONE: Record<string, string> = {
   failed: "bg-red-50 text-red-700 border-red-200",
   awaiting_approval: "bg-amber-50 text-amber-800 border-amber-200",
   awaiting_shotlist_approval: "bg-amber-50 text-amber-800 border-amber-200",
+  awaiting_storyboard_approval: "bg-amber-50 text-amber-800 border-amber-200",
 };
 
 export default function ProjectsPage() {

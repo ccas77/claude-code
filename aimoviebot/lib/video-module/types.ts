@@ -80,6 +80,7 @@ export type JobStatus =
   | "shot_list"
   | "awaiting_shotlist_approval"
   | "storyboard"
+  | "awaiting_storyboard_approval"
   | "video"
   | "captioning"
   | "done"

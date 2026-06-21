@@ -1,9 +1,11 @@
 import { createHook, FatalError } from "workflow";
 import type { Backend, Character, StageName } from "./types";
 
-// Deterministic hook token for the shot list approval step. The
-// /api/video/approve-shotlist route uses the same token to resume the run.
+// Deterministic hook tokens. /api/video/approve-shotlist and
+// /api/video/approve-storyboards use the matching token to resume the
+// workflow at Gate 2 and Gate 3 respectively.
 const SHOTLIST_HOOK = (jobId: string) => `approve-shotlist:${jobId}`;
+const STORYBOARD_HOOK = (jobId: string) => `approve-storyboards:${jobId}`;
 
 // WORKFLOW SANDBOX RULE: the "use workflow" function runs in a VM sandbox
 // without Node-only modules (no `require`, no fs, no @vercel/blob). Anything
@@ -232,6 +234,12 @@ async function setAwaitingShotlistStep(jobId: string) {
   await setStatus(jobId, "awaiting_shotlist_approval");
 }
 
+async function setAwaitingStoryboardStep(jobId: string) {
+  "use step";
+  const { setStatus } = await import("./storage");
+  await setStatus(jobId, "awaiting_storyboard_approval");
+}
+
 async function markFailed(jobId: string, stage: StageName, message: string) {
   "use step";
   const { updateJob } = await import("./storage");
@@ -317,8 +325,18 @@ export async function approvedVideoWorkflow(
     // (5) Sheets — character sheets in parallel with location sheet.
     // Cache-aware: reuses library/sheets/* when source URL matches.
     await runSheetsStage(jobId, characters, locationImageUrl);
-    // (6-8) Storyboards → clips → stitch + captions.
+    // (6) Storyboards (4 parallel, each idempotent).
     await runStage4(jobId);
+    // (Gate 3) — the user reviews the 4 storyboards before paying for
+    // 4 Seedance video clips. Per-storyboard regenerate is available
+    // on /review-storyboards. /api/video/approve-storyboards resumes
+    // this hook once the user is satisfied.
+    await setAwaitingStoryboardStep(jobId);
+    const sbHook = createHook<{ approved: true }>({
+      token: STORYBOARD_HOOK(jobId),
+    });
+    await sbHook;
+    // (7-8) Clips → stitch + captions.
     await runStage5(jobId);
     await runStage6Step(jobId);
     await markDone(jobId);
@@ -364,6 +382,18 @@ export async function retryFromStage(jobId: string, fromStage: 1 | 2 | 3 | 4 | 5
   const job = await readJobStep(jobId);
   if (!job) throw new Error(`Job ${jobId} not found`);
   try {
+    // Helper — re-parks at Gate 3 storyboard approval after re-running
+    // stage 4. Used by every fromStage path that ends up regenerating
+    // storyboards: the user must re-approve before clips fire.
+    const runStoryboardsThenGate = async () => {
+      await runStage4(jobId);
+      await setAwaitingStoryboardStep(jobId);
+      const sbHook = createHook<{ approved: true }>({
+        token: STORYBOARD_HOOK(jobId),
+      });
+      await sbHook;
+    };
+
     if (fromStage === 3) {
       await runStage3Step(jobId);
       await setAwaitingShotlistStep(jobId);
@@ -372,7 +402,7 @@ export async function retryFromStage(jobId: string, fromStage: 1 | 2 | 3 | 4 | 5
       });
       await hook;
       await runSheetsStage(jobId, job.characters, job.locationImageUrl);
-      await runStage4(jobId);
+      await runStoryboardsThenGate();
       await runStage5(jobId);
     } else if (fromStage <= 2) {
       if (fromStage <= 1) {
@@ -381,13 +411,14 @@ export async function retryFromStage(jobId: string, fromStage: 1 | 2 | 3 | 4 | 5
         const locationResult = await runStage2Step(jobId, job.locationImageUrl);
         await refreshLocationOnly(jobId, locationResult);
       }
-      await runStage4(jobId);
+      await runStoryboardsThenGate();
       await runStage5(jobId);
     } else if (fromStage === 4) {
-      await runStage4(jobId);
+      await runStoryboardsThenGate();
       await runStage5(jobId);
     } else {
-      // fromStage === 5
+      // fromStage === 5 — clips only; storyboards already approved on
+      // their previous pass.
       await runStage5(jobId);
     }
     await runStage6Step(jobId);
