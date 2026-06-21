@@ -13,6 +13,7 @@ const noStore = {
 // KV's by-updated-at sorted set, then fetches each job blob in parallel.
 type ProjectSummary = {
   jobId: string;
+  title?: string;
   status: string;
   updatedAt: string;
   createdAt: string;
@@ -40,6 +41,7 @@ export async function GET() {
           job.characters?.[0]?.imageUrl;
         summaries.push({
           jobId: job.jobId,
+          title: job.title,
           status: job.status,
           updatedAt: job.updatedAt,
           createdAt: job.createdAt,

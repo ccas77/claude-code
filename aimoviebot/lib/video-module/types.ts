@@ -126,6 +126,10 @@ export type StageResult = {
 // fresh stage-3 location sheet. Empty / missing = reuse cache when present.
 export type Job = {
   jobId: string;
+  // Human-readable title for the render. Set at concept time from the
+  // Render page's "Project name" input; editable later from /status.
+  // UI falls back to the truncated jobId when missing.
+  title?: string;
   status: JobStatus;
   characters: Character[]; // 1+ characters
   locationImageUrl: string;

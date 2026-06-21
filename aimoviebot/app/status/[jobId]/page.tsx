@@ -39,6 +39,7 @@ type InflightHiggsfieldJob = {
 
 type StatusResponse = {
   jobId: string;
+  title?: string;
   status: string;
   characters?: { name: string; imageUrl: string }[];
   clipsAreStale?: boolean;
@@ -113,6 +114,32 @@ export default function StatusPage({ params }: { params: Promise<{ jobId: string
   const [draftShots, setDraftShots] = useState<Record<number, Shot> | null>(null);
   const [savingShots, setSavingShots] = useState(false);
   const [restitching, setRestitching] = useState(false);
+  // Title rename. editingTitle = currently in edit mode; titleDraft =
+  // pending text. Empty saves clear the title back to the jobId fallback.
+  const [editingTitle, setEditingTitle] = useState(false);
+  const [titleDraft, setTitleDraft] = useState("");
+  const [savingTitle, setSavingTitle] = useState(false);
+
+  async function saveTitle() {
+    setSavingTitle(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/video/title", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jobId, title: titleDraft }),
+      });
+      const json = (await res.json()) as { error?: string };
+      if (!res.ok) throw new Error(json.error ?? `HTTP ${res.status}`);
+      setEditingTitle(false);
+      await reloadJob();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setSavingTitle(false);
+    }
+  }
+
   // Per-tile clip duration draft. The Send-to-Seedance flow asks for
   // a duration at commit time, not at shot-edit time. Seeded from
   // persisted chunkDurations on data load; click a pill to change.
@@ -428,9 +455,47 @@ export default function StatusPage({ params }: { params: Promise<{ jobId: string
     }
     return (
       <main className="space-y-6">
-        <header>
-          <h1 className="text-2xl font-semibold tracking-tight">Done</h1>
-          <p className="text-stone-600 mt-1 text-xs font-mono">Job {jobId}</p>
+        <header className="space-y-1">
+          {editingTitle ? (
+            <div className="flex gap-2 items-center">
+              <input
+                value={titleDraft}
+                onChange={(e) => setTitleDraft(e.target.value)}
+                placeholder="Project name (blank to clear)"
+                maxLength={100}
+                autoFocus
+                className="flex-1 border border-stone-300 rounded p-2 text-2xl font-semibold"
+              />
+              <button
+                onClick={saveTitle}
+                disabled={savingTitle}
+                className="bg-violet-700 text-white rounded px-3 py-2 text-sm disabled:bg-stone-300"
+              >
+                {savingTitle ? "Saving…" : "Save"}
+              </button>
+              <button
+                onClick={() => setEditingTitle(false)}
+                disabled={savingTitle}
+                className="text-stone-500 text-sm px-2"
+              >
+                Cancel
+              </button>
+            </div>
+          ) : (
+            <h1
+              onClick={() => {
+                setTitleDraft(data.title ?? "");
+                setEditingTitle(true);
+              }}
+              className="text-2xl font-semibold tracking-tight cursor-text hover:bg-stone-50 -mx-1 px-1 rounded"
+              title="Click to rename"
+            >
+              {data.title || "Untitled render"}
+            </h1>
+          )}
+          <p className="text-stone-500 text-xs font-mono">
+            Done · {jobId}
+          </p>
         </header>
 
         {error ? <p className="text-red-600 text-sm">{error}</p> : null}
@@ -804,11 +869,48 @@ export default function StatusPage({ params }: { params: Promise<{ jobId: string
 
   return (
     <main className="space-y-8">
-      <header>
-        <h1 className="text-2xl font-semibold tracking-tight">
-          {STAGE_LABELS[data.status] ?? data.status}
-        </h1>
-        <p className="text-stone-600 mt-1 text-sm">Job {jobId}</p>
+      <header className="space-y-1">
+        {editingTitle ? (
+          <div className="flex gap-2 items-center">
+            <input
+              value={titleDraft}
+              onChange={(e) => setTitleDraft(e.target.value)}
+              placeholder="Project name"
+              maxLength={100}
+              autoFocus
+              className="flex-1 border border-stone-300 rounded p-2 text-2xl font-semibold"
+            />
+            <button
+              onClick={saveTitle}
+              disabled={savingTitle}
+              className="bg-violet-700 text-white rounded px-3 py-2 text-sm disabled:bg-stone-300"
+            >
+              {savingTitle ? "Saving…" : "Save"}
+            </button>
+            <button
+              onClick={() => setEditingTitle(false)}
+              disabled={savingTitle}
+              className="text-stone-500 text-sm px-2"
+            >
+              Cancel
+            </button>
+          </div>
+        ) : (
+          <h1
+            onClick={() => {
+              setTitleDraft(data.title ?? "");
+              setEditingTitle(true);
+            }}
+            className="text-2xl font-semibold tracking-tight cursor-text hover:bg-stone-50 -mx-1 px-1 rounded"
+            title="Click to rename"
+          >
+            {data.title || STAGE_LABELS[data.status] || data.status}
+          </h1>
+        )}
+        <p className="text-stone-500 text-xs">
+          {STAGE_LABELS[data.status] ?? data.status} ·{" "}
+          <span className="font-mono">{jobId}</span>
+        </p>
         {data.error ? (
           <div className="mt-3 space-y-2">
             <p className="text-red-600 text-sm">

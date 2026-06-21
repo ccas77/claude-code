@@ -22,6 +22,9 @@ const bodySchema = z.object({
   conceptInput: z.string().min(1),
   characters: z.array(characterSchema).min(1).max(4),
   locationImageUrl: z.string().url(),
+  // Optional human-readable label for the render. Shown on /status,
+  // /projects, /library. Editable later via /api/video/title.
+  title: z.string().min(1).max(100).optional(),
 });
 
 export async function POST(req: Request) {
@@ -45,6 +48,7 @@ export async function POST(req: Request) {
 
   const job: Job = {
     jobId,
+    title: input.title?.trim() || undefined,
     status: "concept",
     characters: input.characters,
     locationImageUrl: input.locationImageUrl,

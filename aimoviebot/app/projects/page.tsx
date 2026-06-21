@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 
 type ProjectSummary = {
   jobId: string;
+  title?: string;
   status: string;
   updatedAt: string;
   createdAt: string;
@@ -100,6 +101,12 @@ function ProjectCard({ project }: { project: ProjectSummary }) {
         </div>
       )}
       <div className="p-2 space-y-1">
+        <p
+          className="text-sm font-medium text-stone-800 line-clamp-2"
+          title={project.title ?? "Untitled"}
+        >
+          {project.title ?? "Untitled render"}
+        </p>
         <span
           className={`inline-block text-[10px] uppercase tracking-wide border rounded px-1.5 py-0.5 ${tone}`}
         >

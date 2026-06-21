@@ -55,6 +55,7 @@ function ConceptInner() {
   const params = useSearchParams();
   const characters = useMemo(() => parseCast(params.get("cast")), [params]);
   const locationImageUrl = params.get("location") ?? "";
+  const projectTitle = params.get("title") ?? "";
   const [mode, setMode] = useState<Mode>("A");
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
@@ -117,6 +118,7 @@ function ConceptInner() {
           conceptInput: text,
           characters,
           locationImageUrl,
+          ...(projectTitle.trim() ? { title: projectTitle.trim() } : {}),
         }),
       });
       const data = (await res.json()) as { jobId?: string; error?: string };

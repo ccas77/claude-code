@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { list } from "@vercel/blob";
+import { readJob } from "@/lib/video-module/storage";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -147,8 +148,25 @@ export async function GET() {
       new Date(b.createdAtIso).getTime() - new Date(a.createdAtIso).getTime(),
   );
 
+  // Look up the project title for each distinct jobId in projectVideos
+  // so the Library can show "MaskX graveyard chase" instead of a UUID.
+  const uniqueJobIds = Array.from(
+    new Set(projectVideos.map((v) => v.jobId)),
+  );
+  const titlesByJobId: Record<string, string> = {};
+  await Promise.all(
+    uniqueJobIds.map(async (jid) => {
+      try {
+        const job = await readJob(jid);
+        if (job?.title) titlesByJobId[jid] = job.title;
+      } catch {
+        // ignore — UI falls back to jobId
+      }
+    }),
+  );
+
   return NextResponse.json(
-    { imported, projectClips: projectVideos },
+    { imported, projectClips: projectVideos, titlesByJobId },
     { headers: noStore },
   );
 }

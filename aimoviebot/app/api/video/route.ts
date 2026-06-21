@@ -37,6 +37,7 @@ export async function GET(req: Request) {
   return NextResponse.json(
     {
       jobId: job.jobId,
+      title: job.title,
       status: job.status,
       characters: job.characters,
       locationImageUrl: job.locationImageUrl,

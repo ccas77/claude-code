@@ -27,6 +27,7 @@ type ProjectVideo = {
 type Resp = {
   imported: ImportedVideo[];
   projectClips: ProjectVideo[];
+  titlesByJobId?: Record<string, string>;
 };
 
 type SheetEntry = {
@@ -103,7 +104,10 @@ export default function LibraryPage() {
       </div>
 
       {tab === "projects" ? (
-        <ProjectsSection clips={data.projectClips} />
+        <ProjectsSection
+          clips={data.projectClips}
+          titlesByJobId={data.titlesByJobId ?? {}}
+        />
       ) : tab === "imports" ? (
         <ImportsSection items={data.imported} />
       ) : (
@@ -140,7 +144,13 @@ function countProjects(clips: ProjectVideo[]): number {
   return new Set(clips.map((c) => c.jobId)).size;
 }
 
-function ProjectsSection({ clips }: { clips: ProjectVideo[] }) {
+function ProjectsSection({
+  clips,
+  titlesByJobId,
+}: {
+  clips: ProjectVideo[];
+  titlesByJobId: Record<string, string>;
+}) {
   const groups = new Map<string, ProjectVideo[]>();
   for (const c of clips) {
     const list = groups.get(c.jobId) ?? [];
@@ -177,8 +187,10 @@ function ProjectsSection({ clips }: { clips: ProjectVideo[] }) {
         <section key={jobId} className="space-y-3">
           <h2 className="text-sm font-medium text-stone-700">
             <a href={`/status/${jobId}`} className="hover:text-violet-700">
-              Project{" "}
-              <span className="font-mono text-xs text-stone-500">{jobId}</span>
+              {titlesByJobId[jobId] || "Untitled render"}{" "}
+              <span className="font-mono text-xs text-stone-400 ml-1">
+                {jobId.slice(0, 8)}
+              </span>
             </a>
           </h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">

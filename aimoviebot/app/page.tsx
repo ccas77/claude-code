@@ -38,6 +38,7 @@ function newCharacter(): CharacterDraft {
 
 export default function UploadPage() {
   const router = useRouter();
+  const [projectTitle, setProjectTitle] = useState("");
   const [characters, setCharacters] = useState<CharacterDraft[]>([newCharacter()]);
   const [location, setLocation] = useState<Uploaded | null>(null);
   const [locationLabel, setLocationLabel] = useState("");
@@ -52,13 +53,14 @@ export default function UploadPage() {
   // has to hunt for the right URL after closing the tab.
   const [activeProject, setActiveProject] = useState<{
     jobId: string;
+    title?: string;
     status: string;
   } | null>(null);
 
   useEffect(() => {
     fetch("/api/projects")
       .then((r) => r.json())
-      .then((d: { projects: { jobId: string; status: string }[] }) => {
+      .then((d: { projects: { jobId: string; title?: string; status: string }[] }) => {
         const active = (d.projects ?? []).find(
           (p) => p.status !== "done" && p.status !== "failed",
         );
@@ -223,6 +225,7 @@ export default function UploadPage() {
       cast: JSON.stringify(cast),
       location: location!.url,
     });
+    if (projectTitle.trim()) params.set("title", projectTitle.trim());
     router.push(`/concept?${params.toString()}`);
   }
 
@@ -242,14 +245,31 @@ export default function UploadPage() {
           className="block rounded-lg bg-violet-50 border border-violet-300 px-4 py-3 hover:bg-violet-100 transition"
         >
           <p className="text-sm text-violet-900 font-medium">
-            Resume your in-progress render →
+            Resume: {activeProject.title || "Untitled render"} →
           </p>
           <p className="text-xs text-violet-700 mt-0.5">
-            Status: {humanStatus(activeProject.status)} ·{" "}
+            {humanStatus(activeProject.status)} ·{" "}
             <span className="font-mono">{activeProject.jobId.slice(0, 8)}</span>
           </p>
         </a>
       ) : null}
+
+      <section className="space-y-2">
+        <h2 className="text-sm font-medium text-stone-700">
+          Project name (optional)
+        </h2>
+        <input
+          value={projectTitle}
+          onChange={(e) => setProjectTitle(e.target.value)}
+          placeholder="e.g. MaskX graveyard chase"
+          maxLength={100}
+          className="w-full border border-stone-300 rounded p-2 bg-white text-sm"
+        />
+        <p className="text-xs text-stone-500">
+          Shown on the status header, the Projects list, and the
+          Library. You can rename it later.
+        </p>
+      </section>
 
       <div
         className={`rounded-lg px-4 py-3 text-sm border ${
