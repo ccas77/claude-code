@@ -76,6 +76,11 @@ export default function StatusPage({ params }: { params: Promise<{ jobId: string
   // currently in flight (e.g. "storyboard:2" or "clip:0") so other
   // tiles' buttons stay enabled.
   const [regenerating, setRegenerating] = useState<string | null>(null);
+  // Bumped on every reload so <img src> includes a fresh ?v= query
+  // string. Storyboards/clips are stored at deterministic Blob URLs,
+  // so without a cache-buster the browser keeps serving the OLD image
+  // even after we regenerate the bytes.
+  const [assetVersion, setAssetVersion] = useState(0);
 
   // Force a fresh job-state fetch. Used after server-side mutations
   // (regenerate, repair, etc.) because the passive polling stops once
@@ -90,6 +95,7 @@ export default function StatusPage({ params }: { params: Promise<{ jobId: string
       if (!res.ok)
         throw new Error(json.error ?? `HTTP ${res.status}`);
       setData(json);
+      setAssetVersion((v) => v + 1);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     }
@@ -477,8 +483,9 @@ export default function StatusPage({ params }: { params: Promise<{ jobId: string
                     Clip {i + 1}/{a.clipUrls!.length}
                   </div>
                   <video
+                    key={`${u}-${assetVersion}`}
                     controls
-                    src={u}
+                    src={`${u}?v=${assetVersion}`}
                     className="w-full aspect-[9/16] bg-black rounded"
                   />
                   <div className="flex justify-between items-center mt-1">
@@ -543,8 +550,9 @@ export default function StatusPage({ params }: { params: Promise<{ jobId: string
         <section className="space-y-2">
           <h2 className="text-sm font-medium text-stone-700">Final video</h2>
           <video
+            key={`${a.videoUrl}-${assetVersion}`}
             controls
-            src={a.videoUrl}
+            src={`${a.videoUrl}?v=${assetVersion}`}
             className="w-full max-w-sm mx-auto aspect-[9/16] bg-black rounded-lg"
           />
           <a
@@ -579,10 +587,15 @@ export default function StatusPage({ params }: { params: Promise<{ jobId: string
         {(a.storyboardUrls ?? []).map((url, i) => {
           const marker = `storyboard:${i}`;
           const busy = regenerating === marker;
+          const sendMarker = `clip:${i}`;
+          const sending = regenerating === sendMarker;
+          const isStale = (a.staleClipIndexes ?? []).includes(i);
           return (
             <div
               key={`sb-${i}`}
-              className="border border-stone-200 rounded-lg p-3 bg-white"
+              className={`border rounded-lg p-3 bg-white ${
+                isStale ? "border-amber-400" : "border-stone-200"
+              }`}
             >
               <div className="text-xs text-stone-600 mb-2 flex justify-between">
                 <span>
@@ -595,7 +608,7 @@ export default function StatusPage({ params }: { params: Promise<{ jobId: string
                 ) : null}
               </div>
               <img
-                src={url}
+                src={`${url}?v=${assetVersion}`}
                 alt=""
                 className="w-full aspect-[9/16] object-cover rounded"
               />
@@ -603,12 +616,24 @@ export default function StatusPage({ params }: { params: Promise<{ jobId: string
                 onClick={() => regenerateAsset("storyboard", i)}
                 disabled={Boolean(regenerating)}
                 className="mt-2 w-full text-xs text-red-700 border border-red-200 rounded px-2 py-1 hover:bg-red-50 disabled:text-stone-300 disabled:border-stone-200"
-                title="Send this storyboard back to Higgsfield. The matching clip stays as-is — use the clip's own Regenerate button to re-render it against the new storyboard."
+                title="Send this storyboard back to Higgsfield. One Higgsfield image call. The matching video clip stays as-is until you click Send to Seedance."
               >
                 {busy
                   ? `Regenerating ${regenElapsed}s…`
                   : "Regenerate storyboard"}
               </button>
+              {isStale ? (
+                <button
+                  onClick={() => regenerateAsset("clip", i)}
+                  disabled={Boolean(regenerating)}
+                  className="mt-2 w-full text-xs text-white bg-amber-600 hover:bg-amber-700 rounded px-2 py-1 disabled:bg-stone-300"
+                  title="Render a new 4s Seedance clip from this storyboard, then re-stitch the final video. One Seedance call."
+                >
+                  {sending
+                    ? `Sending ${regenElapsed}s…`
+                    : "Send to Seedance + restitch"}
+                </button>
+              ) : null}
             </div>
           );
         })}

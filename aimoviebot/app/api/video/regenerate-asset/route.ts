@@ -48,12 +48,24 @@ export async function POST(req: Request) {
       const result = await stage4OneStoryboard(jobId, chunkIndex, {
         force: true,
       });
-      // Splice the new URL into the array at chunkIndex; leave siblings
-      // untouched.
+      // Splice the new URL in at chunkIndex; leave siblings untouched.
+      // If a clip already exists for this chunk, mark it stale — the
+      // user has to explicitly hit "Send to Seedance" on the tile to
+      // pay for the new clip. No silent Seedance spend.
       await updateJob(jobId, (j) => {
         const arr = [...(j.artifacts.storyboardUrls ?? [])];
         arr[chunkIndex] = result.url;
-        return { ...j, artifacts: { ...j.artifacts, storyboardUrls: arr } };
+        const hasClip = Boolean(j.artifacts.clipUrls?.[chunkIndex]);
+        const stale = new Set(j.artifacts.staleClipIndexes ?? []);
+        if (hasClip) stale.add(chunkIndex);
+        return {
+          ...j,
+          artifacts: {
+            ...j.artifacts,
+            storyboardUrls: arr,
+            staleClipIndexes: Array.from(stale).sort((a, b) => a - b),
+          },
+        };
       });
       return NextResponse.json({
         jobId,
@@ -82,11 +94,18 @@ export async function POST(req: Request) {
       clipUrls: fresh.artifacts.clipUrls,
       dialogue: fresh.artifacts.dialogue ?? [],
     });
-    await updateJob(jobId, (j) => ({
-      ...j,
-      status: "done",
-      artifacts: { ...j.artifacts, videoUrl: stitched.url },
-    }));
+    // Clear the stale flag for this chunk — the clip is now in sync
+    // with its storyboard again.
+    await updateJob(jobId, (j) => {
+      const stale = (j.artifacts.staleClipIndexes ?? []).filter(
+        (i) => i !== chunkIndex,
+      );
+      return {
+        ...j,
+        status: "done",
+        artifacts: { ...j.artifacts, videoUrl: stitched.url, staleClipIndexes: stale },
+      };
+    });
 
     return NextResponse.json({
       jobId,

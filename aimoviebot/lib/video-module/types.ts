@@ -68,6 +68,12 @@ export type Artifacts = {
   storyboardUrls?: string[]; // one mini-storyboard per chunk
   clipUrls?: string[]; // one Seedance clip per chunk, before concat
   videoUrl?: string; // final concatenated + captioned mp4
+  // Chunks where the storyboard was regenerated AFTER the clip was
+  // rendered. The clip + final video are stale for these chunks until
+  // the user clicks "Send to Seedance" on the storyboard tile (which
+  // re-renders the clip against the new storyboard + re-stitches).
+  // Empty / missing = nothing stale.
+  staleClipIndexes?: number[];
   inflightHiggsfieldJobs?: InflightHiggsfieldJob[];
 };
 
