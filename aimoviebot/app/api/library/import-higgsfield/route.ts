@@ -198,3 +198,21 @@ export async function HEAD(req: Request) {
     return new NextResponse(null, { status: 404 });
   }
 }
+
+// One-shot purge: removes EVERY library/higgsfield/ blob (both the mp4s
+// and their sidecar metadata). Used to undo a bulk import that pulled
+// videos from other apps in the same Higgsfield account.
+import { del } from "@vercel/blob";
+export async function DELETE() {
+  let cursor: string | undefined = undefined;
+  let removed = 0;
+  do {
+    const page = await list({ prefix: PREFIX, limit: 1000, cursor });
+    if (page.blobs.length === 0) break;
+    const urls = page.blobs.map((b) => b.url);
+    await del(urls);
+    removed += urls.length;
+    cursor = page.cursor ?? undefined;
+  } while (cursor);
+  return NextResponse.json({ removed });
+}
