@@ -726,7 +726,11 @@ export async function stage5OneClip(
   // 2. Persist immediately. The persistArtifact write is what survives
   //    a sibling clip's failure — once this returns, the head() check
   //    above will short-circuit any future retry.
-  const persistedUrl = await persistArtifact(blobKey, result.url, "video/mp4");
+  const persistedUrl = await persistArtifact(
+    keys.videoClip(jobId, chunkIndex + 1),
+    result.url,
+    "video/mp4",
+  );
   return { url: persistedUrl, backend: servedBy };
 }
 
