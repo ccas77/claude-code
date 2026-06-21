@@ -69,11 +69,14 @@ export type Artifacts = {
   clipUrls?: string[]; // one Seedance clip per chunk, before concat
   videoUrl?: string; // final concatenated + captioned mp4
   // Chunks where the storyboard was regenerated AFTER the clip was
-  // rendered. The clip + final video are stale for these chunks until
-  // the user clicks "Send to Seedance" on the storyboard tile (which
-  // re-renders the clip against the new storyboard + re-stitches).
-  // Empty / missing = nothing stale.
+  // rendered. The clip is stale for these chunks until the user clicks
+  // "Send to Seedance" on the storyboard tile.
   staleClipIndexes?: number[];
+  // Fingerprint (joined clip URLs) of clipUrls used in the last stitch
+  // pass. When this differs from a fresh fingerprint of current
+  // clipUrls, the final videoUrl is stale and the UI offers a
+  // "Restitch final video" button. Recomputed every successful stitch.
+  lastStitchedClipFingerprint?: string;
   inflightHiggsfieldJobs?: InflightHiggsfieldJob[];
 };
 

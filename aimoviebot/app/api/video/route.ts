@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { readJob } from "@/lib/video-module/storage";
+import { clipUrlsFingerprint, readJob } from "@/lib/video-module/storage";
 
 export const runtime = "nodejs";
 // Job state mutates on every stage; we must NEVER serve a cached response,
@@ -27,6 +27,13 @@ export async function GET(req: Request) {
       { status: 404, headers: noStore },
     );
   }
+  // Derived: is the current clipUrls set out of sync with what was
+  // last stitched into the final video? Drives the "Restitch" button.
+  const currentFp = clipUrlsFingerprint(job.artifacts.clipUrls);
+  const lastFp = job.artifacts.lastStitchedClipFingerprint ?? "";
+  const clipsAreStale = Boolean(
+    job.artifacts.clipUrls?.length && currentFp !== lastFp,
+  );
   return NextResponse.json(
     {
       jobId: job.jobId,
@@ -39,6 +46,7 @@ export async function GET(req: Request) {
       videoDurationSec: job.videoDurationSec,
       chunkCount: job.chunkCount,
       forceRegenerateSheets: job.forceRegenerateSheets,
+      clipsAreStale,
     },
     { headers: noStore },
   );

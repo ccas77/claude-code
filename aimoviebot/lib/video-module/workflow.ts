@@ -218,7 +218,9 @@ async function runStage5(jobId: string) {
 
 async function runStage6Step(jobId: string) {
   "use step";
-  const { setStatus, readJob } = await import("./storage");
+  const { setStatus, readJob, updateJob, clipUrlsFingerprint } = await import(
+    "./storage"
+  );
   const { stage6 } = await import("./stages");
   await setStatus(jobId, "captioning");
   const job = await readJob(jobId);
@@ -226,12 +228,22 @@ async function runStage6Step(jobId: string) {
   if (!job.artifacts.clipUrls || job.artifacts.clipUrls.length === 0) {
     throw new Error("Stage 6 missing clip URLs");
   }
+  const clipUrls = job.artifacts.clipUrls;
   await fatal("Stage 6", () =>
     stage6(jobId, {
-      clipUrls: job.artifacts.clipUrls!,
+      clipUrls,
       dialogue: job.artifacts.dialogue ?? [],
     }),
   );
+  // Snapshot fingerprint so the status page knows the final video is
+  // in sync with the current clips (Restitch button stays hidden).
+  await updateJob(jobId, (j) => ({
+    ...j,
+    artifacts: {
+      ...j.artifacts,
+      lastStitchedClipFingerprint: clipUrlsFingerprint(clipUrls),
+    },
+  }));
 }
 
 async function setSheetsStatusStep(jobId: string) {

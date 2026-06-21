@@ -242,6 +242,18 @@ export async function writeShotList(jobId: string, shots: unknown): Promise<void
 // Used by /api/projects to list every job time-sorted, newest first.
 // Replaces the previous "list every jobs/*/job-*.json prefix and pick
 // the latest" Blob-scanning approach.
+// Stable fingerprint of an ordered clip URL list. Used to detect
+// when the current clip set differs from what was last stitched into
+// the final video (so the UI can show / hide a "Restitch" button).
+export function clipUrlsFingerprint(urls: string[] | undefined): string {
+  if (!urls || urls.length === 0) return "";
+  return crypto
+    .createHash("sha256")
+    .update(urls.join("|"))
+    .digest("hex")
+    .slice(0, 16);
+}
+
 export async function listAllJobIds(limit = 200): Promise<string[]> {
   // ZRANGE 0..limit-1 REV gives us most-recently-updated first.
   const ids = await redis.zrange<string[]>(jobsIndexKey, 0, limit - 1, {

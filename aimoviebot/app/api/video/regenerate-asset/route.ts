@@ -4,7 +4,6 @@ import { readJob, setStatus, updateJob } from "@/lib/video-module/storage";
 import {
   stage4OneStoryboard,
   stage5OneClip,
-  stage6,
 } from "@/lib/video-module/stages";
 
 export const runtime = "nodejs";
@@ -12,13 +11,11 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 
 // Regenerate ONE storyboard OR ONE clip on an existing job without
-// touching the others. After the regen, the job's URL array is rewritten
-// AT THAT INDEX so other indexes' persisted blobs aren't disturbed.
-// For clip regens, stage6 (concat + captions) re-runs to rebuild the
-// final stitched video against the new clip.
+// touching siblings. Neither path auto-restitches the final video —
+// the user explicitly calls /api/video/restitch when they've finished
+// iterating. That avoids wasting ffmpeg passes on intermediate states.
 //
-// Cost: one Higgsfield image (storyboard) OR one Seedance clip (clip)
-// PLUS, for clip regens, one ffmpeg/Whisper pass (no Higgsfield).
+// Cost: one Higgsfield image (storyboard) OR one Seedance clip (clip).
 const bodySchema = z.object({
   jobId: z.string().uuid(),
   kind: z.enum(["storyboard", "clip"]),
@@ -74,43 +71,32 @@ export async function POST(req: Request) {
     }
 
     // kind === "clip"
+    // NOTE: this does NOT auto-restitch. The user explicitly clicks the
+    // separate "Restitch final video" button once they're satisfied
+    // with all the new clips. That avoids wasting ffmpeg+Whisper passes
+    // when the user is going to regen more clips next.
     await setStatus(jobId, "video");
     const result = await stage5OneClip(jobId, chunkIndex, { force: true });
     await updateJob(jobId, (j) => {
       const arr = [...(j.artifacts.clipUrls ?? [])];
       arr[chunkIndex] = result.url;
-      return { ...j, artifacts: { ...j.artifacts, clipUrls: arr } };
-    });
-
-    // Re-stitch — the existing final video is stale because one of its
-    // input clips just changed. Reuses the persisted other clips.
-    await setStatus(jobId, "captioning");
-    const fresh = await readJob(jobId);
-    if (!fresh) throw new Error("Job vanished mid-regenerate");
-    if (!fresh.artifacts.clipUrls || fresh.artifacts.clipUrls.length === 0) {
-      throw new Error("No clip URLs after regenerate — cannot re-stitch");
-    }
-    const stitched = await stage6(jobId, {
-      clipUrls: fresh.artifacts.clipUrls,
-      dialogue: fresh.artifacts.dialogue ?? [],
-    });
-    // Clear the stale flag for this chunk — the clip is now in sync
-    // with its storyboard again.
-    await updateJob(jobId, (j) => {
+      // Clip is now in sync with its storyboard — drop the stale flag.
       const stale = (j.artifacts.staleClipIndexes ?? []).filter(
         (i) => i !== chunkIndex,
       );
       return {
         ...j,
-        status: "done",
-        artifacts: { ...j.artifacts, videoUrl: stitched.url, staleClipIndexes: stale },
+        artifacts: {
+          ...j.artifacts,
+          clipUrls: arr,
+          staleClipIndexes: stale,
+        },
       };
     });
 
     return NextResponse.json({
       jobId,
       regenerated: { kind, chunkIndex, url: result.url },
-      videoUrl: stitched.url,
     });
   } catch (e) {
     return NextResponse.json(

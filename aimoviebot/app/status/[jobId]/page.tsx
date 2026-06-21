@@ -8,9 +8,28 @@ type Shot = {
   n: number;
   camera: string;
   action: string;
-  performance?: string;
+  performance: string;
   dialogue: DialogueLine[];
 };
+
+// Match the backend chunkShots algorithm (lib/video-module/stages.ts).
+// First (length % n) chunks get one extra element. Used to map chunkIndex
+// → which shots from job.artifacts.shotList feed that storyboard.
+function chunksOf<T>(arr: T[], n: number): T[][] {
+  if (n <= 1) return [arr];
+  if (arr.length < n) return [arr];
+  const base = Math.floor(arr.length / n);
+  const remainder = arr.length % n;
+  const out: T[][] = [];
+  let cursor = 0;
+  for (let i = 0; i < n; i++) {
+    const size = base + (i < remainder ? 1 : 0);
+    out.push(arr.slice(cursor, cursor + size));
+    cursor += size;
+  }
+  return out;
+}
+
 type InflightHiggsfieldJob = {
   hfJobId: string;
   stage: string;
@@ -22,6 +41,7 @@ type StatusResponse = {
   jobId: string;
   status: string;
   characters?: { name: string; imageUrl: string }[];
+  clipsAreStale?: boolean;
   artifacts: {
     sceneDescription?: string;
     dialogue?: DialogueLine[];
@@ -76,12 +96,22 @@ export default function StatusPage({ params }: { params: Promise<{ jobId: string
   // Per-asset regenerate. Single string marker tracks WHICH asset is
   // currently in flight (e.g. "storyboard:2" or "clip:0") so other
   // tiles' buttons stay enabled.
-  const [regenerating, setRegenerating] = useState<string | null>(null);
+  // Set of in-flight regen markers (e.g. "storyboard:1", "clip:0"). We
+  // allow multiple in parallel, so a single string isn't enough.
+  const [regenerating, setRegenerating] = useState<Set<string>>(new Set());
   // Bumped on every reload so <img src> includes a fresh ?v= query
-  // string. Storyboards/clips are stored at deterministic Blob URLs,
-  // so without a cache-buster the browser keeps serving the OLD image
-  // even after we regenerate the bytes.
+  // string. Storyboards/clips are stored at content-addressed URLs now,
+  // so this is belt-and-braces — harmless.
   const [assetVersion, setAssetVersion] = useState(0);
+  // Storyboard tiles the user has ticked for the next batch regen.
+  const [selectedTiles, setSelectedTiles] = useState<Set<number>>(new Set());
+  // Storyboard tile whose inline shot editor is expanded.
+  const [expandedTile, setExpandedTile] = useState<number | null>(null);
+  // Local draft of edited shots before "Save shot edits" is clicked.
+  // Keyed by shot index (matching shotList ordering).
+  const [draftShots, setDraftShots] = useState<Record<number, Shot> | null>(null);
+  const [savingShots, setSavingShots] = useState(false);
+  const [restitching, setRestitching] = useState(false);
 
   // Force a fresh job-state fetch. Used after server-side mutations
   // (regenerate, repair, etc.) because the passive polling stops once
@@ -122,8 +152,8 @@ export default function StatusPage({ params }: { params: Promise<{ jobId: string
     chunkIndex: number,
   ) {
     const marker = `${kind}:${chunkIndex}`;
-    if (regenerating) return;
-    setRegenerating(marker);
+    if (regenerating.has(marker)) return;
+    setRegenerating((s) => new Set(s).add(marker));
     setError(null);
     try {
       const res = await fetch("/api/video/regenerate-asset", {
@@ -133,13 +163,70 @@ export default function StatusPage({ params }: { params: Promise<{ jobId: string
       });
       const json = (await res.json()) as { error?: string };
       if (!res.ok) throw new Error(json.error ?? `HTTP ${res.status}`);
-      // Pull fresh state so the new image/clip actually shows up in the
-      // UI — polling has stopped on done jobs and won't re-fire alone.
       await reloadJob();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
-      setRegenerating(null);
+      setRegenerating((s) => {
+        const next = new Set(s);
+        next.delete(marker);
+        return next;
+      });
+    }
+  }
+
+  // Fire regen for every ticked storyboard tile in parallel.
+  async function regenerateSelected() {
+    const indexes = Array.from(selectedTiles);
+    if (indexes.length === 0) return;
+    setSelectedTiles(new Set());
+    await Promise.all(indexes.map((i) => regenerateAsset("storyboard", i)));
+  }
+
+  // Persist edits to the canonical shotList. Used by the inline tile
+  // editor. Edits are permanent (same shotList stage 5 and the next
+  // regen read from).
+  async function saveShotEdits() {
+    if (!draftShots || !data?.artifacts.shotList) return;
+    setSavingShots(true);
+    setError(null);
+    try {
+      const merged: Shot[] = data.artifacts.shotList.map((s, i) =>
+        draftShots[i] ? { ...s, ...draftShots[i] } : s,
+      );
+      const res = await fetch("/api/video/shots", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jobId, shots: merged }),
+      });
+      const json = (await res.json()) as { error?: string };
+      if (!res.ok) throw new Error(json.error ?? `HTTP ${res.status}`);
+      setDraftShots(null);
+      await reloadJob();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setSavingShots(false);
+    }
+  }
+
+  async function restitchFinal() {
+    if (restitching) return;
+    setRestitching(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/video/restitch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jobId }),
+      });
+      const json = (await res.json()) as { error?: string };
+      if (!res.ok) throw new Error(json.error ?? `HTTP ${res.status}`);
+      await reloadJob();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setRestitching(false);
     }
   }
 
@@ -474,7 +561,7 @@ export default function StatusPage({ params }: { params: Promise<{ jobId: string
           <div className="grid grid-cols-2 gap-3">
             {a.clipUrls.map((u, i) => {
               const marker = `clip:${i}`;
-              const busy = regenerating === marker;
+              const busy = regenerating.has(marker);
               return (
                 <div
                   key={u}
@@ -499,9 +586,9 @@ export default function StatusPage({ params }: { params: Promise<{ jobId: string
                     </a>
                     <button
                       onClick={() => regenerateAsset("clip", i)}
-                      disabled={Boolean(regenerating)}
+                      disabled={busy}
                       className="text-xs text-red-700 border border-red-200 rounded px-2 py-0.5 hover:bg-red-50 disabled:text-stone-300 disabled:border-stone-200"
-                      title="Send this clip back to Seedance and re-stitch the final video. Other clips stay as-is."
+                      title="Send this clip back to Seedance. Does NOT auto-restitch — use the Restitch button when you're happy with all the new clips."
                     >
                       {busy
                         ? `Regen ${regenElapsed}s…`
@@ -585,65 +672,229 @@ export default function StatusPage({ params }: { params: Promise<{ jobId: string
           url={a.locationSheetUrl}
           served={data.servedBy?.stage2}
         />
-        {(a.storyboardUrls ?? []).map((url, i) => {
-          const marker = `storyboard:${i}`;
-          const busy = regenerating === marker;
-          const sendMarker = `clip:${i}`;
-          const sending = regenerating === sendMarker;
-          const isStale = (a.staleClipIndexes ?? []).includes(i);
-          return (
-            <div
-              key={`sb-${i}`}
-              className={`border rounded-lg p-3 bg-white ${
-                isStale ? "border-amber-400" : "border-stone-200"
-              }`}
-            >
-              <div className="text-xs text-stone-600 mb-2 flex justify-between">
-                <span>
-                  Storyboard {i + 1}/{(a.storyboardUrls ?? []).length}
-                </span>
-                {data.servedBy?.stage4 ? (
-                  <span className="text-stone-400">
-                    {data.servedBy.stage4}
-                  </span>
-                ) : null}
-              </div>
-              <img
-                src={`${url}?v=${assetVersion}`}
-                alt=""
-                className="w-full aspect-[9/16] object-cover rounded"
-              />
-              <button
-                onClick={() => regenerateAsset("storyboard", i)}
-                disabled={Boolean(regenerating)}
-                className="mt-2 w-full text-xs text-red-700 border border-red-200 rounded px-2 py-1 hover:bg-red-50 disabled:text-stone-300 disabled:border-stone-200"
-                title="Send this storyboard back to Higgsfield. One Higgsfield image call. The matching video clip stays as-is until you click Send to Seedance."
-              >
-                {busy
-                  ? `Regenerating ${regenElapsed}s…`
-                  : "Regenerate storyboard"}
-              </button>
-              {isStale ? (
-                <button
-                  onClick={() => regenerateAsset("clip", i)}
-                  disabled={Boolean(regenerating)}
-                  className="mt-2 w-full text-xs text-white bg-amber-600 hover:bg-amber-700 rounded px-2 py-1 disabled:bg-stone-300"
-                  title="Render a new 4s Seedance clip from this storyboard, then re-stitch the final video. One Seedance call."
-                >
-                  {sending
-                    ? `Sending ${regenElapsed}s…`
-                    : "Send to Seedance + restitch"}
-                </button>
-              ) : null}
-            </div>
-          );
-        })}
         {(!a.storyboardUrls || a.storyboardUrls.length === 0) &&
         data.status !== "done" &&
         data.status !== "failed" ? (
           <ArtifactTile label="Storyboards" url={undefined} />
         ) : null}
       </section>
+
+      {/* Storyboards section — tick the ones you want regenerated, edit
+          underlying shot text inline before regen, send any new one to
+          Seedance per-tile, restitch final video manually when ready. */}
+      {a.storyboardUrls && a.storyboardUrls.length > 0 ? (
+        <section className="space-y-3">
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <h2 className="text-sm font-medium text-stone-700">
+              Storyboards ({a.storyboardUrls.length})
+            </h2>
+            <div className="flex gap-2 flex-wrap">
+              {selectedTiles.size > 0 ? (
+                <button
+                  onClick={regenerateSelected}
+                  disabled={regenerating.size > 0}
+                  className="text-xs bg-violet-700 text-white rounded px-3 py-1.5 disabled:bg-stone-300"
+                  title="Regenerate every ticked storyboard in parallel. One Higgsfield image call per tile. The matching clips stay as-is until you click Send to Seedance per tile."
+                >
+                  Regenerate {selectedTiles.size} selected
+                </button>
+              ) : null}
+              {data.clipsAreStale ? (
+                <button
+                  onClick={restitchFinal}
+                  disabled={restitching}
+                  className="text-xs bg-emerald-700 text-white rounded px-3 py-1.5 disabled:bg-stone-300"
+                  title="ffmpeg-concat the current clips and re-burn captions. No Higgsfield / Seedance spend."
+                >
+                  {restitching ? "Restitching…" : "Restitch final video"}
+                </button>
+              ) : null}
+            </div>
+          </div>
+          {(() => {
+            const cc = a.storyboardUrls.length;
+            const shotChunks = chunksOf<Shot>(
+              (a.shotList ?? []) as Shot[],
+              cc,
+            );
+            // Map chunk index → absolute shot indexes in shotList.
+            const shotIndexesByChunk: number[][] = [];
+            let cursor = 0;
+            for (let i = 0; i < cc; i++) {
+              const size = shotChunks[i]?.length ?? 0;
+              shotIndexesByChunk.push(
+                Array.from({ length: size }, (_, k) => cursor + k),
+              );
+              cursor += size;
+            }
+            return (
+              <div className="grid grid-cols-2 gap-3">
+                {a.storyboardUrls!.map((url, i) => {
+                  const regenMarker = `storyboard:${i}`;
+                  const regenBusy = regenerating.has(regenMarker);
+                  const sendMarker = `clip:${i}`;
+                  const sendBusy = regenerating.has(sendMarker);
+                  const isStale = (a.staleClipIndexes ?? []).includes(i);
+                  const selected = selectedTiles.has(i);
+                  const expanded = expandedTile === i;
+                  const shotIdxs = shotIndexesByChunk[i] ?? [];
+                  return (
+                    <div
+                      key={`sb-${i}`}
+                      className={`border rounded-lg p-3 bg-white space-y-2 ${
+                        isStale ? "border-amber-400" : "border-stone-200"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <label className="flex items-center gap-1 text-xs text-stone-700">
+                          <input
+                            type="checkbox"
+                            checked={selected}
+                            onChange={() => {
+                              setSelectedTiles((s) => {
+                                const next = new Set(s);
+                                if (next.has(i)) next.delete(i);
+                                else next.add(i);
+                                return next;
+                              });
+                            }}
+                          />
+                          Storyboard {i + 1}
+                        </label>
+                        {isStale ? (
+                          <span className="text-[10px] text-amber-700 font-medium">
+                            clip stale
+                          </span>
+                        ) : null}
+                      </div>
+                      <img
+                        src={`${url}?v=${assetVersion}`}
+                        alt=""
+                        className="w-full aspect-[9/16] object-cover rounded"
+                      />
+                      <div className="flex gap-2 text-xs">
+                        <button
+                          onClick={() => regenerateAsset("storyboard", i)}
+                          disabled={regenBusy}
+                          className="flex-1 text-red-700 border border-red-200 rounded px-2 py-1 hover:bg-red-50 disabled:text-stone-300 disabled:border-stone-200"
+                          title="Regenerate just this one. One Higgsfield call."
+                        >
+                          {regenBusy
+                            ? `Regen ${regenElapsed}s…`
+                            : "Regenerate"}
+                        </button>
+                        <button
+                          onClick={() => {
+                            if (expanded) {
+                              setExpandedTile(null);
+                              setDraftShots(null);
+                            } else {
+                              setExpandedTile(i);
+                              // Seed the draft with the current shot
+                              // contents for ONLY this chunk's indexes.
+                              const seed: Record<number, Shot> = {};
+                              for (const idx of shotIdxs) {
+                                const s = (a.shotList ?? [])[idx];
+                                if (s) seed[idx] = { ...s };
+                              }
+                              setDraftShots(seed);
+                            }
+                          }}
+                          className="flex-1 text-violet-700 border border-violet-200 rounded px-2 py-1 hover:bg-violet-50"
+                          title="Edit the underlying shot prompts before regenerating. Persists permanently."
+                        >
+                          {expanded ? "Close editor" : "Edit shots"}
+                        </button>
+                      </div>
+                      {isStale ? (
+                        <button
+                          onClick={() => regenerateAsset("clip", i)}
+                          disabled={sendBusy}
+                          className="w-full text-xs text-white bg-amber-600 hover:bg-amber-700 rounded px-2 py-1 disabled:bg-stone-300"
+                          title="Render one fresh 4s Seedance clip from this storyboard. Does NOT auto-restitch — use the Restitch button when you're done iterating."
+                        >
+                          {sendBusy
+                            ? `Sending ${regenElapsed}s…`
+                            : "Send to Seedance"}
+                        </button>
+                      ) : null}
+                      {expanded && draftShots ? (
+                        <div className="border-t border-stone-200 pt-2 space-y-3">
+                          {shotIdxs.map((idx) => {
+                            const draft = draftShots[idx];
+                            if (!draft) return null;
+                            const patch = (p: Partial<Shot>) =>
+                              setDraftShots((d) => ({
+                                ...(d ?? {}),
+                                [idx]: { ...draft, ...p },
+                              }));
+                            return (
+                              <div
+                                key={`shot-${idx}`}
+                                className="space-y-1 text-xs"
+                              >
+                                <div className="font-medium text-stone-700">
+                                  Shot {draft.n}
+                                </div>
+                                <label className="block">
+                                  <span className="text-stone-500">
+                                    Camera
+                                  </span>
+                                  <textarea
+                                    value={draft.camera}
+                                    onChange={(e) =>
+                                      patch({ camera: e.target.value })
+                                    }
+                                    rows={2}
+                                    className="w-full border border-stone-300 rounded p-1 bg-white"
+                                  />
+                                </label>
+                                <label className="block">
+                                  <span className="text-stone-500">
+                                    Action
+                                  </span>
+                                  <textarea
+                                    value={draft.action}
+                                    onChange={(e) =>
+                                      patch({ action: e.target.value })
+                                    }
+                                    rows={3}
+                                    className="w-full border border-stone-300 rounded p-1 bg-white"
+                                  />
+                                </label>
+                                <label className="block">
+                                  <span className="text-stone-500">
+                                    Performance
+                                  </span>
+                                  <textarea
+                                    value={draft.performance}
+                                    onChange={(e) =>
+                                      patch({ performance: e.target.value })
+                                    }
+                                    rows={3}
+                                    className="w-full border border-stone-300 rounded p-1 bg-white"
+                                  />
+                                </label>
+                              </div>
+                            );
+                          })}
+                          <button
+                            onClick={saveShotEdits}
+                            disabled={savingShots}
+                            className="w-full text-xs bg-violet-700 text-white rounded px-2 py-1 disabled:bg-stone-300"
+                          >
+                            {savingShots ? "Saving…" : "Save shot edits"}
+                          </button>
+                        </div>
+                      ) : null}
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })()}
+        </section>
+      ) : null}
 
       {a.shotList ? (
         <section className="space-y-2">
