@@ -29,17 +29,45 @@ type Resp = {
   projectClips: ProjectVideo[];
 };
 
+type SheetEntry = {
+  kind: "character" | "location";
+  sourceUrl: string;
+  sheetUrl: string;
+  label?: string;
+  createdAt: string;
+};
+
+type TabName = "projects" | "imports" | "assets";
+
 export default function LibraryPage() {
   const [data, setData] = useState<Resp | null>(null);
+  const [sheets, setSheets] = useState<SheetEntry[] | null>(null);
   const [err, setErr] = useState<string | null>(null);
-  const [tab, setTab] = useState<"projects" | "imports">("projects");
+  const [tab, setTab] = useState<TabName>("projects");
 
   useEffect(() => {
     fetch("/api/library/videos", { cache: "no-store" })
       .then((r) => r.json())
       .then((d: Resp) => setData(d))
       .catch((e) => setErr(e instanceof Error ? e.message : String(e)));
+    fetch("/api/library/sheets", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((d: { entries: SheetEntry[] }) => setSheets(d.entries))
+      .catch(() => setSheets([]));
   }, []);
+
+  async function deleteSheet(entry: SheetEntry) {
+    if (
+      !confirm(
+        `Delete cached ${entry.kind} sheet${entry.label ? ` for "${entry.label}"` : ""}? Next render with the same source upload will regenerate it.`,
+      )
+    ) {
+      return;
+    }
+    const url = `/api/library/sheets?kind=${entry.kind}&source=${encodeURIComponent(entry.sourceUrl)}`;
+    await fetch(url, { method: "DELETE" });
+    setSheets((s) => (s ?? []).filter((e) => e.sourceUrl !== entry.sourceUrl));
+  }
 
   if (err) return <p className="text-red-600">{err}</p>;
   if (!data) return <p>Loading…</p>;
@@ -49,10 +77,10 @@ export default function LibraryPage() {
       <header className="space-y-2">
         <h1 className="text-2xl font-semibold tracking-tight">Library</h1>
         <p className="text-stone-600 text-sm">
-          Two collections. <strong>Projects</strong> = videos this app
-          rendered, grouped by render and arranged in clip order.{" "}
+          Three tabs. <strong>Projects</strong> = videos this app rendered.{" "}
           <strong>Imports</strong> = videos pulled in from your Higgsfield
-          account, grouped by date.
+          account. <strong>Assets</strong> = cached character + location
+          sheets that get auto-reused on future renders.
         </p>
       </header>
 
@@ -67,12 +95,19 @@ export default function LibraryPage() {
           label={`Imports (${data.imported.length})`}
           onClick={() => setTab("imports")}
         />
+        <Tab
+          active={tab === "assets"}
+          label={`Assets (${sheets?.length ?? "…"})`}
+          onClick={() => setTab("assets")}
+        />
       </div>
 
       {tab === "projects" ? (
         <ProjectsSection clips={data.projectClips} />
-      ) : (
+      ) : tab === "imports" ? (
         <ImportsSection items={data.imported} />
+      ) : (
+        <AssetsSection sheets={sheets} onDelete={deleteSheet} />
       )}
     </main>
   );
@@ -190,6 +225,108 @@ function ImportsSection({ items }: { items: ImportedVideo[] }) {
           </div>
         </section>
       ))}
+    </div>
+  );
+}
+
+function AssetsSection({
+  sheets,
+  onDelete,
+}: {
+  sheets: SheetEntry[] | null;
+  onDelete: (entry: SheetEntry) => void;
+}) {
+  if (sheets == null) return <p className="text-stone-500 text-sm">Loading…</p>;
+  if (sheets.length === 0)
+    return (
+      <p className="text-stone-500 text-sm">
+        No cached sheets yet. After your first successful render, the
+        character + location sheets the app generates will appear here
+        and be reused automatically on future renders with the same
+        source uploads.
+      </p>
+    );
+  const characters = sheets.filter((s) => s.kind === "character");
+  const locations = sheets.filter((s) => s.kind === "location");
+  return (
+    <div className="space-y-8">
+      <section className="space-y-3">
+        <h2 className="text-sm font-medium text-stone-700">
+          Character sheets ({characters.length})
+        </h2>
+        {characters.length === 0 ? (
+          <p className="text-stone-500 text-sm">None.</p>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+            {characters.map((s) => (
+              <SheetTile key={s.sourceUrl} entry={s} onDelete={onDelete} />
+            ))}
+          </div>
+        )}
+      </section>
+      <section className="space-y-3">
+        <h2 className="text-sm font-medium text-stone-700">
+          Location sheets ({locations.length})
+        </h2>
+        {locations.length === 0 ? (
+          <p className="text-stone-500 text-sm">None.</p>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+            {locations.map((s) => (
+              <SheetTile key={s.sourceUrl} entry={s} onDelete={onDelete} />
+            ))}
+          </div>
+        )}
+      </section>
+    </div>
+  );
+}
+
+function SheetTile({
+  entry,
+  onDelete,
+}: {
+  entry: SheetEntry;
+  onDelete: (entry: SheetEntry) => void;
+}) {
+  return (
+    <div className="border border-stone-200 rounded-lg overflow-hidden bg-white">
+      <div className="grid grid-cols-2 bg-stone-50">
+        <div className="border-r border-stone-200">
+          <img
+            src={entry.sourceUrl}
+            alt="source"
+            className="w-full aspect-[9/16] object-cover"
+          />
+          <p className="text-[10px] text-center text-stone-500 py-1">
+            source
+          </p>
+        </div>
+        <div>
+          <img
+            src={entry.sheetUrl}
+            alt="sheet"
+            className="w-full aspect-[9/16] object-cover"
+          />
+          <p className="text-[10px] text-center text-stone-500 py-1">
+            sheet
+          </p>
+        </div>
+      </div>
+      <div className="p-2 space-y-1">
+        <p className="text-[11px] font-medium text-stone-800 truncate">
+          {entry.label ?? "(no label)"}
+        </p>
+        <p className="text-[10px] text-stone-500">
+          Cached {fmt(entry.createdAt)}
+        </p>
+        <button
+          onClick={() => onDelete(entry)}
+          className="text-[11px] text-stone-500 hover:text-red-600"
+        >
+          Delete cache
+        </button>
+      </div>
     </div>
   );
 }

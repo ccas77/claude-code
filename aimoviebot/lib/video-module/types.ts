@@ -105,6 +105,11 @@ export type StageResult = {
 // Used to switch between gpt_image_2 (default, faithful identity but
 // content-moderation-sensitive) and nano_banana_pro (more permissive) on
 // retry when one model rejects an upload.
+//
+// forceRegenerateSheets: bypass the sheet cache for the listed assets on
+// this render. "character:Amy" forces a fresh stage-2 generation for Amy
+// even if a cached sheet exists for her source URL; "location" forces a
+// fresh stage-3 location sheet. Empty / missing = reuse cache when present.
 export type Job = {
   jobId: string;
   status: JobStatus;
@@ -112,6 +117,7 @@ export type Job = {
   locationImageUrl: string;
   videoDurationSec?: number;
   imageModelOverride?: string;
+  forceRegenerateSheets?: string[];
   artifacts: Artifacts;
   servedBy?: Partial<Record<StageName, Backend>>;
   error?: { stage: StageName; message: string };

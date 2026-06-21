@@ -40,18 +40,65 @@ import type {
 } from "./types";
 
 // Stage 1: one character sheet per character. Generates via Higgsfield
-// gpt-image-2 (model configurable in MODELS.image.higgsfield). Persists to
-// a deterministic Blob key but defers the job.json write to the orchestrator
-// so concurrent character calls can't race on the characterSheets array.
+// gpt-image-2 (model configurable in MODELS.image.higgsfield). Persists
+// to BOTH a per-job blob (for traceability) AND the library cache (so
+// future renders skip regeneration).
+//
+// Idempotency: if a cached sheet already exists for this character's
+// source upload URL AND the user hasn't opted to regenerate, the cached
+// URL is returned with zero Higgsfield spend.
 async function loadImageModelOverride(jobId: string): Promise<string | undefined> {
   const job = await readJob(jobId);
   return job?.imageModelOverride;
 }
 
+async function shouldForceRegenerate(
+  jobId: string,
+  marker: string,
+): Promise<boolean> {
+  const job = await readJob(jobId);
+  return Boolean(job?.forceRegenerateSheets?.includes(marker));
+}
+
 export async function stage1(
   jobId: string,
   character: Character,
-): Promise<{ name: string; url: string; backend: Backend }> {
+): Promise<{ name: string; url: string; backend: Backend; reusedFromCache: boolean }> {
+  const { readSheetCache, writeSheetCache } = await import("./sheet-cache");
+
+  // 1. Cache lookup (unless user said regenerate-fresh for this name).
+  const forceRegen = await shouldForceRegenerate(
+    jobId,
+    `character:${character.name}`,
+  );
+  if (!forceRegen) {
+    const cached = await readSheetCache("character", character.imageUrl);
+    if (cached) {
+      return {
+        name: character.name,
+        url: cached.sheetUrl,
+        backend: "higgsfield",
+        reusedFromCache: true,
+      };
+    }
+  }
+
+  // 2. Per-job idempotency: if the per-job blob already exists from an
+  //    earlier attempt, reuse without resubmitting Higgsfield.
+  const perJobKey = keys.characterSheet(jobId, character.name);
+  try {
+    const { head } = await import("@vercel/blob");
+    const existing = await head(perJobKey);
+    return {
+      name: character.name,
+      url: existing.url,
+      backend: "higgsfield",
+      reusedFromCache: false,
+    };
+  } catch {
+    // not yet generated for this job — fall through
+  }
+
   const prompt = await renderStage1(character.name);
   const modelOverride = await loadImageModelOverride(jobId);
   const result = await hgImage({
@@ -66,20 +113,44 @@ export async function stage1(
         submittedAt: new Date().toISOString(),
       }),
   });
-  const url = await persistArtifact(
-    keys.characterSheet(jobId, character.name),
-    result.url,
-  );
+  const url = await persistArtifact(perJobKey, result.url);
   if (result.hfJobId) await clearInflightHiggsfieldJob(jobId, result.hfJobId);
-  return { name: character.name, url, backend: "higgsfield" };
+
+  // 3. Write to cache so the NEXT render with the same source reuses.
+  await writeSheetCache({
+    kind: "character",
+    sourceUrl: character.imageUrl,
+    generatedSheetUrl: url,
+    label: character.name,
+  });
+
+  return { name: character.name, url, backend: "higgsfield", reusedFromCache: false };
 }
 
-// Stage 2: location sheet. Same shape as stage1: generate + persist to Blob,
-// but defer the job.json write to the orchestrator.
+// Stage 2: location sheet. Same caching shape as stage1.
 export async function stage2(
   jobId: string,
   locationImageUrl: string,
-): Promise<{ url: string; backend: Backend }> {
+): Promise<{ url: string; backend: Backend; reusedFromCache: boolean }> {
+  const { readSheetCache, writeSheetCache } = await import("./sheet-cache");
+
+  const forceRegen = await shouldForceRegenerate(jobId, "location");
+  if (!forceRegen) {
+    const cached = await readSheetCache("location", locationImageUrl);
+    if (cached) {
+      return { url: cached.sheetUrl, backend: "higgsfield", reusedFromCache: true };
+    }
+  }
+
+  const perJobKey = keys.locationSheet(jobId);
+  try {
+    const { head } = await import("@vercel/blob");
+    const existing = await head(perJobKey);
+    return { url: existing.url, backend: "higgsfield", reusedFromCache: false };
+  } catch {
+    // fall through
+  }
+
   const prompt = await renderStage2();
   const modelOverride = await loadImageModelOverride(jobId);
   const result = await hgImage({
@@ -94,9 +165,16 @@ export async function stage2(
         submittedAt: new Date().toISOString(),
       }),
   });
-  const url = await persistArtifact(keys.locationSheet(jobId), result.url);
+  const url = await persistArtifact(perJobKey, result.url);
   if (result.hfJobId) await clearInflightHiggsfieldJob(jobId, result.hfJobId);
-  return { url, backend: "higgsfield" };
+
+  await writeSheetCache({
+    kind: "location",
+    sourceUrl: locationImageUrl,
+    generatedSheetUrl: url,
+  });
+
+  return { url, backend: "higgsfield", reusedFromCache: false };
 }
 
 // Stage 3: shot list, 16 panels, dialogue distributed.
@@ -116,8 +194,12 @@ export async function stage3(
     sceneDescription: string;
     dialogue: DialogueLine[];
     characters: Character[];
-    characterSheets: CharacterSheet[];
-    locationSheetUrl: string;
+    // Use the user's ORIGINAL uploads as visual refs, not AI-generated
+    // sheets. Stage 3 is a text-only LLM call (shot list JSON); it just
+    // needs identity references, not polished cinematic sheets. This
+    // lets stage 3 run BEFORE any image-spend stage (no dependency on
+    // stage 1 / stage 2 having run yet).
+    locationImageUrl: string;
   },
 ): Promise<ShotList> {
   const prompt = await renderStage3({
@@ -129,8 +211,8 @@ export async function stage3(
   const raw = await gatewayGenerateJSON<unknown>({
     prompt,
     imageUrls: [
-      ...args.characterSheets.map((s) => s.url),
-      args.locationSheetUrl,
+      ...args.characters.map((c) => c.imageUrl),
+      args.locationImageUrl,
     ],
     modelId: MODELS.shotList.gateway,
   });
@@ -194,9 +276,76 @@ export function validateShotList(
   return shots;
 }
 
-// Stage 4: storyboard grid image (2x8 vertical panels). Reference ORDER
-// matters: location FIRST so the model anchors the literal setting before
-// the characters are placed inside it. Then character sheets in cast order.
+// Stage 4 ONE-STORYBOARD renderer (per chunk). Idempotent — if the
+// chunk's storyboard blob already exists, returns the existing URL with
+// zero Higgsfield calls. Reads everything it needs (shotList, sheets,
+// characters) from job state. The workflow drives one of these per
+// chunk in parallel; a crash on chunk N leaves chunks 1..N-1 saved.
+export async function stage4OneStoryboard(
+  jobId: string,
+  chunkIndex: number,
+): Promise<{ url: string; backend: Backend }> {
+  const perJobKey = keys.storyboardChunk(jobId, chunkIndex + 1);
+  // Idempotency via head() — if the blob already exists, reuse.
+  try {
+    const { head } = await import("@vercel/blob");
+    const existing = await head(perJobKey);
+    return { url: existing.url, backend: "higgsfield" };
+  } catch {
+    // fall through
+  }
+
+  const job = await readJob(jobId);
+  if (!job) throw new Error(`Job ${jobId} not found`);
+  const shots = job.artifacts.shotList;
+  const characterSheets = job.artifacts.characterSheets;
+  const locationSheetUrl = job.artifacts.locationSheetUrl;
+  if (
+    !shots ||
+    !characterSheets ||
+    characterSheets.length === 0 ||
+    !locationSheetUrl
+  ) {
+    throw new Error(
+      `Stage 4 storyboard ${chunkIndex + 1}: missing upstream artifacts`,
+    );
+  }
+  const chunks = chunkShots(shots, VIDEO_CHUNKS.count);
+  if (chunkIndex < 0 || chunkIndex >= chunks.length) {
+    throw new Error(
+      `Stage 4: chunk index ${chunkIndex} out of range 0..${chunks.length - 1}`,
+    );
+  }
+  const total = chunks.length;
+  const chunkShotList = chunks[chunkIndex];
+  const refs = [locationSheetUrl, ...characterSheets.map((s) => s.url)];
+  const prompt = await renderStage4({
+    shots: chunkShotList,
+    characters: job.characters,
+  });
+  const modelOverride = await loadImageModelOverride(jobId);
+  const r = await tryWithNsfwFallback(modelOverride, async (model) =>
+    hgImage({
+      prompt,
+      imageRefs: refs,
+      modelOverride: model,
+      onSubmit: (hfJobId) =>
+        trackInflightHiggsfieldJob(jobId, {
+          hfJobId,
+          stage: "stage4",
+          label: `Storyboard ${chunkIndex + 1}/${total}`,
+          submittedAt: new Date().toISOString(),
+        }),
+    }),
+  );
+  const url = await persistArtifact(perJobKey, r.url);
+  if (r.hfJobId) await clearInflightHiggsfieldJob(jobId, r.hfJobId);
+  return { url, backend: "higgsfield" };
+}
+
+// Stage 4: storyboard grid image (legacy, batched). The workflow now
+// uses stage4OneStoryboard per chunk so a sibling crash doesn't lose
+// persisted storyboards. Kept for non-workflow callers.
 export async function stage4(
   jobId: string,
   args: {
@@ -211,9 +360,6 @@ export async function stage4(
     args.locationSheetUrl,
     ...args.characterSheets.map((s) => s.url),
   ];
-  // Split the 16-shot list into N chunks. Each chunk gets its OWN
-  // mini-storyboard image (typically 4 panels) so gpt_image_2 isn't
-  // trying to draw 16 panels in one go (which it does poorly).
   const chunks = chunkShots(args.shots, VIDEO_CHUNKS.count);
   const total = chunks.length;
   const results = await Promise.all(
@@ -222,21 +368,19 @@ export async function stage4(
         shots: chunkShots,
         characters: args.characters,
       });
-      const r = await tryWithNsfwFallback(
-        modelOverride,
-        async (model) =>
-          hgImage({
-            prompt,
-            imageRefs: refs,
-            modelOverride: model,
-            onSubmit: (hfJobId) =>
-              trackInflightHiggsfieldJob(jobId, {
-                hfJobId,
-                stage: "stage4",
-                label: `Storyboard ${i + 1}/${total}`,
-                submittedAt: new Date().toISOString(),
-              }),
-          }),
+      const r = await tryWithNsfwFallback(modelOverride, async (model) =>
+        hgImage({
+          prompt,
+          imageRefs: refs,
+          modelOverride: model,
+          onSubmit: (hfJobId) =>
+            trackInflightHiggsfieldJob(jobId, {
+              hfJobId,
+              stage: "stage4",
+              label: `Storyboard ${i + 1}/${total}`,
+              submittedAt: new Date().toISOString(),
+            }),
+        }),
       );
       const url = await persistArtifact(
         keys.storyboardChunk(jobId, i + 1),

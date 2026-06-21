@@ -8,10 +8,18 @@ type Character = { name: string; imageUrl: string };
 type ConceptDraft = {
   status: string;
   characters?: Character[];
+  locationImageUrl?: string;
   artifacts: {
     sceneDescription?: string;
     dialogue?: DialogueLine[];
   };
+};
+
+type SheetCacheEntry = {
+  kind: "character" | "location";
+  sourceUrl: string;
+  sheetUrl: string;
+  label?: string;
 };
 
 export default function ReviewPage({ params }: { params: Promise<{ jobId: string }> }) {
@@ -22,8 +30,21 @@ export default function ReviewPage({ params }: { params: Promise<{ jobId: string
   const [scene, setScene] = useState("");
   const [dialogue, setDialogue] = useState<DialogueLine[]>([]);
   const [cast, setCast] = useState<Character[]>([]);
+  const [locationImageUrl, setLocationImageUrl] = useState<string>("");
   const [duration, setDuration] = useState(4);
   const [submitting, setSubmitting] = useState(false);
+  // Sheet cache lookups. Per character source URL → cached sheet entry
+  // (or null = no cache hit). Same for location. Drives the "Cached -
+  // will reuse" indicator and the "Regenerate fresh" toggle.
+  const [characterCache, setCharacterCache] = useState<
+    Record<string, SheetCacheEntry | null>
+  >({});
+  const [locationCache, setLocationCache] = useState<SheetCacheEntry | null>(
+    null,
+  );
+  // forceRegen markers: "character:Amy" or "location". Selected = bypass
+  // cache for that asset on this render. Passed through to /api/video/approve.
+  const [forceRegen, setForceRegen] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     let cancelled = false;
@@ -36,6 +57,35 @@ export default function ReviewPage({ params }: { params: Promise<{ jobId: string
         setScene(data.artifacts.sceneDescription ?? "");
         setDialogue(data.artifacts.dialogue ?? []);
         setCast(data.characters ?? []);
+        setLocationImageUrl(data.locationImageUrl ?? "");
+
+        // Look up cache for each cast member + the location in parallel.
+        const lookup = async (kind: "character" | "location", url: string) => {
+          const r = await fetch(
+            `/api/library/sheets?kind=${kind}&source=${encodeURIComponent(url)}`,
+          );
+          const json = (await r.json()) as { entry: SheetCacheEntry | null };
+          return json.entry;
+        };
+        const characters = data.characters ?? [];
+        const charResults = await Promise.all(
+          characters.map(async (c) => ({
+            url: c.imageUrl,
+            entry: await lookup("character", c.imageUrl).catch(() => null),
+          })),
+        );
+        if (!cancelled) {
+          const cacheMap: Record<string, SheetCacheEntry | null> = {};
+          for (const r of charResults) cacheMap[r.url] = r.entry;
+          setCharacterCache(cacheMap);
+        }
+        if (data.locationImageUrl) {
+          const locEntry = await lookup(
+            "location",
+            data.locationImageUrl,
+          ).catch(() => null);
+          if (!cancelled) setLocationCache(locEntry);
+        }
       } catch (e) {
         if (!cancelled) setError(e instanceof Error ? e.message : String(e));
       } finally {
@@ -46,6 +96,15 @@ export default function ReviewPage({ params }: { params: Promise<{ jobId: string
       cancelled = true;
     };
   }, [jobId]);
+
+  function toggleForceRegen(marker: string) {
+    setForceRegen((prev) => {
+      const next = new Set(prev);
+      if (next.has(marker)) next.delete(marker);
+      else next.add(marker);
+      return next;
+    });
+  }
 
   function setLine(i: number, patch: Partial<DialogueLine>) {
     setDialogue((d) => d.map((row, idx) => (idx === i ? { ...row, ...patch } : row)));
@@ -87,6 +146,7 @@ export default function ReviewPage({ params }: { params: Promise<{ jobId: string
           sceneDescription: scene,
           dialogue: cleaned,
           videoDurationSec: duration,
+          forceRegenerateSheets: Array.from(forceRegen),
         }),
       });
       const data = (await res.json()) as { error?: string };
@@ -193,6 +253,102 @@ export default function ReviewPage({ params }: { params: Promise<{ jobId: string
               <InsertHere onClick={() => insertLineAt(i + 1)} />
             </div>
           ))}
+        </ul>
+      </section>
+
+      <section className="space-y-2">
+        <h2 className="text-sm font-medium text-stone-700">
+          Character + location sheets
+        </h2>
+        <p className="text-xs text-stone-500">
+          Sheets cached from earlier renders will be auto-reused (no
+          Higgsfield spend). Tick "Regenerate fresh" on any item where
+          you want a brand new sheet this time.
+        </p>
+        <ul className="space-y-1">
+          {cast.map((c) => {
+            const cached = characterCache[c.imageUrl];
+            const marker = `character:${c.name}`;
+            return (
+              <li
+                key={c.name}
+                className="flex items-center gap-3 border border-stone-200 rounded p-2 bg-white"
+              >
+                {cached ? (
+                  <img
+                    src={cached.sheetUrl}
+                    alt=""
+                    className="w-10 h-16 object-cover rounded bg-stone-100"
+                  />
+                ) : (
+                  <img
+                    src={c.imageUrl}
+                    alt=""
+                    className="w-10 h-16 object-cover rounded bg-stone-100 opacity-60"
+                  />
+                )}
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-stone-800">
+                    {c.name}
+                  </p>
+                  <p className="text-xs text-stone-500">
+                    {cached
+                      ? forceRegen.has(marker)
+                        ? "Will regenerate fresh"
+                        : "Cached - will reuse"
+                      : "No cache - will generate"}
+                  </p>
+                </div>
+                {cached ? (
+                  <label className="text-xs text-stone-600 flex items-center gap-1">
+                    <input
+                      type="checkbox"
+                      checked={forceRegen.has(marker)}
+                      onChange={() => toggleForceRegen(marker)}
+                    />
+                    Regenerate fresh
+                  </label>
+                ) : null}
+              </li>
+            );
+          })}
+          {locationImageUrl ? (
+            <li className="flex items-center gap-3 border border-stone-200 rounded p-2 bg-white">
+              {locationCache ? (
+                <img
+                  src={locationCache.sheetUrl}
+                  alt=""
+                  className="w-10 h-16 object-cover rounded bg-stone-100"
+                />
+              ) : (
+                <img
+                  src={locationImageUrl}
+                  alt=""
+                  className="w-10 h-16 object-cover rounded bg-stone-100 opacity-60"
+                />
+              )}
+              <div className="flex-1">
+                <p className="text-sm font-medium text-stone-800">Location</p>
+                <p className="text-xs text-stone-500">
+                  {locationCache
+                    ? forceRegen.has("location")
+                      ? "Will regenerate fresh"
+                      : "Cached - will reuse"
+                    : "No cache - will generate"}
+                </p>
+              </div>
+              {locationCache ? (
+                <label className="text-xs text-stone-600 flex items-center gap-1">
+                  <input
+                    type="checkbox"
+                    checked={forceRegen.has("location")}
+                    onChange={() => toggleForceRegen("location")}
+                  />
+                  Regenerate fresh
+                </label>
+              ) : null}
+            </li>
+          ) : null}
         </ul>
       </section>
 

@@ -19,6 +19,10 @@ const bodySchema = z.object({
   // Optional per-render override of the duration. Defaults are applied in
   // stage 5 / config.ts.
   videoDurationSec: z.number().int().min(4).max(15).optional(),
+  // Per-asset cache-bust markers. "character:Amy" = regenerate Amy's
+  // sheet even if a cached one exists; "location" = same for the
+  // location sheet. Omitted entries reuse cache.
+  forceRegenerateSheets: z.array(z.string()).optional(),
 });
 
 export async function POST(req: Request) {
@@ -26,7 +30,13 @@ export async function POST(req: Request) {
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.message }, { status: 400 });
   }
-  const { jobId, sceneDescription, dialogue, videoDurationSec } = parsed.data;
+  const {
+    jobId,
+    sceneDescription,
+    dialogue,
+    videoDurationSec,
+    forceRegenerateSheets,
+  } = parsed.data;
 
   const job = await readJob(jobId);
   if (!job) {
@@ -53,6 +63,7 @@ export async function POST(req: Request) {
     ...j,
     status: "queued",
     videoDurationSec,
+    forceRegenerateSheets: forceRegenerateSheets ?? [],
     artifacts: {
       ...j.artifacts,
       sceneDescription: cleanedScene,

@@ -32,10 +32,12 @@ export async function GET(req: Request) {
       jobId: job.jobId,
       status: job.status,
       characters: job.characters,
+      locationImageUrl: job.locationImageUrl,
       artifacts: job.artifacts,
       servedBy: job.servedBy,
       error: job.error,
       videoDurationSec: job.videoDurationSec,
+      forceRegenerateSheets: job.forceRegenerateSheets,
     },
     { headers: noStore },
   );

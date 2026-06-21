@@ -34,7 +34,7 @@ async function fatal<T>(label: string, fn: () => Promise<T>): Promise<T> {
 async function runStage1ForCharacterStep(
   jobId: string,
   character: Character,
-): Promise<{ name: string; url: string; backend: Backend }> {
+): Promise<{ name: string; url: string; backend: Backend; reusedFromCache: boolean }> {
   "use step";
   const { stage1 } = await import("./stages");
   return fatal("Stage 1", () => stage1(jobId, character));
@@ -43,7 +43,7 @@ async function runStage1ForCharacterStep(
 async function runStage2Step(
   jobId: string,
   locationImageUrl: string,
-): Promise<{ url: string; backend: Backend }> {
+): Promise<{ url: string; backend: Backend; reusedFromCache: boolean }> {
   "use step";
   const { stage2 } = await import("./stages");
   return fatal("Stage 2", () => stage2(jobId, locationImageUrl));
@@ -84,47 +84,66 @@ async function runStage3Step(jobId: string) {
   if (!job.artifacts.sceneDescription || !job.artifacts.dialogue) {
     throw new Error("Approved sceneDescription / dialogue missing");
   }
-  if (
-    !job.artifacts.characterSheets ||
-    job.artifacts.characterSheets.length === 0 ||
-    !job.artifacts.locationSheetUrl
-  ) {
-    throw new Error("Stage 1/2 artifacts missing for Stage 3");
-  }
+  // Stage 3 (shot list) is text-only and uses the user's original
+  // uploads as visual refs. It does NOT depend on the AI-generated
+  // character or location sheets, so it can run before any image-spend
+  // stage — that's the whole point of moving it earlier in the pipeline.
   await fatal("Stage 3", () =>
     stage3(jobId, {
       sceneDescription: job.artifacts.sceneDescription!,
       dialogue: job.artifacts.dialogue!,
       characters: job.characters,
-      characterSheets: job.artifacts.characterSheets!,
-      locationSheetUrl: job.artifacts.locationSheetUrl!,
+      locationImageUrl: job.locationImageUrl,
     }),
   );
 }
 
-async function runStage4Step(jobId: string) {
+// Per-storyboard durable step. One workflow step per chunk so a crash on
+// chunk N leaves chunks 1..N-1 saved. stage4OneStoryboard is idempotent.
+async function runStage4OneStoryboardStep(
+  jobId: string,
+  chunkIndex: number,
+): Promise<{ url: string; backend: Backend }> {
   "use step";
-  const { setStatus, readJob } = await import("./storage");
-  const { stage4 } = await import("./stages");
-  await setStatus(jobId, "storyboard");
-  const job = await readJob(jobId);
-  if (!job) throw new Error(`Job ${jobId} disappeared`);
-  if (
-    !job.artifacts.shotList ||
-    !job.artifacts.characterSheets ||
-    job.artifacts.characterSheets.length === 0 ||
-    !job.artifacts.locationSheetUrl
-  ) {
-    throw new Error("Stage 4 missing upstream artifacts");
-  }
-  await fatal("Stage 4", () =>
-    stage4(jobId, {
-      shots: job.artifacts.shotList!,
-      characters: job.characters,
-      characterSheets: job.artifacts.characterSheets!,
-      locationSheetUrl: job.artifacts.locationSheetUrl!,
-    }),
+  const { stage4OneStoryboard } = await import("./stages");
+  return fatal(`Stage 4 storyboard ${chunkIndex + 1}`, () =>
+    stage4OneStoryboard(jobId, chunkIndex),
   );
+}
+
+async function persistStoryboardUrlsStep(
+  jobId: string,
+  storyboardUrls: string[],
+) {
+  "use step";
+  const { updateJob } = await import("./storage");
+  await updateJob(jobId, (j) => ({
+    ...j,
+    artifacts: { ...j.artifacts, storyboardUrls },
+    servedBy: { ...(j.servedBy ?? {}), stage4: "higgsfield" },
+  }));
+}
+
+async function setStoryboardStatusStep(jobId: string) {
+  "use step";
+  const { setStatus } = await import("./storage");
+  await setStatus(jobId, "storyboard");
+}
+
+// Promise.all of N per-storyboard steps. Matches stage5's pattern: each
+// step is its own checkpoint, so a sibling crash doesn't lose persisted
+// storyboards.
+const STAGE4_CHUNK_COUNT = 4; // must match VIDEO_CHUNKS.count
+
+async function runStage4(jobId: string) {
+  await setStoryboardStatusStep(jobId);
+  const results = await Promise.all(
+    Array.from({ length: STAGE4_CHUNK_COUNT }, (_, i) =>
+      runStage4OneStoryboardStep(jobId, i),
+    ),
+  );
+  const storyboardUrls = results.map((r) => r.url);
+  await persistStoryboardUrlsStep(jobId, storyboardUrls);
 }
 
 // Per-clip durable step. One workflow step per chunk so a crash on
@@ -251,12 +270,31 @@ async function refreshLocationOnly(
   }));
 }
 
-// Durable orchestrator. Started by /api/video/approve once the user locks in
-// the edited sceneDescription + dialogue. Each stage persists its own state,
-// so an interruption resumes from the last completed step.
-//
-// Stage 1 runs in parallel ACROSS characters AND in parallel WITH Stage 2.
-// N characters = N independent image gens, all concurrent.
+// Sheets stage: characters in parallel WITH location. Both stage1 and
+// stage2 are idempotent + cache-aware (reuse library/sheets/* when a
+// cached entry exists for the source URL). After all complete, one
+// updateJob writes the sheets to artifacts.
+async function runSheetsStage(jobId: string, characters: Character[], locationImageUrl: string) {
+  await setSheetsStatusStep(jobId);
+  const [characterResults, locationResult] = await Promise.all([
+    Promise.all(
+      characters.map((c) => runStage1ForCharacterStep(jobId, c)),
+    ),
+    runStage2Step(jobId, locationImageUrl),
+  ]);
+  await persistStage1And2Step(jobId, characterResults, locationResult);
+}
+
+// Durable orchestrator. Pipeline order (after item-5 reorder):
+//   1. Concept + dialogue ........ already done before this workflow starts
+//   2. Gate 1 .................... already done before this workflow starts
+//   3. Shot list (cheap, text) ... runStage3Step
+//   4. Gate 2 (shot list) ........ createHook + await
+//   5. Character + location sheets (parallel, cache-aware) ... runSheetsStage
+//   6. Storyboards (4 parallel) .. runStage4
+//   7. Video clips (4 parallel) .. runStage5
+//   8. Stitch + captions ......... runStage6Step
+// Nothing image-expensive fires until AFTER Gate 2.
 export async function approvedVideoWorkflow(
   jobId: string,
   characters: Character[],
@@ -265,17 +303,10 @@ export async function approvedVideoWorkflow(
   "use workflow";
 
   try {
-    await setSheetsStatusStep(jobId);
-    const [characterResults, locationResult] = await Promise.all([
-      Promise.all(
-        characters.map((c) => runStage1ForCharacterStep(jobId, c)),
-      ),
-      runStage2Step(jobId, locationImageUrl),
-    ]);
-    await persistStage1And2Step(jobId, characterResults, locationResult);
+    // (3) Shot list — cheap text, fires immediately so the user can
+    // review what's actually going to be drawn before any image cost.
     await runStage3Step(jobId);
-    // Approval gate #2: pause for user to review + edit the 16-shot list
-    // before paying for storyboard image + Seedance video. /api/video/
+    // (4) Gate 2 — the user edits + approves the 16 shots. /api/video/
     // approve-shotlist resumes this hook after writing the edited shots
     // to artifacts.shotList.
     await setAwaitingShotlistStep(jobId);
@@ -283,7 +314,11 @@ export async function approvedVideoWorkflow(
       token: SHOTLIST_HOOK(jobId),
     });
     await hook;
-    await runStage4Step(jobId);
+    // (5) Sheets — character sheets in parallel with location sheet.
+    // Cache-aware: reuses library/sheets/* when source URL matches.
+    await runSheetsStage(jobId, characters, locationImageUrl);
+    // (6-8) Storyboards → clips → stitch + captions.
+    await runStage4(jobId);
     await runStage5(jobId);
     await runStage6Step(jobId);
     await markDone(jobId);
@@ -312,40 +347,49 @@ function inferStageFromError(message: string): StageName {
   return "stage1";
 }
 
-// Retry from a specific stage forward, reusing whatever is already persisted.
-// Retrying from stage 1 re-runs every character sheet in parallel + the
-// location sheet, then re-persists them in one job.json write.
+// Retry from a specific stage forward, reusing whatever is already
+// persisted. fromStage semantics map to CODE stage names (not the user-
+// facing pipeline number), so they're stable across pipeline reorders:
+//   1 = character sheets (+ location)        → redo sheets, then 4-6
+//   2 = location sheet only                  → redo location, then 4-6
+//   3 = shot list                            → redo shot list + Gate 2 + sheets + 4-6
+//   4 = storyboards                          → redo storyboards + clips + stitch
+//   5 = video clips                          → redo clips + stitch
+//
+// Reorder note: fromStage=3 re-parks at Gate 2 so the user can re-edit
+// the regenerated shots before any image-spend resumes.
 export async function retryFromStage(jobId: string, fromStage: 1 | 2 | 3 | 4 | 5) {
   "use workflow";
 
   const job = await readJobStep(jobId);
   if (!job) throw new Error(`Job ${jobId} not found`);
   try {
-    if (fromStage <= 1) {
-      await setSheetsStatusStep(jobId);
-      const [characterResults, locationResult] = await Promise.all([
-        Promise.all(
-          job.characters.map((c) => runStage1ForCharacterStep(jobId, c)),
-        ),
-        runStage2Step(jobId, job.locationImageUrl),
-      ]);
-      await persistStage1And2Step(jobId, characterResults, locationResult);
-    } else if (fromStage <= 2) {
-      const locationResult = await runStage2Step(jobId, job.locationImageUrl);
-      await refreshLocationOnly(jobId, locationResult);
-    }
-    if (fromStage <= 3) {
+    if (fromStage === 3) {
       await runStage3Step(jobId);
-      // Re-running stage 3 means the shot list changed; re-park for approval
-      // before consuming the expensive downstream stages.
       await setAwaitingShotlistStep(jobId);
       const hook = createHook<{ approved: true }>({
         token: SHOTLIST_HOOK(jobId),
       });
       await hook;
+      await runSheetsStage(jobId, job.characters, job.locationImageUrl);
+      await runStage4(jobId);
+      await runStage5(jobId);
+    } else if (fromStage <= 2) {
+      if (fromStage <= 1) {
+        await runSheetsStage(jobId, job.characters, job.locationImageUrl);
+      } else {
+        const locationResult = await runStage2Step(jobId, job.locationImageUrl);
+        await refreshLocationOnly(jobId, locationResult);
+      }
+      await runStage4(jobId);
+      await runStage5(jobId);
+    } else if (fromStage === 4) {
+      await runStage4(jobId);
+      await runStage5(jobId);
+    } else {
+      // fromStage === 5
+      await runStage5(jobId);
     }
-    if (fromStage <= 4) await runStage4Step(jobId);
-    if (fromStage <= 5) await runStage5(jobId);
     await runStage6Step(jobId);
     await markDone(jobId);
   } catch (err) {
