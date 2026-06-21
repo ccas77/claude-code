@@ -213,48 +213,68 @@ like a character turnaround, plus 45° angles, top-down, ground-level. Each
 panel reveals new information; no duplicate angles. Reconstruct a full
 360° understanding. The provided image is the sole source of truth.`,
 
-  stage3: `Convert the SCENE DESCRIPTION into exactly 16 storyboard panels.
-Use the uploaded character + location sheets as the sole sources of truth
-(one sheet per character, named below). ALL shots are composed for 9:16
-VERTICAL framing. Favor compositions that read well tall: full-body and
+  stage3: `Convert the SCENE DESCRIPTION into exactly 8 storyboard panels.
+Each panel is one ~4-second shot in a short vertical film. The final
+video is 16 seconds total (four 4-second clips), so 8 shots = roughly
+two beats per clip — enough to breathe, not enough to rush. Use the
+uploaded character + location images as the sole sources of truth for
+identity and environment.
+
+ALL shots are composed for 9:16 VERTICAL framing. Favor full-body or
 medium verticals, stacked foreground/background depth, low and high
-angles, close-ups; use sparing wide shots that still work in portrait
-rather than sprawling landscape vistas. Vary shot sizes (EWS to ECU) and
-angles (eye/low/high/OTS/POV/tracking). Structure: shots 1-3 establish,
-4-7 build, 8-11 reveal/twist, 12-14 escalate, 15-16 resolve.
+angles, close-ups. Use wide shots sparingly and only ones that work in
+portrait. Vary shot sizes (EWS to ECU) and angles (eye/low/high/OTS/
+POV/tracking).
 
-Refer to characters BY NAME in actions (e.g. "Mira leans against the door
-while Cal watches"), so the right reference sheet is used for each figure.
+Refer to characters BY NAME in action and performance (e.g. "Mira
+leans against the door"), so the right reference image is used for
+each figure.
 
-PHYSICAL PERFORMANCE PER SHOT (this is what stops the characters looking
-like potatoes). Every shot must include a non-empty "performance" field
-describing the body acting: weight distribution, posture, where hands and
-shoulders are, eyeline, breath, micro-expression (jaw clench, lip part,
-swallow, eye flicker), gesture, the energy between bodies in the frame
-(distance, lean-in, restraint, vulnerability). NEVER write a character as
-"standing", "looking", or "facing" without specifying HOW. If two
-characters share a frame, name the physical tension between them. Keep
-performance as ONE sentence-or-three of body direction; do not duplicate
-the action.
+PER-SHOT WRITING RULE — AIM, DON'T PILE.
+Each shot has ONE dominant action and ONE dominant performance beat.
+Write both as vividly and specifically as you want — keep the texture,
+the precise verbs, the physical detail. What you must NOT do is stack
+competing simultaneous movements into one shot. A shot is ~4 seconds;
+the model can render one clear physical intention, not six at once.
 
-Distribute the DIALOGUE lines across the 16 shots IN ORDER. Attach each
+  action: the single thing that physically happens in this shot. One
+  intention. ("Amy's chin drags over her shoulder toward the dark
+  corner.") NOT a catalogue ("she turns AND steps back AND raises her
+  hand AND her breath catches"). One verb that owns the shot.
+
+  performance: one externalising beat — the single gesture or
+  micro-expression that best shows the emotion. Write it richly, but
+  it must be ONE beat the body can actually execute in the time, not a
+  catalogue of every muscle. Choose the detail that reads on camera
+  and commit to it fully. "Her jaw locks and one tendon twitches in
+  her throat" beats "weight on her heels AND shoulders inward AND
+  fingers curled AND jaw tight AND breath held."
+
+The test for every performance line: can a person physically perform
+this single intention in four seconds without rushing? If not, cut
+until it's one committed beat. Vividness stays. Simultaneity goes.
+Specific and aimed, not sparse and rushed, and never a stacked pile.
+
+Distribute the DIALOGUE lines across the 8 shots IN ORDER. Attach each
 line to the shot where it is spoken via the per-shot dialogue array.
 Every line from the supplied dialogue array must appear on exactly one
-shot and nowhere else. Do not paraphrase. Do not duplicate. If a shot is
-wordless, return an empty dialogue array for it.
+shot and nowhere else. Do not paraphrase. Do not duplicate. If a shot
+is wordless, return an empty dialogue array for it. If a single shot
+needs more than one short line to land an exchange, that's allowed,
+but only when both lines genuinely belong to the same beat.
 
-PUNCTUATION RULE: never use em dashes. Use commas, periods, or sentence
-breaks.
+PUNCTUATION RULE: never use em dashes. Use commas, periods, or
+sentence breaks.
 
 OUTPUT FORMAT: return JSON ONLY (no prose, no fences). The top-level
-value is an array of exactly 16 shot objects, each shaped:
+value is an array of exactly 8 shot objects, each shaped:
 {
-  "n": 1-16 (1-indexed, in order),
-  "camera": "string describing framing/angle/movement",
-  "action": "what happens in the shot; characters by name; no body
-             direction here (that goes in performance)",
-  "performance": "body acting: weight, posture, hands, eyeline, breath,
-                  micro-expression, the physical tension between bodies",
+  "n": 1-8 (1-indexed, in order),
+  "camera": "framing/angle/movement",
+  "action": "the ONE physical intention in this shot. Character by name.
+             No body-direction here (that goes in performance).",
+  "performance": "the ONE committed body beat. Vivid, specific, four-
+                  seconds-possible. Not a stacked list.",
   "dialogue": [ { "speaker": "Name", "line": "exact quoted speech" }, ... ]
 }
 
@@ -264,14 +284,16 @@ Cast:
 SCENE DESCRIPTION:
 {sceneDescription}
 
-DIALOGUE (in order, must all appear across the 16 shots):
+DIALOGUE (in order, must all appear across the 8 shots):
 {dialogue}`,
 
-  stage4: `Professional 9:16 VERTICAL storyboard sheet. 16 panels in a 2
-columns × 8 rows layout (NOT a 4×4 grid of landscape cells). Every
-individual panel is framed 9:16 vertical so the panels compose well for
-the portrait video this becomes. Thin black borders, bold frame number
-top-left of each panel, short caption under each panel.
+  stage4: `Professional 9:16 VERTICAL storyboard sheet. Render exactly
+the number of panels listed below — typically 1-4 panels for one of
+the four mini-storyboards in a 16-second film. Lay them out in a
+SINGLE vertical column (one panel above the next) so each individual
+panel is framed 9:16 vertical, matching the portrait video this
+becomes. Thin black borders, bold frame number top-left of each
+panel, short caption under each panel.
 
 REFERENCE HIERARCHY (strict, do not freelance):
 1. The FIRST attached image is the LOCATION. It is the literal setting.

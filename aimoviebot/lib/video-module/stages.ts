@@ -83,6 +83,30 @@ export async function rebuildStoryboardUrlsFromBlob(
   return checked.filter((u): u is string => Boolean(u));
 }
 
+// Inspect a chunk's shots and return the set of character names that
+// actually appear (in dialogue speakers OR action/performance text).
+// Used by stage5 to send Higgsfield ONLY the relevant character sheets
+// for a chunk — extra sheets are noise that confuses Seedance.
+function pickNamesInChunk(
+  chunkShots: ShotList,
+  cast: Character[],
+): Set<string> {
+  const named = new Set<string>();
+  for (const shot of chunkShots) {
+    for (const d of shot.dialogue) {
+      if (d.speaker) named.add(d.speaker);
+    }
+    const haystack = `${shot.action ?? ""} ${shot.performance ?? ""}`.toLowerCase();
+    for (const c of cast) {
+      if (haystack.includes(c.name.toLowerCase())) named.add(c.name);
+    }
+  }
+  // Defensive: if a chunk somehow has no detectable names, fall back to
+  // the full cast so the clip doesn't render anonymous figures.
+  if (named.size === 0) for (const c of cast) named.add(c.name);
+  return named;
+}
+
 // Reconstructs the clipUrls array by checking each per-chunk video blob.
 export async function rebuildClipUrlsFromBlob(
   jobId: string,
@@ -293,8 +317,14 @@ export function validateShotList(
       `Stage 3: expected JSON array of shots, got ${typeof raw}`,
     );
   }
-  if (raw.length !== 16) {
-    throw new Error(`Stage 3: expected 16 shots, got ${raw.length}`);
+  // Accept 4..16 shots. The prompt asks for 8, but accommodate models
+  // that come back with slightly more or fewer. Below 4, the downstream
+  // pipeline can't fill 4 chunks; above 16, the user has too much to
+  // edit comfortably.
+  if (raw.length < 4 || raw.length > 16) {
+    throw new Error(
+      `Stage 3: expected 4..16 shots (prompt asks for 8), got ${raw.length}`,
+    );
   }
   const shots: Shot[] = raw.map((r, i) => {
     const obj = r as Record<string, unknown>;
@@ -637,11 +667,21 @@ export async function stage5OneClip(
     shots: chunkShotList,
     characters: job.characters,
   });
-  const sharedRefs = [
-    ...characterSheets.map((s) => s.url),
+  // Pass ONLY what this clip needs:
+  //   - the storyboard for THIS chunk (as start_image — the seed frame
+  //     for Seedance), NOT also as a duplicate image ref
+  //   - character sheets ONLY for the characters that actually appear
+  //     in this chunk's shots (extra sheets are noise that misleads
+  //     Seedance into mixing identities)
+  //   - the location sheet (always relevant to the environment)
+  const namesInChunk = pickNamesInChunk(chunkShotList, job.characters);
+  const relevantCharacterSheets = characterSheets.filter((s) =>
+    namesInChunk.has(s.name),
+  );
+  const refs = [
+    ...relevantCharacterSheets.map((s) => s.url),
     locationSheetUrl,
   ];
-  const refs = [storyboardUrl, ...sharedRefs];
   const total = chunks.length;
   const resolution = VIDEO_DEFAULTS.resolution;
   const mode = VIDEO_DEFAULTS.mode;
