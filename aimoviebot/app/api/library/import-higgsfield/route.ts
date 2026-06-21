@@ -79,18 +79,54 @@ async function importOne(item: GenerationItem): Promise<{ ok: boolean; reason?: 
   }
 }
 
-export async function POST() {
+// Run N async tasks with at most `concurrency` in flight at a time. Keeps
+// the import fast without saturating Blob / cloudfront on a serverless
+// instance with limited connections.
+async function withConcurrency<T, R>(
+  items: T[],
+  concurrency: number,
+  fn: (item: T) => Promise<R>,
+): Promise<R[]> {
+  const out: R[] = new Array(items.length);
+  let next = 0;
+  const workers = Array.from(
+    { length: Math.min(concurrency, items.length) },
+    async () => {
+      while (true) {
+        const i = next++;
+        if (i >= items.length) return;
+        out[i] = await fn(items[i]);
+      }
+    },
+  );
+  await Promise.all(workers);
+  return out;
+}
+
+export async function POST(req: Request) {
   try {
+    const url = new URL(req.url);
+    // Per-invocation cap so each call comfortably finishes inside the 5-min
+    // function timeout. Re-run the endpoint to pull older history; it
+    // resumes via the alreadyImported() skip list. Default = enough for a
+    // typical day's renders without risking timeout.
+    const maxNew = Math.max(
+      1,
+      Math.min(parseInt(url.searchParams.get("maxNew") ?? "20", 10), 200),
+    );
+    const concurrency = Math.max(
+      1,
+      Math.min(parseInt(url.searchParams.get("concurrency") ?? "5", 10), 10),
+    );
+
     const existing = await alreadyImported();
     let cursor: number | null | undefined = undefined;
     let scanned = 0;
     let skipped = 0;
     let imported = 0;
     const errors: { id: string; reason: string }[] = [];
-    // Hard cap on pages so a runaway loop doesn't burn the function. 50
-    // pages × 50 items = up to 2500 history entries. Most accounts won't
-    // come close.
     let pages = 0;
+
     do {
       pages += 1;
       const page = await listGenerationsPage({
@@ -98,28 +134,51 @@ export async function POST() {
         size: 50,
         cursor: cursor ?? undefined,
       });
-      for (const item of page.items) {
-        scanned += 1;
+      scanned += page.items.length;
+
+      const candidates = page.items.filter((item) => {
         if (existing.has(item.id)) {
           skipped += 1;
-          continue;
+          return false;
         }
         if (item.status !== "completed") {
           skipped += 1;
-          continue;
+          return false;
         }
-        const r = await importOne(item);
+        return true;
+      });
+
+      // Trim to remaining budget so we don't blow past maxNew in this call.
+      const remaining = Math.max(0, maxNew - imported);
+      const toImport = candidates.slice(0, remaining);
+
+      const results = await withConcurrency(toImport, concurrency, importOne);
+      results.forEach((r, i) => {
+        const id = toImport[i].id;
         if (r.ok) {
           imported += 1;
-          existing.add(item.id);
+          existing.add(id);
         } else {
-          errors.push({ id: item.id, reason: r.reason ?? "unknown" });
+          errors.push({ id, reason: r.reason ?? "unknown" });
         }
-      }
+      });
+
+      if (imported >= maxNew) break;
       cursor = page.nextCursor;
     } while (cursor != null && pages < 50);
 
-    return NextResponse.json({ scanned, imported, skipped, errors, pages });
+    return NextResponse.json({
+      scanned,
+      imported,
+      skipped,
+      errors,
+      pages,
+      hasMore: cursor != null,
+      hint:
+        cursor != null
+          ? "There are more pages of history. POST again to continue (the importer skips anything already imported)."
+          : null,
+    });
   } catch (e) {
     return NextResponse.json(
       { error: e instanceof Error ? e.message : String(e) },
