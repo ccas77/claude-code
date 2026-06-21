@@ -32,6 +32,7 @@ type StatusResponse = {
     clipUrls?: string[];
     videoUrl?: string;
     inflightHiggsfieldJobs?: InflightHiggsfieldJob[];
+    staleClipIndexes?: number[];
   };
   servedBy?: Record<string, "higgsfield" | "gateway">;
   error?: { stage: string; message: string };
