@@ -751,9 +751,12 @@ export default function StatusPage({ params }: { params: Promise<{ jobId: string
                   return (
                     <div
                       key={`sb-${i}`}
+                      // Expanded editor breaks out of the 2-col grid so
+                      // the shot fields aren't squeezed into half a page
+                      // at 10px font.
                       className={`border rounded-lg p-3 bg-white space-y-2 ${
-                        isStale ? "border-amber-400" : "border-stone-200"
-                      }`}
+                        expanded ? "col-span-2" : ""
+                      } ${isStale ? "border-amber-400" : "border-stone-200"}`}
                     >
                       <div className="flex items-center justify-between gap-2">
                         <label className="flex items-center gap-1 text-xs text-stone-700">
@@ -829,7 +832,7 @@ export default function StatusPage({ params }: { params: Promise<{ jobId: string
                         </button>
                       ) : null}
                       {expanded && draftShots ? (
-                        <div className="border-t border-stone-200 pt-2 space-y-3">
+                        <div className="border-t border-stone-200 pt-4 space-y-5 text-sm">
                           {shotIdxs.map((idx) => {
                             const draft = draftShots[idx];
                             if (!draft) return null;
@@ -841,13 +844,13 @@ export default function StatusPage({ params }: { params: Promise<{ jobId: string
                             return (
                               <div
                                 key={`shot-${idx}`}
-                                className="space-y-1 text-xs"
+                                className="space-y-3 pb-3 border-b border-stone-100 last:border-b-0"
                               >
-                                <div className="font-medium text-stone-700">
+                                <div className="font-semibold text-stone-800">
                                   Shot {draft.n}
                                 </div>
-                                <label className="block">
-                                  <span className="text-stone-500">
+                                <label className="block space-y-1">
+                                  <span className="text-xs uppercase tracking-wide text-stone-500">
                                     Camera
                                   </span>
                                   <textarea
@@ -855,12 +858,12 @@ export default function StatusPage({ params }: { params: Promise<{ jobId: string
                                     onChange={(e) =>
                                       patch({ camera: e.target.value })
                                     }
-                                    rows={2}
-                                    className="w-full border border-stone-300 rounded p-1 bg-white"
+                                    rows={3}
+                                    className="w-full border border-stone-300 rounded p-2 bg-white text-sm"
                                   />
                                 </label>
-                                <label className="block">
-                                  <span className="text-stone-500">
+                                <label className="block space-y-1">
+                                  <span className="text-xs uppercase tracking-wide text-stone-500">
                                     Action
                                   </span>
                                   <textarea
@@ -868,12 +871,12 @@ export default function StatusPage({ params }: { params: Promise<{ jobId: string
                                     onChange={(e) =>
                                       patch({ action: e.target.value })
                                     }
-                                    rows={3}
-                                    className="w-full border border-stone-300 rounded p-1 bg-white"
+                                    rows={4}
+                                    className="w-full border border-stone-300 rounded p-2 bg-white text-sm"
                                   />
                                 </label>
-                                <label className="block">
-                                  <span className="text-stone-500">
+                                <label className="block space-y-1">
+                                  <span className="text-xs uppercase tracking-wide text-stone-500">
                                     Performance
                                   </span>
                                   <textarea
@@ -881,13 +884,13 @@ export default function StatusPage({ params }: { params: Promise<{ jobId: string
                                     onChange={(e) =>
                                       patch({ performance: e.target.value })
                                     }
-                                    rows={3}
-                                    className="w-full border border-stone-300 rounded p-1 bg-white"
+                                    rows={4}
+                                    className="w-full border border-stone-300 rounded p-2 bg-white text-sm"
                                   />
                                 </label>
-                                <div className="space-y-1">
+                                <div className="space-y-2">
                                   <div className="flex items-center justify-between">
-                                    <span className="text-stone-500">
+                                    <span className="text-xs uppercase tracking-wide text-stone-500">
                                       Dialogue ({draft.dialogue.length})
                                     </span>
                                     <button
@@ -900,20 +903,20 @@ export default function StatusPage({ params }: { params: Promise<{ jobId: string
                                           ],
                                         })
                                       }
-                                      className="text-violet-700 text-[10px]"
+                                      className="text-violet-700 text-xs"
                                     >
                                       + add line
                                     </button>
                                   </div>
                                   {draft.dialogue.length === 0 ? (
-                                    <p className="text-stone-400 italic text-[10px]">
-                                      No dialogue.
+                                    <p className="text-stone-400 italic text-xs">
+                                      No dialogue on this shot.
                                     </p>
                                   ) : null}
                                   {draft.dialogue.map((d, lineIdx) => (
                                     <div
                                       key={lineIdx}
-                                      className="flex gap-1 items-start"
+                                      className="flex gap-2 items-start"
                                     >
                                       <input
                                         value={d.speaker}
@@ -926,9 +929,9 @@ export default function StatusPage({ params }: { params: Promise<{ jobId: string
                                           patch({ dialogue: next });
                                         }}
                                         placeholder="Speaker"
-                                        className="w-20 border border-stone-300 rounded p-1 bg-white text-[10px]"
+                                        className="w-32 border border-stone-300 rounded p-2 bg-white text-sm"
                                       />
-                                      <input
+                                      <textarea
                                         value={d.line}
                                         onChange={(e) => {
                                           const next = [...draft.dialogue];
@@ -939,7 +942,8 @@ export default function StatusPage({ params }: { params: Promise<{ jobId: string
                                           patch({ dialogue: next });
                                         }}
                                         placeholder="What they say out loud"
-                                        className="flex-1 border border-stone-300 rounded p-1 bg-white text-[10px]"
+                                        rows={2}
+                                        className="flex-1 border border-stone-300 rounded p-2 bg-white text-sm"
                                       />
                                       <button
                                         type="button"
@@ -949,7 +953,7 @@ export default function StatusPage({ params }: { params: Promise<{ jobId: string
                                           );
                                           patch({ dialogue: next });
                                         }}
-                                        className="text-stone-500 text-xs px-1"
+                                        className="text-stone-500 hover:text-red-600 px-2 py-2"
                                         aria-label="Remove line"
                                       >
                                         ×
@@ -963,7 +967,7 @@ export default function StatusPage({ params }: { params: Promise<{ jobId: string
                           <button
                             onClick={saveShotEdits}
                             disabled={savingShots}
-                            className="w-full text-xs bg-violet-700 text-white rounded px-2 py-1 disabled:bg-stone-300"
+                            className="w-full text-sm bg-violet-700 text-white rounded px-3 py-2 disabled:bg-stone-300"
                           >
                             {savingShots ? "Saving…" : "Save shot edits"}
                           </button>
