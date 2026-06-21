@@ -68,6 +68,26 @@ export default function StatusPage({ params }: { params: Promise<{ jobId: string
   const [finalizing, setFinalizing] = useState(false);
   const [clipUrlsRaw, setClipUrlsRaw] = useState("");
   const [recovering, setRecovering] = useState(false);
+  const [repairing, setRepairing] = useState(false);
+
+  async function repairFromBlob() {
+    setRepairing(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/video/repair", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jobId }),
+      });
+      const json = (await res.json()) as { error?: string };
+      if (!res.ok) throw new Error(json.error ?? `HTTP ${res.status}`);
+      setData(null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setRepairing(false);
+    }
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -210,6 +230,14 @@ export default function StatusPage({ params }: { params: Promise<{ jobId: string
                   {retrying ? "Restarting…" : `Retry from ${data.error.stage}`}
                 </button>
               ) : null}
+              <button
+                onClick={repairFromBlob}
+                disabled={repairing}
+                className="text-violet-700 text-sm border border-violet-300 rounded px-3 py-1.5 disabled:text-stone-400 disabled:border-stone-200"
+                title="Reconciles job state with what actually exists in Blob storage. Useful when a workflow crash claimed 'missing upstream artifacts' that are actually persisted at their deterministic keys. No Higgsfield calls."
+              >
+                {repairing ? "Repairing…" : "Repair from Blob"}
+              </button>
               <button
                 onClick={() => retry(1)}
                 disabled={retrying}

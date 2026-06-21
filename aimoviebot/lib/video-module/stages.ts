@@ -39,6 +39,63 @@ import type {
   ShotList,
 } from "./types";
 
+// head() the given blob key; returns the public URL on hit, null on miss.
+// Used by Stage 4 / Stage 5 / repair to reconstruct artifact arrays from
+// deterministic Blob keys when the job state snapshot is stale.
+async function tryHead(blobKey: string): Promise<string | null> {
+  try {
+    const { head } = await import("@vercel/blob");
+    const meta = await head(blobKey);
+    return meta.url;
+  } catch {
+    return null;
+  }
+}
+
+// Reconstructs the characterSheets array by checking the deterministic
+// per-character Blob key for each cast member. Missing characters drop
+// out — Stage 5's validator catches the empty case downstream.
+export async function rebuildCharacterSheetsFromBlob(
+  jobId: string,
+  characters: Character[],
+): Promise<CharacterSheet[]> {
+  const checked = await Promise.all(
+    characters.map(async (c) => {
+      const url = await tryHead(keys.characterSheet(jobId, c.name));
+      return url ? { name: c.name, url } : null;
+    }),
+  );
+  return checked.filter((x): x is CharacterSheet => Boolean(x));
+}
+
+// Reconstructs the storyboardUrls array by checking each deterministic
+// stage4-storyboard-{i}.png blob. If any chunk is missing, that index
+// is dropped — Stage 5's chunkShots match check catches the size diff.
+export async function rebuildStoryboardUrlsFromBlob(
+  jobId: string,
+  expectedChunkCount: number,
+): Promise<string[]> {
+  const checked = await Promise.all(
+    Array.from({ length: expectedChunkCount }, (_, i) =>
+      tryHead(keys.storyboardChunk(jobId, i + 1)),
+    ),
+  );
+  return checked.filter((u): u is string => Boolean(u));
+}
+
+// Reconstructs the clipUrls array by checking each per-chunk video blob.
+export async function rebuildClipUrlsFromBlob(
+  jobId: string,
+  expectedChunkCount: number,
+): Promise<string[]> {
+  const checked = await Promise.all(
+    Array.from({ length: expectedChunkCount }, (_, i) =>
+      tryHead(keys.videoClip(jobId, i + 1)),
+    ),
+  );
+  return checked.filter((u): u is string => Boolean(u));
+}
+
 // Stage 1: one character sheet per character. Generates via Higgsfield
 // gpt-image-2 (model configurable in MODELS.image.higgsfield). Persists
 // to BOTH a per-job blob (for traceability) AND the library cache (so
@@ -298,16 +355,32 @@ export async function stage4OneStoryboard(
   const job = await readJob(jobId);
   if (!job) throw new Error(`Job ${jobId} not found`);
   const shots = job.artifacts.shotList;
-  const characterSheets = job.artifacts.characterSheets;
-  const locationSheetUrl = job.artifacts.locationSheetUrl;
+  // Same staleness-resilience pattern as stage5OneClip: try the job
+  // snapshot's array, fall back to head() on deterministic blob keys.
+  let characterSheets = job.artifacts.characterSheets;
+  if (!characterSheets || characterSheets.length === 0) {
+    characterSheets = await rebuildCharacterSheetsFromBlob(
+      jobId,
+      job.characters,
+    );
+  }
+  let locationSheetUrl = job.artifacts.locationSheetUrl;
+  if (!locationSheetUrl) {
+    locationSheetUrl = (await tryHead(keys.locationSheet(jobId))) ?? undefined;
+  }
   if (
     !shots ||
     !characterSheets ||
     characterSheets.length === 0 ||
     !locationSheetUrl
   ) {
+    const missing: string[] = [];
+    if (!shots) missing.push("shotList");
+    if (!characterSheets || characterSheets.length === 0)
+      missing.push("characterSheets");
+    if (!locationSheetUrl) missing.push("locationSheet");
     throw new Error(
-      `Stage 4 storyboard ${chunkIndex + 1}: missing upstream artifacts`,
+      `Stage 4 storyboard ${chunkIndex + 1}: missing upstream artifacts (${missing.join(", ")})`,
     );
   }
   const chunks = chunkShots(shots, VIDEO_CHUNKS.count);
@@ -489,9 +562,26 @@ export async function stage5OneClip(
   const job = await readJob(jobId);
   if (!job) throw new Error(`Job ${jobId} not found`);
   const shots = job.artifacts.shotList;
-  const characterSheets = job.artifacts.characterSheets;
-  const locationSheetUrl = job.artifacts.locationSheetUrl;
-  const storyboardUrls = job.artifacts.storyboardUrls;
+  // Vercel Blob's list() is occasionally stale, so the job snapshot
+  // this step reads may be missing artifact arrays that ARE persisted
+  // at their deterministic blob keys. Reconstruct from Blob head() before
+  // failing — that's what saves us from the "Job X: missing storyboardUrls"
+  // race when another step's parallel write nukes the visible ordering.
+  let characterSheets = job.artifacts.characterSheets;
+  if (!characterSheets || characterSheets.length === 0) {
+    characterSheets = await rebuildCharacterSheetsFromBlob(jobId, job.characters);
+  }
+  let locationSheetUrl = job.artifacts.locationSheetUrl;
+  if (!locationSheetUrl) {
+    locationSheetUrl = (await tryHead(keys.locationSheet(jobId))) ?? undefined;
+  }
+  let storyboardUrls = job.artifacts.storyboardUrls;
+  if (!storyboardUrls || storyboardUrls.length === 0) {
+    storyboardUrls = await rebuildStoryboardUrlsFromBlob(
+      jobId,
+      VIDEO_CHUNKS.count,
+    );
+  }
   if (
     !shots ||
     !characterSheets ||
@@ -500,8 +590,15 @@ export async function stage5OneClip(
     !storyboardUrls ||
     storyboardUrls.length === 0
   ) {
+    const missing: string[] = [];
+    if (!shots) missing.push("shotList");
+    if (!characterSheets || characterSheets.length === 0)
+      missing.push("characterSheets");
+    if (!locationSheetUrl) missing.push("locationSheet");
+    if (!storyboardUrls || storyboardUrls.length === 0)
+      missing.push("storyboardUrls");
     throw new Error(
-      `Stage 5 clip ${chunkIndex + 1}: missing upstream artifacts (shotList/characterSheets/locationSheet/storyboardUrls)`,
+      `Stage 5 clip ${chunkIndex + 1}: missing upstream artifacts (${missing.join(", ")})`,
     );
   }
 
