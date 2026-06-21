@@ -410,6 +410,400 @@ export default function StatusPage({ params }: { params: Promise<{ jobId: string
       ? STAGE_FROM[data.error.stage] ?? 1
       : null;
 
+  // Clip-centric DONE view. Hides everything that's noise once a render
+  // is finished. Each clip is one tile with Edit Storyboard (expander
+  // showing chunk shots + current storyboard image + Regenerate
+  // storyboard button) and Regenerate video (duration picker + Send).
+  if (data.status === "done" && a.clipUrls && a.clipUrls.length > 0) {
+    const cc = a.clipUrls.length;
+    const shotChunks = chunksOf<Shot>((a.shotList ?? []) as Shot[], cc);
+    const shotIndexesByChunk: number[][] = [];
+    let cursor = 0;
+    for (let i = 0; i < cc; i++) {
+      const size = shotChunks[i]?.length ?? 0;
+      shotIndexesByChunk.push(
+        Array.from({ length: size }, (_, k) => cursor + k),
+      );
+      cursor += size;
+    }
+    return (
+      <main className="space-y-6">
+        <header>
+          <h1 className="text-2xl font-semibold tracking-tight">Done</h1>
+          <p className="text-stone-600 mt-1 text-xs font-mono">Job {jobId}</p>
+        </header>
+
+        {error ? <p className="text-red-600 text-sm">{error}</p> : null}
+
+        {a.videoUrl ? (
+          <section className="space-y-2">
+            <h2 className="text-sm font-medium text-stone-700">Final video</h2>
+            <video
+              key={`${a.videoUrl}-${assetVersion}`}
+              controls
+              src={`${a.videoUrl}?v=${assetVersion}`}
+              className="w-full max-w-sm mx-auto aspect-[9/16] bg-black rounded-lg"
+            />
+            <div className="flex justify-center gap-3 text-sm">
+              <a
+                href={a.videoUrl}
+                download
+                className="text-violet-700 underline"
+              >
+                Download mp4
+              </a>
+              {data.clipsAreStale ? (
+                <button
+                  onClick={restitchFinal}
+                  disabled={restitching}
+                  className="bg-emerald-700 text-white rounded px-3 py-1 text-xs disabled:bg-stone-300"
+                  title="ffmpeg-concat the current clips and re-burn captions. No Higgsfield / Seedance spend."
+                >
+                  {restitching
+                    ? "Restitching…"
+                    : "Restitch (clips changed)"}
+                </button>
+              ) : null}
+            </div>
+          </section>
+        ) : null}
+
+        <section className="space-y-3">
+          <h2 className="text-sm font-medium text-stone-700">
+            Clips ({cc})
+          </h2>
+          <div className="space-y-4">
+            {a.clipUrls.map((clipUrl, i) => {
+              const expanded = expandedTile === i;
+              const storyboardUrl = a.storyboardUrls?.[i];
+              const shotIdxs = shotIndexesByChunk[i] ?? [];
+              const sbMarker = `storyboard:${i}`;
+              const sbBusy = regenerating.has(sbMarker);
+              const clipMarker = `clip:${i}`;
+              const clipBusy = regenerating.has(clipMarker);
+              const chosenDur =
+                clipDurationByChunk[i] ?? a.chunkDurations?.[i] ?? 4;
+              return (
+                <div
+                  key={`clip-${i}`}
+                  className="border border-stone-200 rounded-lg p-3 bg-white space-y-3"
+                >
+                  <div className="grid grid-cols-2 gap-3 items-start">
+                    <video
+                      key={`${clipUrl}-${assetVersion}`}
+                      controls
+                      src={`${clipUrl}?v=${assetVersion}`}
+                      className="w-full aspect-[9/16] bg-black rounded"
+                    />
+                    <div className="space-y-2 text-xs">
+                      <div className="font-medium text-stone-800">
+                        Clip {i + 1}
+                      </div>
+                      <a
+                        href={clipUrl}
+                        download
+                        className="block text-violet-700 underline"
+                      >
+                        Download
+                      </a>
+                      <button
+                        onClick={() => {
+                          if (expanded) {
+                            setExpandedTile(null);
+                            setDraftShots(null);
+                          } else {
+                            setExpandedTile(i);
+                            const seed: Record<number, Shot> = {};
+                            for (const idx of shotIdxs) {
+                              const s = (a.shotList ?? [])[idx];
+                              if (s) seed[idx] = { ...s };
+                            }
+                            setDraftShots(seed);
+                          }
+                        }}
+                        className="w-full text-violet-700 border border-violet-200 rounded px-2 py-1 hover:bg-violet-50"
+                      >
+                        {expanded ? "Close storyboard" : "Edit storyboard"}
+                      </button>
+                      <div className="space-y-1 pt-1 border-t border-stone-100">
+                        <div className="flex items-center gap-1 flex-wrap">
+                          <span className="text-[10px] uppercase tracking-wide text-stone-500">
+                            New clip length:
+                          </span>
+                          {[4, 8, 12, 15].map((d) => {
+                            const active = chosenDur === d;
+                            return (
+                              <button
+                                key={d}
+                                type="button"
+                                onClick={() =>
+                                  setClipDurationByChunk((c) => ({
+                                    ...c,
+                                    [i]: d,
+                                  }))
+                                }
+                                className={`text-xs px-2 py-0.5 rounded border ${
+                                  active
+                                    ? "bg-violet-700 text-white border-violet-700"
+                                    : "bg-white text-stone-700 border-stone-300 hover:border-violet-400"
+                                }`}
+                              >
+                                {d}s
+                              </button>
+                            );
+                          })}
+                        </div>
+                        <button
+                          onClick={() =>
+                            regenerateAsset("clip", i, {
+                              durationSec: chosenDur,
+                            })
+                          }
+                          disabled={clipBusy}
+                          className="w-full bg-amber-600 hover:bg-amber-700 text-white rounded px-2 py-1 disabled:bg-stone-300"
+                          title="Render a fresh Seedance clip at the selected length. Does NOT auto-restitch — use the Restitch button on the final video when done."
+                        >
+                          {clipBusy
+                            ? `Sending ${regenElapsed}s…`
+                            : `Regenerate video (${chosenDur}s)`}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {expanded && draftShots ? (
+                    <div className="border-t border-stone-200 pt-3 space-y-4 text-sm">
+                      {storyboardUrl ? (
+                        <div className="space-y-1">
+                          <p className="text-xs uppercase tracking-wide text-stone-500">
+                            Current storyboard (used for this clip)
+                          </p>
+                          <img
+                            src={`${storyboardUrl}?v=${assetVersion}`}
+                            alt=""
+                            className="w-full max-w-xs aspect-[9/16] object-cover rounded"
+                          />
+                        </div>
+                      ) : null}
+                      {shotIdxs.map((idx) => {
+                        const draft = draftShots[idx];
+                        if (!draft) return null;
+                        const patch = (p: Partial<Shot>) =>
+                          setDraftShots((d) => ({
+                            ...(d ?? {}),
+                            [idx]: { ...draft, ...p },
+                          }));
+                        return (
+                          <div
+                            key={`shot-${idx}`}
+                            className="space-y-3 pb-3 border-b border-stone-100 last:border-b-0"
+                          >
+                            <div className="font-semibold text-stone-800">
+                              Shot {draft.n}
+                            </div>
+                            <label className="block space-y-1">
+                              <span className="text-xs uppercase tracking-wide text-stone-500">
+                                Camera
+                              </span>
+                              <textarea
+                                value={draft.camera}
+                                onChange={(e) =>
+                                  patch({ camera: e.target.value })
+                                }
+                                rows={2}
+                                className="w-full border border-stone-300 rounded p-2 bg-white text-sm"
+                              />
+                            </label>
+                            <label className="block space-y-1">
+                              <span className="text-xs uppercase tracking-wide text-stone-500">
+                                Action
+                              </span>
+                              <textarea
+                                value={draft.action}
+                                onChange={(e) =>
+                                  patch({ action: e.target.value })
+                                }
+                                rows={3}
+                                className="w-full border border-stone-300 rounded p-2 bg-white text-sm"
+                              />
+                            </label>
+                            <label className="block space-y-1">
+                              <span className="text-xs uppercase tracking-wide text-stone-500">
+                                Performance
+                              </span>
+                              <textarea
+                                value={draft.performance}
+                                onChange={(e) =>
+                                  patch({ performance: e.target.value })
+                                }
+                                rows={3}
+                                className="w-full border border-stone-300 rounded p-2 bg-white text-sm"
+                              />
+                            </label>
+                            <div className="space-y-2">
+                              <div className="flex items-center justify-between">
+                                <span className="text-xs uppercase tracking-wide text-stone-500">
+                                  Dialogue ({draft.dialogue.length})
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    patch({
+                                      dialogue: [
+                                        ...draft.dialogue,
+                                        { speaker: "", line: "" },
+                                      ],
+                                    })
+                                  }
+                                  className="text-violet-700 text-xs"
+                                >
+                                  + add line
+                                </button>
+                              </div>
+                              {draft.dialogue.length === 0 ? (
+                                <p className="text-stone-400 italic text-xs">
+                                  No dialogue on this shot.
+                                </p>
+                              ) : null}
+                              {draft.dialogue.map((d, lineIdx) => (
+                                <div
+                                  key={lineIdx}
+                                  className="flex gap-2 items-start"
+                                >
+                                  <input
+                                    value={d.speaker}
+                                    onChange={(e) => {
+                                      const next = [...draft.dialogue];
+                                      next[lineIdx] = {
+                                        ...next[lineIdx],
+                                        speaker: e.target.value,
+                                      };
+                                      patch({ dialogue: next });
+                                    }}
+                                    placeholder="Speaker"
+                                    className="w-28 border border-stone-300 rounded p-2 bg-white text-sm"
+                                  />
+                                  <textarea
+                                    value={d.line}
+                                    onChange={(e) => {
+                                      const next = [...draft.dialogue];
+                                      next[lineIdx] = {
+                                        ...next[lineIdx],
+                                        line: e.target.value,
+                                      };
+                                      patch({ dialogue: next });
+                                    }}
+                                    placeholder="What they say out loud"
+                                    rows={2}
+                                    className="flex-1 border border-stone-300 rounded p-2 bg-white text-sm"
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const next = draft.dialogue.filter(
+                                        (_, k) => k !== lineIdx,
+                                      );
+                                      patch({ dialogue: next });
+                                    }}
+                                    className="text-stone-500 hover:text-red-600 px-2 py-2"
+                                  >
+                                    ×
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })}
+                      <div className="flex gap-2">
+                        <button
+                          onClick={saveShotEdits}
+                          disabled={savingShots}
+                          className="flex-1 text-sm bg-violet-700 text-white rounded px-3 py-2 disabled:bg-stone-300"
+                        >
+                          {savingShots ? "Saving…" : "Save shot edits"}
+                        </button>
+                        <button
+                          onClick={() => regenerateAsset("storyboard", i)}
+                          disabled={sbBusy}
+                          className="flex-1 text-sm bg-red-700 text-white rounded px-3 py-2 disabled:bg-stone-300"
+                          title="Render a new storyboard image using the shot edits above. One Higgsfield call. Does NOT regenerate the clip — use the Regenerate video button after."
+                        >
+                          {sbBusy
+                            ? `Regen storyboard ${regenElapsed}s…`
+                            : "Regenerate storyboard"}
+                        </button>
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
+              );
+            })}
+          </div>
+        </section>
+
+        <details className="border border-stone-200 rounded bg-white">
+          <summary className="cursor-pointer px-3 py-2 text-xs text-stone-600 hover:text-violet-700">
+            References (character sheets, source uploads, raw job JSON)
+          </summary>
+          <div className="px-3 pb-3 space-y-3">
+            {(a.characterSheets ?? []).length > 0 ? (
+              <div>
+                <p className="text-xs text-stone-500 mb-1">Character sheets</p>
+                <div className="grid grid-cols-3 gap-2">
+                  {(a.characterSheets ?? []).map((sheet) => (
+                    <div key={sheet.name}>
+                      <img
+                        src={sheet.url}
+                        alt={sheet.name}
+                        className="w-full aspect-[9/16] object-cover rounded"
+                      />
+                      <p className="text-[10px] text-stone-500 text-center mt-1">
+                        {sheet.name}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+            {a.locationSheetUrl ? (
+              <div>
+                <p className="text-xs text-stone-500 mb-1">Location sheet</p>
+                <img
+                  src={a.locationSheetUrl}
+                  alt="Location"
+                  className="w-full max-w-xs aspect-[9/16] object-cover rounded"
+                />
+              </div>
+            ) : null}
+            {data.characters && data.characters.length > 0 ? (
+              <div>
+                <p className="text-xs text-stone-500 mb-1">Source uploads</p>
+                <div className="grid grid-cols-3 gap-2">
+                  {data.characters.map((c) => (
+                    <div key={`src-${c.name}`}>
+                      <img
+                        src={c.imageUrl}
+                        alt={c.name}
+                        className="w-full aspect-[9/16] object-cover rounded"
+                      />
+                      <p className="text-[10px] text-stone-500 text-center mt-1">
+                        {c.name}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+            <pre className="text-[10px] text-stone-700 overflow-x-auto">
+              {JSON.stringify(data, null, 2)}
+            </pre>
+          </div>
+        </details>
+      </main>
+    );
+  }
+
   return (
     <main className="space-y-8">
       <header>
