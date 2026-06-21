@@ -112,6 +112,12 @@ export default function StatusPage({ params }: { params: Promise<{ jobId: string
   // Local draft of edited shots before "Save shot edits" is clicked.
   // Keyed by shot index (matching shotList ordering).
   const [draftShots, setDraftShots] = useState<Record<number, Shot> | null>(null);
+  // Indexes of shots the user has marked for deletion in the current
+  // editor session. Applied on Save: those entries drop out of the
+  // persisted shotList.
+  const [deletedShotIndexes, setDeletedShotIndexes] = useState<Set<number>>(
+    new Set(),
+  );
   const [savingShots, setSavingShots] = useState(false);
   const [restitching, setRestitching] = useState(false);
   // Title rename. editingTitle = currently in edit mode; titleDraft =
@@ -509,7 +515,7 @@ export default function StatusPage({ params }: { params: Promise<{ jobId: string
               src={`${a.videoUrl}?v=${assetVersion}`}
               className="w-full max-w-sm mx-auto aspect-[9/16] bg-black rounded-lg"
             />
-            <div className="flex justify-center gap-3 text-sm">
+            <div className="flex justify-center gap-3 text-sm items-center">
               <a
                 href={a.videoUrl}
                 download
@@ -517,18 +523,22 @@ export default function StatusPage({ params }: { params: Promise<{ jobId: string
               >
                 Download mp4
               </a>
-              {data.clipsAreStale ? (
-                <button
-                  onClick={restitchFinal}
-                  disabled={restitching}
-                  className="bg-emerald-700 text-white rounded px-3 py-1 text-xs disabled:bg-stone-300"
-                  title="ffmpeg-concat the current clips and re-burn captions. No Higgsfield / Seedance spend."
-                >
-                  {restitching
-                    ? "Restitching…"
-                    : "Restitch (clips changed)"}
-                </button>
-              ) : null}
+              <button
+                onClick={restitchFinal}
+                disabled={restitching}
+                className={`rounded px-3 py-1 text-xs text-white disabled:bg-stone-300 ${
+                  data.clipsAreStale
+                    ? "bg-emerald-700 hover:bg-emerald-800"
+                    : "bg-stone-600 hover:bg-stone-700"
+                }`}
+                title="ffmpeg-concat the current clips and re-burn captions. No Higgsfield / Seedance spend."
+              >
+                {restitching
+                  ? "Restitching…"
+                  : data.clipsAreStale
+                    ? "Restitch (clips changed)"
+                    : "Restitch final video"}
+              </button>
             </div>
           </section>
         ) : null}
