@@ -72,6 +72,27 @@ export default function ReviewShotsPage({
       return next;
     });
   }
+  // Remove an entire shot. Hard floor at 4 — the pipeline renders 4
+  // video clips, one per shot-chunk, so each chunk needs at least one
+  // shot. Trying to delete below 4 is a no-op (button is also disabled
+  // in the UI). Remaining shots keep their .n; the approve endpoint
+  // renumbers them sequentially on submit.
+  function removeShot(shotIdx: number) {
+    setShots((cs) => {
+      if (!cs || cs.length <= 4) return cs;
+      return cs.filter((_, idx) => idx !== shotIdx);
+    });
+  }
+  function moveShot(shotIdx: number, dir: -1 | 1) {
+    setShots((cs) => {
+      if (!cs) return cs;
+      const j = shotIdx + dir;
+      if (j < 0 || j >= cs.length) return cs;
+      const next = [...cs];
+      [next[shotIdx], next[j]] = [next[j], next[shotIdx]];
+      return next;
+    });
+  }
   function moveDialogueLine(shotIdx: number, lineIdx: number, dir: -1 | 1) {
     setShots((cs) => {
       if (!cs) return cs;
@@ -177,15 +198,23 @@ export default function ReviewShotsPage({
         ))}
       </datalist>
 
+      <p className="text-xs text-stone-500">
+        {shots.length} shot{shots.length === 1 ? "" : "s"}. The pipeline
+        renders 4 video clips (4 seconds each = 16s total) regardless of
+        how many shots you keep — fewer shots means each clip dwells
+        longer on the shots it does have. Minimum 4 (one per clip), max
+        16 (the original draft).
+      </p>
+
       <ol className="space-y-4">
         {shots.map((s, i) => (
           <li
-            key={s.n}
+            key={i}
             className="border border-stone-200 rounded-lg p-3 bg-white space-y-2"
           >
             <div className="flex items-baseline gap-2">
-              <span className="text-xs text-stone-500 font-mono w-12">
-                Shot {s.n}
+              <span className="text-xs text-stone-500 font-mono w-16">
+                Shot {i + 1}
               </span>
               <input
                 value={s.camera}
@@ -193,6 +222,40 @@ export default function ReviewShotsPage({
                 placeholder="Camera / framing / angle"
                 className="flex-1 border border-stone-300 rounded p-2 bg-white text-sm"
               />
+              <button
+                type="button"
+                onClick={() => moveShot(i, -1)}
+                disabled={i === 0}
+                className="text-stone-500 text-xs px-1 disabled:text-stone-300"
+                aria-label="Move shot up"
+                title="Move up"
+              >
+                ↑
+              </button>
+              <button
+                type="button"
+                onClick={() => moveShot(i, 1)}
+                disabled={i === shots.length - 1}
+                className="text-stone-500 text-xs px-1 disabled:text-stone-300"
+                aria-label="Move shot down"
+                title="Move down"
+              >
+                ↓
+              </button>
+              <button
+                type="button"
+                onClick={() => removeShot(i)}
+                disabled={shots.length <= 4}
+                className="text-red-600 text-xs px-2 py-1 border border-red-200 rounded hover:bg-red-50 disabled:text-stone-300 disabled:border-stone-200 disabled:hover:bg-transparent"
+                aria-label="Delete shot"
+                title={
+                  shots.length <= 4
+                    ? "Need at least 4 shots (one per video clip)"
+                    : "Delete this shot"
+                }
+              >
+                Delete
+              </button>
             </div>
             <label className="block">
               <span className="text-xs text-stone-500">Action</span>

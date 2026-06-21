@@ -24,9 +24,14 @@ const shotSchema = z.object({
   dialogue: z.array(dialogueLineSchema),
 });
 
+// Minimum 4 shots = one per video chunk (the pipeline renders 4 clips
+// of 4 seconds each, drawing from one shot-chunk per clip). Below 4 a
+// chunk would have no shot, which the downstream chunkShots refuses.
+// Max 16 = the original LLM-generated count; trimming is supported,
+// adding shots beyond 16 is not.
 const bodySchema = z.object({
   jobId: z.string().uuid(),
-  shots: z.array(shotSchema).min(1),
+  shots: z.array(shotSchema).min(4).max(16),
 });
 
 export async function POST(req: Request) {

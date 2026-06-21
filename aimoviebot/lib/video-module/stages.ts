@@ -410,15 +410,29 @@ export async function stage4(
   return { url: storyboardUrls[0], backend: "higgsfield" };
 }
 
-// Helper for chunked render: splits a flat shot list into N approximately
-// equal chunks. With the default 16 shots and 4 chunks, that's 4 shots
-// per chunk.
+// Helper for chunked render: splits a flat shot list into EXACTLY N
+// chunks, distributing shots as evenly as possible. The first
+// (shots % n) chunks get one extra shot. This guarantees the downstream
+// pipeline always renders N storyboards + N video clips regardless of
+// whether the user deleted shots — there's always one chunk per clip.
+//
+// Caller must ensure shots.length >= n (each chunk needs at least one
+// shot). Validation lives at the approve endpoint.
 function chunkShots(shots: ShotList, n: number): ShotList[] {
   if (n <= 1) return [shots];
+  if (shots.length < n) {
+    throw new Error(
+      `chunkShots: need at least ${n} shots for ${n} chunks, got ${shots.length}`,
+    );
+  }
+  const base = Math.floor(shots.length / n);
+  const remainder = shots.length % n;
   const out: ShotList[] = [];
-  const perChunk = Math.ceil(shots.length / n);
-  for (let i = 0; i < shots.length; i += perChunk) {
-    out.push(shots.slice(i, i + perChunk));
+  let cursor = 0;
+  for (let i = 0; i < n; i++) {
+    const size = base + (i < remainder ? 1 : 0);
+    out.push(shots.slice(cursor, cursor + size));
+    cursor += size;
   }
   return out;
 }
