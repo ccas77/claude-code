@@ -27,6 +27,9 @@ const bodySchema = z.object({
   jobId: z.string().uuid(),
   // Full list. Easier than diffing; the page always sends what it has.
   shots: z.array(shotSchema).min(1).max(32),
+  // Per-chunk Seedance render duration (one entry per chunk index).
+  // Seedance's range is 4-15s; we clamp to that on save.
+  chunkDurations: z.array(z.number().int()).optional(),
 });
 
 export async function POST(req: Request) {
@@ -34,7 +37,7 @@ export async function POST(req: Request) {
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.message }, { status: 400 });
   }
-  const { jobId, shots } = parsed.data;
+  const { jobId, shots, chunkDurations } = parsed.data;
 
   const job = await readJob(jobId);
   if (!job) {
@@ -53,6 +56,14 @@ export async function POST(req: Request) {
     })),
   }));
 
-  await mergeArtifacts(jobId, { shotList: cleaned });
+  const patch: { shotList: typeof cleaned; chunkDurations?: number[] } = {
+    shotList: cleaned,
+  };
+  if (chunkDurations) {
+    patch.chunkDurations = chunkDurations.map((d) =>
+      Math.max(4, Math.min(15, d)),
+    );
+  }
+  await mergeArtifacts(jobId, patch);
   return NextResponse.json({ jobId, count: cleaned.length });
 }

@@ -66,6 +66,10 @@ export type Artifacts = {
   // clip (4s). Stage 6 ffmpeg-concatenates the clips into the final video
   // and burns captions in.
   storyboardUrls?: string[]; // one mini-storyboard per chunk
+  // Per-chunk Seedance duration in seconds. Lets a chunk with a lot of
+  // dialogue render at 8s/12s/16s instead of the cramped 4s default.
+  // Index = chunkIndex. Missing entry / missing array = 4s default.
+  chunkDurations?: number[];
   clipUrls?: string[]; // one Seedance clip per chunk, before concat
   videoUrl?: string; // final concatenated + captioned mp4
   // Chunks where the storyboard was regenerated AFTER the clip was

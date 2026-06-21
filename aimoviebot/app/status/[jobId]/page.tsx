@@ -49,6 +49,7 @@ type StatusResponse = {
     locationSheetUrl?: string;
     shotList?: Shot[];
     storyboardUrls?: string[];
+    chunkDurations?: number[];
     clipUrls?: string[];
     videoUrl?: string;
     inflightHiggsfieldJobs?: InflightHiggsfieldJob[];
@@ -110,6 +111,9 @@ export default function StatusPage({ params }: { params: Promise<{ jobId: string
   // Local draft of edited shots before "Save shot edits" is clicked.
   // Keyed by shot index (matching shotList ordering).
   const [draftShots, setDraftShots] = useState<Record<number, Shot> | null>(null);
+  // Per-chunk duration draft for the currently-expanded tile. Index =
+  // chunkIndex. Saved alongside shot edits.
+  const [draftDuration, setDraftDuration] = useState<number | null>(null);
   const [savingShots, setSavingShots] = useState(false);
   const [restitching, setRestitching] = useState(false);
 
@@ -204,14 +208,34 @@ export default function StatusPage({ params }: { params: Promise<{ jobId: string
             .filter((d) => d.speaker && d.line),
         };
       });
+      // Merge in the duration change for the expanded chunk (if any).
+      const body: {
+        jobId: string;
+        shots: Shot[];
+        chunkDurations?: number[];
+      } = { jobId, shots: merged };
+      if (
+        expandedTile !== null &&
+        draftDuration !== null &&
+        data?.artifacts.storyboardUrls
+      ) {
+        const cc = data.artifacts.storyboardUrls.length;
+        const next = Array.from(
+          { length: cc },
+          (_, k) => data.artifacts.chunkDurations?.[k] ?? 4,
+        );
+        next[expandedTile] = draftDuration;
+        body.chunkDurations = next;
+      }
       const res = await fetch("/api/video/shots", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ jobId, shots: merged }),
+        body: JSON.stringify(body),
       });
       const json = (await res.json()) as { error?: string };
       if (!res.ok) throw new Error(json.error ?? `HTTP ${res.status}`);
       setDraftShots(null);
+      setDraftDuration(null);
       await reloadJob();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -801,20 +825,23 @@ export default function StatusPage({ params }: { params: Promise<{ jobId: string
                             if (expanded) {
                               setExpandedTile(null);
                               setDraftShots(null);
+                              setDraftDuration(null);
                             } else {
                               setExpandedTile(i);
-                              // Seed the draft with the current shot
-                              // contents for ONLY this chunk's indexes.
+                              // Seed shot drafts for ONLY this chunk.
                               const seed: Record<number, Shot> = {};
                               for (const idx of shotIdxs) {
                                 const s = (a.shotList ?? [])[idx];
                                 if (s) seed[idx] = { ...s };
                               }
                               setDraftShots(seed);
+                              setDraftDuration(
+                                a.chunkDurations?.[i] ?? 4,
+                              );
                             }
                           }}
                           className="flex-1 text-violet-700 border border-violet-200 rounded px-2 py-1 hover:bg-violet-50"
-                          title="Edit the underlying shot prompts before regenerating. Persists permanently."
+                          title="Edit the underlying shot prompts (and clip duration) before regenerating. Persists permanently."
                         >
                           {expanded ? "Close editor" : "Edit shots"}
                         </button>
@@ -824,15 +851,46 @@ export default function StatusPage({ params }: { params: Promise<{ jobId: string
                           onClick={() => regenerateAsset("clip", i)}
                           disabled={sendBusy}
                           className="w-full text-xs text-white bg-amber-600 hover:bg-amber-700 rounded px-2 py-1 disabled:bg-stone-300"
-                          title="Render one fresh 4s Seedance clip from this storyboard. Does NOT auto-restitch — use the Restitch button when you're done iterating."
+                          title="Render one fresh Seedance clip from this storyboard at the chunk's chosen duration. Does NOT auto-restitch — use the Restitch button when you're done iterating."
                         >
                           {sendBusy
                             ? `Sending ${regenElapsed}s…`
-                            : "Send to Seedance"}
+                            : `Send to Seedance (${
+                                a.chunkDurations?.[i] ?? 4
+                              }s clip)`}
                         </button>
                       ) : null}
                       {expanded && draftShots ? (
                         <div className="border-t border-stone-200 pt-4 space-y-5 text-sm">
+                          <label className="block space-y-1">
+                            <span className="text-xs uppercase tracking-wide text-stone-500">
+                              Clip duration
+                            </span>
+                            <div className="flex gap-1">
+                              {[4, 8, 12, 15].map((d) => {
+                                const active = draftDuration === d;
+                                return (
+                                  <button
+                                    key={d}
+                                    type="button"
+                                    onClick={() => setDraftDuration(d)}
+                                    className={`text-sm px-3 py-1.5 rounded border ${
+                                      active
+                                        ? "bg-violet-700 text-white border-violet-700"
+                                        : "bg-white text-stone-700 border-stone-300 hover:border-violet-400"
+                                    }`}
+                                  >
+                                    {d}s
+                                  </button>
+                                );
+                              })}
+                            </div>
+                            <p className="text-xs text-stone-500">
+                              Each clip is one Seedance call. Longer clips
+                              cost more (≈ proportional). Use 8s+ when a
+                              shot has more dialogue than fits in 4s.
+                            </p>
+                          </label>
                           {shotIdxs.map((idx) => {
                             const draft = draftShots[idx];
                             if (!draft) return null;

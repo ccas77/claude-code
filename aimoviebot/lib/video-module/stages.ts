@@ -659,12 +659,12 @@ export async function stage5OneClip(
       "Stage 5 refused: ASPECT_RATIO drifted from 9:16. Aborting render.",
     );
   }
-  const secondsPerChunk = VIDEO_CHUNKS.secondsPerChunk;
-  if (secondsPerChunk < 4 || secondsPerChunk > 15) {
-    throw new Error(
-      `Stage 5 refused: secondsPerChunk ${secondsPerChunk}s outside Seedance's 4-15s range.`,
-    );
-  }
+  // Per-chunk duration: each chunk can be 4/8/12/15s. Default 4. Reads
+  // job.artifacts.chunkDurations[chunkIndex] if set, falls back to 4s.
+  // Seedance's hard range is 4-15s, so we clamp.
+  const requestedDur =
+    job.artifacts.chunkDurations?.[chunkIndex] ?? VIDEO_CHUNKS.secondsPerChunk;
+  const secondsPerChunk = Math.max(4, Math.min(15, requestedDur));
 
   const chunks = chunkShots(shots, resolveJobChunkCount(job));
   if (chunkIndex < 0 || chunkIndex >= chunks.length) {
@@ -885,9 +885,14 @@ export async function stage6(
   // 1. Concat all the raw clips into one mp4 (in /tmp; no re-encode).
   const concatBuf = await concatVideos(args.clipUrls);
   // 2. Whisper-transcribe the audio for timing; falls back to estimated
-  //    cue distribution if no OPENAI_API_KEY is set. Total seconds =
-  //    actual clip count × 4s (each clip is 1 Seedance call at 4s).
-  const totalSeconds = args.clipUrls.length * VIDEO_CHUNKS.secondsPerChunk;
+  //    cue distribution if no OPENAI_API_KEY is set. Total seconds = sum
+  //    of per-chunk durations (default 4 each, but a chunk may be 8/12/15).
+  const job = await readJob(jobId);
+  const durations = job?.artifacts.chunkDurations ?? [];
+  const totalSeconds = args.clipUrls.reduce(
+    (sum, _u, i) => sum + (durations[i] ?? VIDEO_CHUNKS.secondsPerChunk),
+    0,
+  );
   const cues = await whisperCaptionCues(
     concatBuf,
     args.dialogue,
