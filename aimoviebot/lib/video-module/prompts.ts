@@ -314,39 +314,37 @@ SCENE DESCRIPTION:
 DIALOGUE (in order, must all appear across the {shotCount} shots):
 {dialogue}`,
 
-  stage4: `PHOTOREALISTIC 9:16 VERTICAL storyboard sheet. Each panel
-is a photographic still frame — real-camera depth of field, real
-lighting, real skin and fabric texture. NO cartoon, anime,
-illustration, painting, comic, sketch, watercolour, ink wash, 3D
-render, or stylised look — strictly photographic film stills.
-Render exactly the number of panels listed below — typically 1-4
-panels for one of the four mini-storyboards in a 16-second film.
-Lay them out in a SINGLE vertical column (one panel above the next)
-so each individual panel is framed 9:16 vertical, matching the
-portrait video this becomes. Thin black borders, bold frame number
-top-left of each panel, short caption under each panel.
+  stage4: `PHOTOREALISTIC 9:16 vertical film still — ONE single
+composition, no panels, no grid, no borders, no captions. This is the
+opening frame of a short video clip; Seedance will animate from it.
+Real-camera depth of field, real lighting, real skin and fabric
+texture. NO cartoon, anime, illustration, painting, comic, sketch,
+watercolour, ink wash, 3D render, or stylised look — strictly a
+photographic film still.
 
 REFERENCE HIERARCHY (strict, do not freelance):
-1. The FIRST attached image is the LOCATION. It is the literal setting.
-   Every single panel must render INSIDE that exact environment. Do not
-   invent a different location, do not substitute a beach or studio or
-   generic backdrop. If a shot is a close-up, the bits of environment that
-   peek into the frame must still match the location image.
-2. The remaining attached images are CHARACTER REFERENCE SHEETS, one per
-   named character. Match face, hair, body type, clothing, and accessories
-   exactly to whichever sheet corresponds to the named character on each
-   shot. Do not blend, swap, or invent looks.
+1. The FIRST attached image is the LOCATION. It is the literal
+   setting. Render INSIDE that exact environment. Do not invent a
+   different location, do not substitute a beach or studio or
+   generic backdrop. If the framing is a close-up, the bits of
+   environment that peek into the frame must still match the
+   location image.
+2. The remaining attached images are CHARACTER REFERENCE SHEETS,
+   one per named character. Match face, hair, body type, clothing,
+   and accessories exactly to whichever sheet corresponds to the
+   named character. Do not blend, swap, or invent looks.
 
-BODY ACTING: every panel must show physical performance, not stiff
-figures. Honor each shot's [Performance: ...] direction below: weight
-distribution, posture, where hands and shoulders are, eyeline,
+BODY ACTING: render physical performance, not a stiff pose. Honor
+the Performance direction below — weight, posture, hands, eyeline,
 micro-expression. No character standing flat-footed or staring with
-neutral expression.
+a neutral expression.
 
 Cast:
 {cast}
 
-Insert the 16 shots below (separators are single vertical bars):
+Compose ONE frame depicting this moment (the camera, action, and
+performance below ARE this single shot — do not split the frame, do
+not stack panels):
 {shots}`,
 
   stage5: `PHOTOREALISTIC 9:16 vertical film clip, {seconds} seconds, with
@@ -442,9 +440,15 @@ export async function renderStage4(args: {
   shots: Shot[];
   characters: Character[];
 }): Promise<string> {
+  // The chunk's first shot IS the moment we ask the image model to
+  // compose. Other shots in the chunk are conveyed to Seedance via the
+  // stage 5 text prompt — they don't need to appear as panels in the
+  // storyboard. This keeps the start_image a clean single 9:16 frame.
+  const firstShot = args.shots[0];
+  const shotsText = firstShot ? shotsBlock([firstShot]) : "(no shots)";
   return render(await effectivePrompt("stage4"), {
     cast: castBlock(args.characters),
-    shots: shotsBlock(args.shots),
+    shots: shotsText,
   });
 }
 
