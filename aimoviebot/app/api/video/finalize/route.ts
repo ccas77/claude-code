@@ -62,8 +62,16 @@ export async function POST(req: Request) {
       dialogue: job.artifacts.dialogue ?? [],
     });
 
-    // 5. Mark done.
-    await setStatus(body.data.jobId, "done");
+    // 5. Mark done. stage6 has just written videoUrl via its own updateJob;
+    //    we re-read fresh state, then write status:done so the final blob
+    //    write contains BOTH videoUrl AND status. (If we just call
+    //    setStatus, it may race with stage6's write within ms-granularity
+    //    of Blob's uploadedAt sort and leave a "video" status persisted.)
+    await updateJob(body.data.jobId, (j) => ({
+      ...j,
+      status: "done",
+      artifacts: { ...j.artifacts, videoUrl: result.url },
+    }));
 
     return NextResponse.json({ jobId: body.data.jobId, videoUrl: result.url });
   } catch (e) {
