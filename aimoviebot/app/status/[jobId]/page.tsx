@@ -71,6 +71,39 @@ export default function StatusPage({ params }: { params: Promise<{ jobId: string
   const [clipUrlsRaw, setClipUrlsRaw] = useState("");
   const [recovering, setRecovering] = useState(false);
   const [repairing, setRepairing] = useState(false);
+  // Per-asset regenerate. Single string marker tracks WHICH asset is
+  // currently in flight (e.g. "storyboard:2" or "clip:0") so other
+  // tiles' buttons stay enabled.
+  const [regenerating, setRegenerating] = useState<string | null>(null);
+
+  async function regenerateAsset(
+    kind: "storyboard" | "clip",
+    chunkIndex: number,
+  ) {
+    const marker = `${kind}:${chunkIndex}`;
+    if (regenerating) return;
+    const confirmText =
+      kind === "storyboard"
+        ? `Regenerate storyboard ${chunkIndex + 1}? One Higgsfield image call. The matching clip will still be the OLD one — regenerate the clip too if you need it to use the new storyboard.`
+        : `Regenerate clip ${chunkIndex + 1}? One Seedance video call + a fresh stitch + caption pass. The final stitched video will be replaced.`;
+    if (!confirm(confirmText)) return;
+    setRegenerating(marker);
+    setError(null);
+    try {
+      const res = await fetch("/api/video/regenerate-asset", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jobId, kind, chunkIndex }),
+      });
+      const json = (await res.json()) as { error?: string };
+      if (!res.ok) throw new Error(json.error ?? `HTTP ${res.status}`);
+      setData(null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setRegenerating(null);
+    }
+  }
 
   async function repairFromBlob() {
     setRepairing(true);
@@ -398,28 +431,42 @@ export default function StatusPage({ params }: { params: Promise<{ jobId: string
             Raw clips ({a.clipUrls.length})
           </h2>
           <div className="grid grid-cols-2 gap-3">
-            {a.clipUrls.map((u, i) => (
-              <div
-                key={u}
-                className="border border-stone-200 rounded-lg p-2 bg-white"
-              >
-                <div className="text-xs text-stone-600 mb-1">
-                  Clip {i + 1}/{a.clipUrls!.length}
-                </div>
-                <video
-                  controls
-                  src={u}
-                  className="w-full aspect-[9/16] bg-black rounded"
-                />
-                <a
-                  href={u}
-                  download
-                  className="block text-violet-700 underline text-xs mt-1"
+            {a.clipUrls.map((u, i) => {
+              const marker = `clip:${i}`;
+              const busy = regenerating === marker;
+              return (
+                <div
+                  key={u}
+                  className="border border-stone-200 rounded-lg p-2 bg-white"
                 >
-                  Download
-                </a>
-              </div>
-            ))}
+                  <div className="text-xs text-stone-600 mb-1">
+                    Clip {i + 1}/{a.clipUrls!.length}
+                  </div>
+                  <video
+                    controls
+                    src={u}
+                    className="w-full aspect-[9/16] bg-black rounded"
+                  />
+                  <div className="flex justify-between items-center mt-1">
+                    <a
+                      href={u}
+                      download
+                      className="text-violet-700 underline text-xs"
+                    >
+                      Download
+                    </a>
+                    <button
+                      onClick={() => regenerateAsset("clip", i)}
+                      disabled={Boolean(regenerating)}
+                      className="text-xs text-red-700 border border-red-200 rounded px-2 py-0.5 hover:bg-red-50 disabled:text-stone-300 disabled:border-stone-200"
+                      title="Send this clip back to Seedance and re-stitch the final video. Other clips stay as-is."
+                    >
+                      {busy ? "Regen…" : "Regenerate"}
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </section>
       ) : null}
@@ -493,14 +540,40 @@ export default function StatusPage({ params }: { params: Promise<{ jobId: string
           url={a.locationSheetUrl}
           served={data.servedBy?.stage2}
         />
-        {(a.storyboardUrls ?? []).map((url, i) => (
-          <ArtifactTile
-            key={`sb-${i}`}
-            label={`Storyboard ${i + 1}/${(a.storyboardUrls ?? []).length}`}
-            url={url}
-            served={data.servedBy?.stage4}
-          />
-        ))}
+        {(a.storyboardUrls ?? []).map((url, i) => {
+          const marker = `storyboard:${i}`;
+          const busy = regenerating === marker;
+          return (
+            <div
+              key={`sb-${i}`}
+              className="border border-stone-200 rounded-lg p-3 bg-white"
+            >
+              <div className="text-xs text-stone-600 mb-2 flex justify-between">
+                <span>
+                  Storyboard {i + 1}/{(a.storyboardUrls ?? []).length}
+                </span>
+                {data.servedBy?.stage4 ? (
+                  <span className="text-stone-400">
+                    {data.servedBy.stage4}
+                  </span>
+                ) : null}
+              </div>
+              <img
+                src={url}
+                alt=""
+                className="w-full aspect-[9/16] object-cover rounded"
+              />
+              <button
+                onClick={() => regenerateAsset("storyboard", i)}
+                disabled={Boolean(regenerating)}
+                className="mt-2 w-full text-xs text-red-700 border border-red-200 rounded px-2 py-1 hover:bg-red-50 disabled:text-stone-300 disabled:border-stone-200"
+                title="Send this storyboard back to Higgsfield. Other storyboards stay. (Note: the matching clip will still be the old one until you regenerate it too.)"
+              >
+                {busy ? "Regen…" : "Regenerate storyboard"}
+              </button>
+            </div>
+          );
+        })}
         {(!a.storyboardUrls || a.storyboardUrls.length === 0) &&
         data.status !== "done" &&
         data.status !== "failed" ? (
