@@ -26,14 +26,24 @@ export const VIDEO_DEFAULTS = {
 };
 
 // Multi-clip rendering. Seedance degrades quality at the upper end of its
-// 4-15s range (character drift, weird motion, dropped lip-sync). We split
-// the 16-shot story into N chunks of M seconds each, render each chunk as
-// its own Seedance call in parallel, then concat the MP4s with ffmpeg.
-// Defaults: 4 chunks × 4 seconds = 16s final video, 4 shots per chunk.
+// 4-15s range (character drift, weird motion, dropped lip-sync), so every
+// clip is fixed at the cheapest 4s — total video length = chunkCount × 4s.
+// chunkCount is per-job (derived from the user's videoDurationSec choice
+// at Gate 1 approve) and stored on Job.chunkCount; this is just the fallback
+// + the floor/ceiling.
 export const VIDEO_CHUNKS = {
-  count: 4,
+  defaultCount: 4,
+  minCount: 1,
+  maxCount: 8,
   secondsPerChunk: 4,
 };
+
+// Map a requested total duration (seconds) to a chunk count. Floors to
+// 4s steps. Clamped to VIDEO_CHUNKS [min, max].
+export function chunkCountForDuration(secs: number | undefined): number {
+  const n = Math.round((secs ?? VIDEO_CHUNKS.defaultCount * VIDEO_CHUNKS.secondsPerChunk) / VIDEO_CHUNKS.secondsPerChunk);
+  return Math.max(VIDEO_CHUNKS.minCount, Math.min(VIDEO_CHUNKS.maxCount, n));
+}
 
 // Model catalog. Stage 0 + Stage 3 are text-only via Gateway. Images route
 // through Higgsfield with model=gpt_image_2 (single backend, uses the

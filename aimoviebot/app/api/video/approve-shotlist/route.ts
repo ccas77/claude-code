@@ -24,14 +24,13 @@ const shotSchema = z.object({
   dialogue: z.array(dialogueLineSchema),
 });
 
-// Minimum 4 shots = one per video chunk (the pipeline renders 4 clips
-// of 4 seconds each, drawing from one shot-chunk per clip). Below 4 a
-// chunk would have no shot, which the downstream chunkShots refuses.
-// Max 16 = the original LLM-generated count; trimming is supported,
-// adding shots beyond 16 is not.
+// Validation bounds depend on the per-job chunkCount, which is set at
+// Gate 1 approve from videoDurationSec. We validate AFTER reading the
+// job. Minimum = chunkCount (one shot per chunk). Maximum = chunkCount × 4
+// (so the chunker keeps up to 4 shots per 4s clip).
 const bodySchema = z.object({
   jobId: z.string().uuid(),
-  shots: z.array(shotSchema).min(4).max(16),
+  shots: z.array(shotSchema).min(1).max(32),
 });
 
 export async function POST(req: Request) {
@@ -51,6 +50,21 @@ export async function POST(req: Request) {
         error: `Job not awaiting shot list approval (status: ${job.status})`,
       },
       { status: 409 },
+    );
+  }
+
+  // Per-job count check: shots must fit chunkCount..chunkCount×4 so
+  // chunker has at least 1 shot per clip and at most 4. Falls back
+  // to legacy 4..16 if chunkCount is missing.
+  const cc = job.chunkCount ?? 4;
+  const minShots = cc;
+  const maxShots = cc * 4;
+  if (editedShots.length < minShots || editedShots.length > maxShots) {
+    return NextResponse.json(
+      {
+        error: `Shot count must be ${minShots}..${maxShots} for a ${cc * 4}s video (${cc} clips × 4s).`,
+      },
+      { status: 400 },
     );
   }
 

@@ -14,6 +14,8 @@ type Character = { name: string; imageUrl: string };
 type Snapshot = {
   status: string;
   characters?: Character[];
+  chunkCount?: number;
+  videoDurationSec?: number;
   artifacts: {
     sceneDescription?: string;
     dialogue?: DialogueLine[];
@@ -72,14 +74,14 @@ export default function ReviewShotsPage({
       return next;
     });
   }
-  // Remove an entire shot. Hard floor at 4 — the pipeline renders 4
-  // video clips, one per shot-chunk, so each chunk needs at least one
-  // shot. Trying to delete below 4 is a no-op (button is also disabled
-  // in the UI). Remaining shots keep their .n; the approve endpoint
-  // renumbers them sequentially on submit.
+  // Remove an entire shot. Hard floor at chunkCount (one shot per
+  // 4-second clip). Trying to delete below it is a no-op (button is
+  // also disabled in the UI). Remaining shots keep their .n; the
+  // approve endpoint renumbers them sequentially on submit.
+  const minShots = snap?.chunkCount ?? 4;
   function removeShot(shotIdx: number) {
     setShots((cs) => {
-      if (!cs || cs.length <= 4) return cs;
+      if (!cs || cs.length <= minShots) return cs;
       return cs.filter((_, idx) => idx !== shotIdx);
     });
   }
@@ -199,11 +201,10 @@ export default function ReviewShotsPage({
       </datalist>
 
       <p className="text-xs text-stone-500">
-        {shots.length} shot{shots.length === 1 ? "" : "s"}. The pipeline
-        renders 4 video clips (4 seconds each = 16s total) regardless of
-        how many shots you keep — fewer shots means each clip dwells
-        longer on the shots it does have. Minimum 4 (one per clip), max
-        16 (the original draft).
+        {shots.length} shot{shots.length === 1 ? "" : "s"}. This render is{" "}
+        {minShots * 4}s = {minShots} clip{minShots === 1 ? "" : "s"} of
+        4 seconds each. Min {minShots} (one shot per clip), max{" "}
+        {minShots * 4} (four shots per clip).
       </p>
 
       <ol className="space-y-4">
@@ -245,12 +246,12 @@ export default function ReviewShotsPage({
               <button
                 type="button"
                 onClick={() => removeShot(i)}
-                disabled={shots.length <= 4}
+                disabled={shots.length <= minShots}
                 className="text-red-600 text-xs px-2 py-1 border border-red-200 rounded hover:bg-red-50 disabled:text-stone-300 disabled:border-stone-200 disabled:hover:bg-transparent"
                 aria-label="Delete shot"
                 title={
-                  shots.length <= 4
-                    ? "Need at least 4 shots (one per video clip)"
+                  shots.length <= minShots
+                    ? `Need at least ${minShots} shot${minShots === 1 ? "" : "s"} (one per video clip)`
                     : "Delete this shot"
                 }
               >

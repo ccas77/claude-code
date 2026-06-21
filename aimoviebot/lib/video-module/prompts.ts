@@ -220,12 +220,12 @@ ground-level. Each panel reveals new information; no duplicate angles.
 Reconstruct a full 360° understanding. The provided image is the sole
 source of truth.`,
 
-  stage3: `Convert the SCENE DESCRIPTION into exactly 8 storyboard panels.
+  stage3: `Convert the SCENE DESCRIPTION into exactly {shotCount} storyboard panels.
 Each panel is one ~4-second shot in a short vertical film. The final
-video is 16 seconds total (four 4-second clips), so 8 shots = roughly
-two beats per clip — enough to breathe, not enough to rush. Use the
-uploaded character + location images as the sole sources of truth for
-identity and environment.
+video is {totalSec} seconds total ({clipCount} clips of 4 seconds each),
+so aim for ~2 panels per clip — enough to breathe, not enough to rush.
+Use the uploaded character + location images as the sole sources of
+truth for identity and environment.
 
 ALL shots are composed for 9:16 VERTICAL framing. Favor full-body or
 medium verticals, stacked foreground/background depth, low and high
@@ -262,7 +262,7 @@ this single intention in four seconds without rushing? If not, cut
 until it's one committed beat. Vividness stays. Simultaneity goes.
 Specific and aimed, not sparse and rushed, and never a stacked pile.
 
-Distribute the DIALOGUE lines across the 8 shots IN ORDER. Attach each
+Distribute the DIALOGUE lines across the {shotCount} shots IN ORDER. Attach each
 line to the shot where it is spoken via the per-shot dialogue array.
 Every line from the supplied dialogue array must appear on exactly one
 shot and nowhere else. Do not paraphrase. Do not duplicate. If a shot
@@ -274,9 +274,9 @@ PUNCTUATION RULE: never use em dashes. Use commas, periods, or
 sentence breaks.
 
 OUTPUT FORMAT: return JSON ONLY (no prose, no fences). The top-level
-value is an array of exactly 8 shot objects, each shaped:
+value is an array of exactly {shotCount} shot objects, each shaped:
 {
-  "n": 1-8 (1-indexed, in order),
+  "n": 1..{shotCount} (1-indexed, in order),
   "camera": "framing/angle/movement",
   "action": "the ONE physical intention in this shot. Character by name.
              No body-direction here (that goes in performance).",
@@ -291,7 +291,7 @@ Cast:
 SCENE DESCRIPTION:
 {sceneDescription}
 
-DIALOGUE (in order, must all appear across the 8 shots):
+DIALOGUE (in order, must all appear across the {shotCount} shots):
 {dialogue}`,
 
   stage4: `PHOTOREALISTIC 9:16 VERTICAL storyboard sheet. Each panel
@@ -412,11 +412,20 @@ export async function renderStage3(args: {
   sceneDescription: string;
   dialogue: DialogueLine[];
   characters: Character[];
+  // Per-job chunk count = number of 4s clips. Drives the requested
+  // shot count (2 shots per clip is the sweet spot for pacing).
+  chunkCount: number;
 }): Promise<string> {
+  const clipCount = args.chunkCount;
+  const totalSec = clipCount * 4;
+  const shotCount = clipCount * 2; // 2 shots per clip
   return render(await effectivePrompt("stage3"), {
     cast: castBlock(args.characters),
     sceneDescription: args.sceneDescription,
     dialogue: dialogueBlock(args.dialogue),
+    shotCount: String(shotCount),
+    totalSec: String(totalSec),
+    clipCount: String(clipCount),
   });
 }
 

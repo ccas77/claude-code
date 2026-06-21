@@ -4,6 +4,7 @@ import { start } from "workflow/api";
 import { approvedVideoWorkflow } from "@/lib/video-module/workflow";
 import { readJob, updateJob } from "@/lib/video-module/storage";
 import { stripEmDashes } from "@/lib/video-module/stages";
+import { chunkCountForDuration } from "@/lib/video-module/config";
 
 export const runtime = "nodejs";
 
@@ -59,10 +60,15 @@ export async function POST(req: Request) {
 
   // Collapse status, duration, and approved-artifacts into ONE updateJob so
   // two sequential read-modify-writes can't race each other on Blob.
+  // Lock the chunk count from the requested duration: 4s per clip,
+  // chunkCount = round(secs / 4), clamped to [1, 8]. Every downstream
+  // stage reads this from job state instead of a hardcoded constant.
+  const chunkCount = chunkCountForDuration(videoDurationSec);
   await updateJob(jobId, (j) => ({
     ...j,
     status: "queued",
     videoDurationSec,
+    chunkCount,
     forceRegenerateSheets: forceRegenerateSheets ?? [],
     artifacts: {
       ...j.artifacts,

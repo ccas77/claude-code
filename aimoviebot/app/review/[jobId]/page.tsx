@@ -31,7 +31,7 @@ export default function ReviewPage({ params }: { params: Promise<{ jobId: string
   const [dialogue, setDialogue] = useState<DialogueLine[]>([]);
   const [cast, setCast] = useState<Character[]>([]);
   const [locationImageUrl, setLocationImageUrl] = useState<string>("");
-  const [duration, setDuration] = useState(4);
+  const [duration, setDuration] = useState(16);
   const [submitting, setSubmitting] = useState(false);
   // Sheet cache lookups. Per character source URL → cached sheet entry
   // (or null = no cache hit). Same for location. Drives the "Cached -
@@ -358,16 +358,21 @@ export default function ReviewPage({ params }: { params: Promise<{ jobId: string
           <input
             type="range"
             min={4}
-            max={15}
+            max={32}
+            step={4}
             value={duration}
             onChange={(e) => setDuration(Number(e.target.value))}
             className="flex-1"
           />
-          <span className="text-sm text-stone-700 w-12 text-right">{duration}s</span>
+          <span className="text-sm text-stone-700 w-24 text-right">
+            {duration}s · {duration / 4} clip{duration / 4 === 1 ? "" : "s"}
+          </span>
         </div>
         <p className="text-xs text-stone-500">
-          4s is the cheap test default. Step up for production renders so 16
-          shots have room to breathe.
+          Every clip is exactly 4 seconds = 1 Seedance call. {duration}s
+          renders as {duration / 4} clips of 4s each. More clips = more
+          Higgsfield spend, but no single clip ever stretches past 4s.
+          Min 4s (1 clip), max 32s (8 clips).
         </p>
       </section>
 

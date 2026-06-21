@@ -117,6 +117,11 @@ export type Job = {
   characters: Character[]; // 1+ characters
   locationImageUrl: string;
   videoDurationSec?: number;
+  // Number of 4-second clips the pipeline will render. Derived from
+  // videoDurationSec at Gate-1 approval as Math.ceil(secs / 4),
+  // clamped to [1, 8]. Each chunk = one storyboard + one Seedance
+  // call. Total video length = chunkCount × 4s.
+  chunkCount?: number;
   imageModelOverride?: string;
   forceRegenerateSheets?: string[];
   artifacts: Artifacts;

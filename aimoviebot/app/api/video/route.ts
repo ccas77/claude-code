@@ -37,6 +37,7 @@ export async function GET(req: Request) {
       servedBy: job.servedBy,
       error: job.error,
       videoDurationSec: job.videoDurationSec,
+      chunkCount: job.chunkCount,
       forceRegenerateSheets: job.forceRegenerateSheets,
     },
     { headers: noStore },

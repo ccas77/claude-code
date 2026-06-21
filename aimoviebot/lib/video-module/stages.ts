@@ -285,18 +285,16 @@ export async function stage3(
     sceneDescription: string;
     dialogue: DialogueLine[];
     characters: Character[];
-    // Use the user's ORIGINAL uploads as visual refs, not AI-generated
-    // sheets. Stage 3 is a text-only LLM call (shot list JSON); it just
-    // needs identity references, not polished cinematic sheets. This
-    // lets stage 3 run BEFORE any image-spend stage (no dependency on
-    // stage 1 / stage 2 having run yet).
     locationImageUrl: string;
+    // Per-job chunk count drives the shot count the prompt asks for.
+    chunkCount: number;
   },
 ): Promise<ShotList> {
   const prompt = await renderStage3({
     sceneDescription: args.sceneDescription,
     dialogue: args.dialogue,
     characters: args.characters,
+    chunkCount: args.chunkCount,
   });
   const { gatewayGenerateJSON } = await import("./backends/gateway");
   const raw = await gatewayGenerateJSON<unknown>({
@@ -331,9 +329,12 @@ export function validateShotList(
   // that come back with slightly more or fewer. Below 4, the downstream
   // pipeline can't fill 4 chunks; above 16, the user has too much to
   // edit comfortably.
-  if (raw.length < 4 || raw.length > 16) {
+  // Generous bound — the per-job count check happens at the approve
+  // endpoint (where we know chunkCount). Here we just reject totally
+  // wrong outputs (LLM hallucinating 50 shots, etc.).
+  if (raw.length < 1 || raw.length > 32) {
     throw new Error(
-      `Stage 3: expected 4..16 shots (prompt asks for 8), got ${raw.length}`,
+      `Stage 3: expected 1..32 shots, got ${raw.length}`,
     );
   }
   const shots: Shot[] = raw.map((r, i) => {
@@ -428,7 +429,7 @@ export async function stage4OneStoryboard(
       `Stage 4 storyboard ${chunkIndex + 1}: missing upstream artifacts (${missing.join(", ")})`,
     );
   }
-  const chunks = chunkShots(shots, VIDEO_CHUNKS.count);
+  const chunks = chunkShots(shots, job.chunkCount ?? VIDEO_CHUNKS.defaultCount);
   if (chunkIndex < 0 || chunkIndex >= chunks.length) {
     throw new Error(
       `Stage 4: chunk index ${chunkIndex} out of range 0..${chunks.length - 1}`,
@@ -475,7 +476,10 @@ export async function stage4(
     args.locationSheetUrl,
     ...args.characterSheets.map((s) => s.url),
   ];
-  const chunks = chunkShots(args.shots, VIDEO_CHUNKS.count);
+  // Legacy batched stage4 — chunk count derived from the shot list
+  // length / 4 (4 shots per chunk), capped at maxCount.
+  const inferred = Math.max(1, Math.min(VIDEO_CHUNKS.maxCount, Math.ceil(args.shots.length / 4)));
+  const chunks = chunkShots(args.shots, inferred);
   const total = chunks.length;
   const results = await Promise.all(
     chunks.map(async (chunkShots, i) => {
@@ -620,7 +624,7 @@ export async function stage5OneClip(
   if (!storyboardUrls || storyboardUrls.length === 0) {
     storyboardUrls = await rebuildStoryboardUrlsFromBlob(
       jobId,
-      VIDEO_CHUNKS.count,
+      job.chunkCount ?? VIDEO_CHUNKS.defaultCount,
     );
   }
   if (
@@ -660,7 +664,7 @@ export async function stage5OneClip(
     );
   }
 
-  const chunks = chunkShots(shots, VIDEO_CHUNKS.count);
+  const chunks = chunkShots(shots, job.chunkCount ?? VIDEO_CHUNKS.defaultCount);
   if (chunkIndex < 0 || chunkIndex >= chunks.length) {
     throw new Error(
       `Stage 5: chunk index ${chunkIndex} out of range 0..${chunks.length - 1}`,
@@ -784,7 +788,9 @@ export async function stage5(
     );
   }
 
-  const chunks = chunkShots(args.shots, VIDEO_CHUNKS.count);
+  // Legacy batched stage5 — match the chunk count to the supplied
+  // storyboards so the shot/storyboard zip always lines up.
+  const chunks = chunkShots(args.shots, args.storyboardUrls.length);
   if (chunks.length !== args.storyboardUrls.length) {
     throw new Error(
       `Stage 5 refused: ${chunks.length} shot chunks but ${args.storyboardUrls.length} storyboards. They must match.`,
@@ -877,8 +883,9 @@ export async function stage6(
   // 1. Concat all the raw clips into one mp4 (in /tmp; no re-encode).
   const concatBuf = await concatVideos(args.clipUrls);
   // 2. Whisper-transcribe the audio for timing; falls back to estimated
-  //    cue distribution if no OPENAI_API_KEY is set.
-  const totalSeconds = VIDEO_CHUNKS.count * VIDEO_CHUNKS.secondsPerChunk;
+  //    cue distribution if no OPENAI_API_KEY is set. Total seconds =
+  //    actual clip count × 4s (each clip is 1 Seedance call at 4s).
+  const totalSeconds = args.clipUrls.length * VIDEO_CHUNKS.secondsPerChunk;
   const cues = await whisperCaptionCues(
     concatBuf,
     args.dialogue,

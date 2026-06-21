@@ -96,6 +96,7 @@ async function runStage3Step(jobId: string) {
       dialogue: job.artifacts.dialogue!,
       characters: job.characters,
       locationImageUrl: job.locationImageUrl,
+      chunkCount: job.chunkCount ?? 4,
     }),
   );
 }
@@ -132,15 +133,24 @@ async function setStoryboardStatusStep(jobId: string) {
   await setStatus(jobId, "storyboard");
 }
 
+// Returns the per-job chunk count (derived from videoDurationSec at
+// approve time, stored on Job.chunkCount). Falls back to 4 for legacy
+// jobs that pre-date dynamic chunking.
+async function getChunkCountStep(jobId: string): Promise<number> {
+  "use step";
+  const { readJob } = await import("./storage");
+  const job = await readJob(jobId);
+  return job?.chunkCount ?? 4;
+}
+
 // Promise.all of N per-storyboard steps. Matches stage5's pattern: each
 // step is its own checkpoint, so a sibling crash doesn't lose persisted
-// storyboards.
-const STAGE4_CHUNK_COUNT = 4; // must match VIDEO_CHUNKS.count
-
+// storyboards. N is per-job from videoDurationSec / 4s.
 async function runStage4(jobId: string) {
   await setStoryboardStatusStep(jobId);
+  const count = await getChunkCountStep(jobId);
   const results = await Promise.all(
-    Array.from({ length: STAGE4_CHUNK_COUNT }, (_, i) =>
+    Array.from({ length: count }, (_, i) =>
       runStage4OneStoryboardStep(jobId, i),
     ),
   );
@@ -189,13 +199,12 @@ async function setVideoStatusStep(jobId: string) {
 // only calls "use step" functions. No Node-only code here, so it's safe
 // to live in the workflow VM scope. Promise.all of N per-clip steps; on
 // crash of any one, the others' results are still durably persisted
-// because each step's blob write is its own checkpoint.
-const STAGE5_CLIP_COUNT = 4; // must match VIDEO_CHUNKS.count in config.ts
-
+// because each step's blob write is its own checkpoint. N is per-job.
 async function runStage5(jobId: string) {
   await setVideoStatusStep(jobId);
+  const count = await getChunkCountStep(jobId);
   const results = await Promise.all(
-    Array.from({ length: STAGE5_CLIP_COUNT }, (_, i) =>
+    Array.from({ length: count }, (_, i) =>
       runStage5OneClipStep(jobId, i),
     ),
   );
