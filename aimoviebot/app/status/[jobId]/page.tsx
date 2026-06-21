@@ -1,5 +1,6 @@
 "use client";
 import { use, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 
 type DialogueLine = { speaker: string; line: string };
 type CharacterSheet = { name: string; url: string };
@@ -62,6 +63,7 @@ const STAGE_FROM: Record<string, 1 | 2 | 3 | 4 | 5> = {
 
 export default function StatusPage({ params }: { params: Promise<{ jobId: string }> }) {
   const { jobId } = use(params);
+  const router = useRouter();
   const [data, setData] = useState<StatusResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [retrying, setRetrying] = useState(false);
@@ -89,6 +91,11 @@ export default function StatusPage({ params }: { params: Promise<{ jobId: string
     }
   }
 
+  // Auto-redirect to the shot-list review page the moment status hits
+  // awaiting_shotlist_approval. Without this, the status page just shows
+  // a stale "16-shot list" label with nothing actionable on it — there's
+  // literally no work for the user to do here at that stage, they need
+  // to be on /review-shots editing.
   useEffect(() => {
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout> | null = null;
@@ -100,6 +107,10 @@ export default function StatusPage({ params }: { params: Promise<{ jobId: string
         if (cancelled) return;
         if (!res.ok) throw new Error((json as { error?: string }).error ?? `HTTP ${res.status}`);
         setData(json);
+        if (json.status === "awaiting_shotlist_approval") {
+          router.push(`/review-shots/${jobId}`);
+          return;
+        }
         if (json.status !== "done" && json.status !== "failed") {
           timer = setTimeout(tick, 4000);
         }
@@ -108,12 +119,22 @@ export default function StatusPage({ params }: { params: Promise<{ jobId: string
       }
     };
 
+    // Re-poll the moment the tab becomes visible again. Backgrounded
+    // tabs throttle setTimeout to ~1s minimum, but some browsers pause
+    // network too — visibility-change is the reliable wakeup signal so
+    // the page can't get stuck on a stale snapshot.
+    const onVisible = () => {
+      if (!document.hidden && !cancelled) tick();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+
     tick();
     return () => {
       cancelled = true;
       if (timer) clearTimeout(timer);
+      document.removeEventListener("visibilitychange", onVisible);
     };
-  }, [jobId]);
+  }, [jobId, router]);
 
   async function retry(fromStage: 1 | 2 | 3 | 4 | 5, imageModel?: string) {
     setRetrying(true);
