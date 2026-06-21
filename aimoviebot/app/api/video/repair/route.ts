@@ -71,13 +71,13 @@ export async function POST(req: Request) {
     ) {
       const urls = await rebuildStoryboardUrlsFromBlob(
         jobId,
-        VIDEO_CHUNKS.count,
+        job.chunkCount ?? VIDEO_CHUNKS.defaultCount,
       );
       if (urls.length > 0) rebuilt.storyboardUrls = urls;
     }
     // clipUrls
     if (!job.artifacts.clipUrls || job.artifacts.clipUrls.length === 0) {
-      const urls = await rebuildClipUrlsFromBlob(jobId, VIDEO_CHUNKS.count);
+      const urls = await rebuildClipUrlsFromBlob(jobId, job.chunkCount ?? VIDEO_CHUNKS.defaultCount);
       if (urls.length > 0) rebuilt.clipUrls = urls;
     }
     // videoUrl (final stitched)
