@@ -191,9 +191,19 @@ export default function StatusPage({ params }: { params: Promise<{ jobId: string
     setSavingShots(true);
     setError(null);
     try {
-      const merged: Shot[] = data.artifacts.shotList.map((s, i) =>
-        draftShots[i] ? { ...s, ...draftShots[i] } : s,
-      );
+      const merged: Shot[] = data.artifacts.shotList.map((s, i) => {
+        if (!draftShots[i]) return s;
+        const draft = draftShots[i];
+        // Strip blank dialogue rows the user left in the editor — the
+        // /api/video/shots schema requires speaker + line both non-empty.
+        return {
+          ...s,
+          ...draft,
+          dialogue: draft.dialogue
+            .map((d) => ({ speaker: d.speaker.trim(), line: d.line.trim() }))
+            .filter((d) => d.speaker && d.line),
+        };
+      });
       const res = await fetch("/api/video/shots", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -875,6 +885,78 @@ export default function StatusPage({ params }: { params: Promise<{ jobId: string
                                     className="w-full border border-stone-300 rounded p-1 bg-white"
                                   />
                                 </label>
+                                <div className="space-y-1">
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-stone-500">
+                                      Dialogue ({draft.dialogue.length})
+                                    </span>
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        patch({
+                                          dialogue: [
+                                            ...draft.dialogue,
+                                            { speaker: "", line: "" },
+                                          ],
+                                        })
+                                      }
+                                      className="text-violet-700 text-[10px]"
+                                    >
+                                      + add line
+                                    </button>
+                                  </div>
+                                  {draft.dialogue.length === 0 ? (
+                                    <p className="text-stone-400 italic text-[10px]">
+                                      No dialogue.
+                                    </p>
+                                  ) : null}
+                                  {draft.dialogue.map((d, lineIdx) => (
+                                    <div
+                                      key={lineIdx}
+                                      className="flex gap-1 items-start"
+                                    >
+                                      <input
+                                        value={d.speaker}
+                                        onChange={(e) => {
+                                          const next = [...draft.dialogue];
+                                          next[lineIdx] = {
+                                            ...next[lineIdx],
+                                            speaker: e.target.value,
+                                          };
+                                          patch({ dialogue: next });
+                                        }}
+                                        placeholder="Speaker"
+                                        className="w-20 border border-stone-300 rounded p-1 bg-white text-[10px]"
+                                      />
+                                      <input
+                                        value={d.line}
+                                        onChange={(e) => {
+                                          const next = [...draft.dialogue];
+                                          next[lineIdx] = {
+                                            ...next[lineIdx],
+                                            line: e.target.value,
+                                          };
+                                          patch({ dialogue: next });
+                                        }}
+                                        placeholder="What they say out loud"
+                                        className="flex-1 border border-stone-300 rounded p-1 bg-white text-[10px]"
+                                      />
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          const next = draft.dialogue.filter(
+                                            (_, k) => k !== lineIdx,
+                                          );
+                                          patch({ dialogue: next });
+                                        }}
+                                        className="text-stone-500 text-xs px-1"
+                                        aria-label="Remove line"
+                                      >
+                                        ×
+                                      </button>
+                                    </div>
+                                  ))}
+                                </div>
                               </div>
                             );
                           })}
