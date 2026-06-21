@@ -360,6 +360,68 @@ export async function generateImage(args: {
   return { url: final.imageUrl, hfJobId: submitted.jobId };
 }
 
+// ---- show_generations (history browse) ----
+// Returns a page of generations of the given type. The MCP tool paginates
+// via a numeric next_cursor; pass it back as `cursor` for the next page.
+export type GenerationItem = {
+  id: string;
+  type: "video" | "image" | "audio" | "3d";
+  status: string;
+  model: string;
+  createdAt: number;
+  params: {
+    prompt?: string;
+    duration?: number;
+    aspect_ratio?: string;
+    resolution?: string;
+    [k: string]: unknown;
+  };
+  results?: {
+    rawUrl?: string;
+    thumbnailUrl?: string;
+    [k: string]: unknown;
+  };
+};
+
+export async function listGenerationsPage(args: {
+  type: "video" | "image" | "audio" | "3d";
+  size?: number;
+  cursor?: number;
+}): Promise<{ items: GenerationItem[]; nextCursor: number | null }> {
+  return withClient(async (client) => {
+    const res = await client.callTool({
+      name: "show_generations",
+      arguments: {
+        type: args.type,
+        size: args.size ?? 50,
+        ...(args.cursor != null ? { cursor: args.cursor } : {}),
+      },
+    });
+    const r = res as {
+      structuredContent?: Record<string, unknown>;
+      content?: Array<{ type?: string; text?: string }>;
+      isError?: boolean;
+    };
+    if (r.isError) {
+      const msg =
+        r.content?.find((c) => c.type === "text")?.text ?? "show_generations failed";
+      throw new HiggsfieldError(msg);
+    }
+    const merged: Record<string, unknown> = {
+      ...parseTextContent(r.content),
+      ...(r.structuredContent ?? {}),
+    };
+    const items = Array.isArray(merged.items)
+      ? (merged.items as GenerationItem[])
+      : [];
+    const nextCursor =
+      typeof merged.next_cursor === "number"
+        ? (merged.next_cursor as number)
+        : null;
+    return { items, nextCursor };
+  });
+}
+
 export async function generateVideo(args: {
   prompt: string;
   imageRefs: string[];

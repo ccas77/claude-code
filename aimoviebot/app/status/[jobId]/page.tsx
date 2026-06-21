@@ -20,6 +20,7 @@ type InflightHiggsfieldJob = {
 type StatusResponse = {
   jobId: string;
   status: string;
+  characters?: { name: string; imageUrl: string }[];
   artifacts: {
     sceneDescription?: string;
     dialogue?: DialogueLine[];
@@ -64,6 +65,8 @@ export default function StatusPage({ params }: { params: Promise<{ jobId: string
   const [data, setData] = useState<StatusResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [retrying, setRetrying] = useState(false);
+  const [finalizing, setFinalizing] = useState(false);
+  const [clipUrlsRaw, setClipUrlsRaw] = useState("");
 
   useEffect(() => {
     let cancelled = false;
@@ -110,6 +113,37 @@ export default function StatusPage({ params }: { params: Promise<{ jobId: string
       setError(e instanceof Error ? e.message : String(e));
     } finally {
       setRetrying(false);
+    }
+  }
+
+  // Finalize-from-existing-clips. Used when the workflow failed AFTER
+  // Seedance produced clips. The user pastes the 4 cloudfront URLs (or any
+  // playable mp4 URLs) and the backend persists them to Blob, then runs
+  // stage 6 (concat + Whisper + caption burn). No Higgsfield calls.
+  async function finalizeFromClips() {
+    const urls = clipUrlsRaw
+      .split(/\s+/)
+      .map((u) => u.trim())
+      .filter(Boolean);
+    if (urls.length === 0) {
+      setError("Paste at least one clip URL, one per line.");
+      return;
+    }
+    setFinalizing(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/video/finalize", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jobId, clipUrls: urls }),
+      });
+      const json = (await res.json()) as { error?: string };
+      if (!res.ok) throw new Error(json.error ?? `HTTP ${res.status}`);
+      setData(null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setFinalizing(false);
     }
   }
 
@@ -227,6 +261,102 @@ export default function StatusPage({ params }: { params: Promise<{ jobId: string
           </ul>
         </section>
       ) : null}
+
+      {/* Finalize-from-clips: paste 4 cloudfront URLs to stitch + caption
+          a render whose clips already exist in Higgsfield but never made it
+          through stage 6. No Seedance calls. */}
+      <section className="space-y-2 border border-stone-200 bg-white rounded-lg p-4">
+        <h2 className="text-sm font-medium text-stone-700">
+          Stitch from existing clips
+        </h2>
+        <p className="text-xs text-stone-600">
+          If you already have rendered video clips (e.g. from your Higgsfield
+          dashboard), paste their URLs one per line, in playback order. The
+          backend will copy each one into Blob, concatenate them, transcribe
+          for caption timing, burn captions, and save the final video. No new
+          Seedance / Higgsfield credits used.
+        </p>
+        <textarea
+          value={clipUrlsRaw}
+          onChange={(e) => setClipUrlsRaw(e.target.value)}
+          placeholder="https://...mp4&#10;https://...mp4&#10;https://...mp4&#10;https://...mp4"
+          rows={4}
+          className="w-full border border-stone-300 rounded p-2 text-xs font-mono"
+        />
+        <button
+          onClick={finalizeFromClips}
+          disabled={finalizing}
+          className="bg-violet-700 text-white text-sm rounded px-3 py-1.5 disabled:bg-stone-300"
+        >
+          {finalizing ? "Stitching…" : "Stitch + caption"}
+        </button>
+      </section>
+
+      {/* Persisted raw clips, if stage 5 wrote them. Lets the user inspect
+          each chunk independently. */}
+      {a.clipUrls && a.clipUrls.length > 0 ? (
+        <section className="space-y-2">
+          <h2 className="text-sm font-medium text-stone-700">
+            Raw clips ({a.clipUrls.length})
+          </h2>
+          <div className="grid grid-cols-2 gap-3">
+            {a.clipUrls.map((u, i) => (
+              <div
+                key={u}
+                className="border border-stone-200 rounded-lg p-2 bg-white"
+              >
+                <div className="text-xs text-stone-600 mb-1">
+                  Clip {i + 1}/{a.clipUrls!.length}
+                </div>
+                <video
+                  controls
+                  src={u}
+                  className="w-full aspect-[9/16] bg-black rounded"
+                />
+                <a
+                  href={u}
+                  download
+                  className="block text-violet-700 underline text-xs mt-1"
+                >
+                  Download
+                </a>
+              </div>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
+      {/* Source character + location uploads, always visible regardless of
+          stage. Helps the user audit what the renderer was given. */}
+      {data.characters && data.characters.length > 0 ? (
+        <section className="space-y-2">
+          <h2 className="text-sm font-medium text-stone-700">
+            Source cast + location
+          </h2>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            {data.characters.map((c) => (
+              <ArtifactTile
+                key={`src-${c.name}`}
+                label={`${c.name} (source)`}
+                url={c.imageUrl}
+              />
+            ))}
+          </div>
+        </section>
+      ) : null}
+
+      {/* Raw job JSON view, collapsed by default. Always there so nothing
+          about the run is hidden. */}
+      <section>
+        <details className="border border-stone-200 rounded-lg bg-white">
+          <summary className="cursor-pointer px-3 py-2 text-xs text-stone-600 hover:text-violet-700">
+            Raw job JSON
+          </summary>
+          <pre className="px-3 pb-3 text-[10px] text-stone-700 overflow-x-auto">
+            {JSON.stringify(data, null, 2)}
+          </pre>
+        </details>
+      </section>
 
       {a.videoUrl ? (
         <section className="space-y-2">
