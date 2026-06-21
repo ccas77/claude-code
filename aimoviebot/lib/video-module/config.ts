@@ -45,6 +45,31 @@ export function chunkCountForDuration(secs: number | undefined): number {
   return Math.max(VIDEO_CHUNKS.minCount, Math.min(VIDEO_CHUNKS.maxCount, n));
 }
 
+// Resolve the per-job chunk count from whatever the job actually has,
+// in priority order:
+//   1. explicit job.chunkCount (set at Gate-1 approve in current code)
+//   2. existing storyboards array length (jobs that ran stage 4 under
+//      the previous workflow may have a count that differs from what
+//      videoDurationSec would now imply — respect what was rendered)
+//   3. existing clips array length (same logic for jobs further along)
+//   4. duration-derived (covers brand-new jobs that just got approved)
+//   5. defaultCount (last resort)
+export function resolveJobChunkCount(job: {
+  chunkCount?: number;
+  videoDurationSec?: number;
+  artifacts?: { storyboardUrls?: string[]; clipUrls?: string[] };
+}): number {
+  if (typeof job.chunkCount === "number" && job.chunkCount > 0) return job.chunkCount;
+  const sbLen = job.artifacts?.storyboardUrls?.length ?? 0;
+  if (sbLen > 0) return sbLen;
+  const clipLen = job.artifacts?.clipUrls?.length ?? 0;
+  if (clipLen > 0) return clipLen;
+  if (typeof job.videoDurationSec === "number") {
+    return chunkCountForDuration(job.videoDurationSec);
+  }
+  return VIDEO_CHUNKS.defaultCount;
+}
+
 // Model catalog. Stage 0 + Stage 3 are text-only via Gateway. Images route
 // through Higgsfield with model=gpt_image_2 (single backend, uses the
 // existing OAuth connection, no extra auth surface). Video uses Seedance

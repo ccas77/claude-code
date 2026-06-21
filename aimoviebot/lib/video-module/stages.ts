@@ -6,6 +6,7 @@ import {
   VIDEO_CHUNKS,
   VIDEO_DEFAULTS,
   chunkCountForDuration,
+  resolveJobChunkCount,
 } from "./config";
 import {
   generateImage as hgImage,
@@ -430,7 +431,7 @@ export async function stage4OneStoryboard(
       `Stage 4 storyboard ${chunkIndex + 1}: missing upstream artifacts (${missing.join(", ")})`,
     );
   }
-  const chunks = chunkShots(shots, job.chunkCount ?? chunkCountForDuration(job.videoDurationSec));
+  const chunks = chunkShots(shots, resolveJobChunkCount(job));
   if (chunkIndex < 0 || chunkIndex >= chunks.length) {
     throw new Error(
       `Stage 4: chunk index ${chunkIndex} out of range 0..${chunks.length - 1}`,
@@ -625,7 +626,7 @@ export async function stage5OneClip(
   if (!storyboardUrls || storyboardUrls.length === 0) {
     storyboardUrls = await rebuildStoryboardUrlsFromBlob(
       jobId,
-      job.chunkCount ?? chunkCountForDuration(job.videoDurationSec),
+      resolveJobChunkCount(job),
     );
   }
   if (
@@ -665,7 +666,7 @@ export async function stage5OneClip(
     );
   }
 
-  const chunks = chunkShots(shots, job.chunkCount ?? chunkCountForDuration(job.videoDurationSec));
+  const chunks = chunkShots(shots, resolveJobChunkCount(job));
   if (chunkIndex < 0 || chunkIndex >= chunks.length) {
     throw new Error(
       `Stage 5: chunk index ${chunkIndex} out of range 0..${chunks.length - 1}`,

@@ -133,14 +133,17 @@ async function setStoryboardStatusStep(jobId: string) {
   await setStatus(jobId, "storyboard");
 }
 
-// Returns the per-job chunk count (derived from videoDurationSec at
-// approve time, stored on Job.chunkCount). Falls back to 4 for legacy
-// jobs that pre-date dynamic chunking.
+// Returns the per-job chunk count. Uses the resolveJobChunkCount
+// cascade so legacy jobs without an explicit chunkCount still pick the
+// right value (storyboards array length → clips array length →
+// duration-derived → default).
 async function getChunkCountStep(jobId: string): Promise<number> {
   "use step";
   const { readJob } = await import("./storage");
+  const { resolveJobChunkCount } = await import("./config");
   const job = await readJob(jobId);
-  return job?.chunkCount ?? 4;
+  if (!job) return 4;
+  return resolveJobChunkCount(job);
 }
 
 // Promise.all of N per-storyboard steps. Matches stage5's pattern: each

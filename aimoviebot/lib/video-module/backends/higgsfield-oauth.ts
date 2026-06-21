@@ -157,7 +157,7 @@ export async function exchangeCode(code: string, verifier: string): Promise<Toke
 
 async function refresh(tokens: TokenSet): Promise<TokenSet> {
   if (!tokens.refreshToken) {
-    throw new Error("No refresh token; reconnect Higgsfield.");
+    throw new HiggsfieldNotConnected();
   }
   const { token_endpoint } = await discover();
   const { clientId, clientSecret } = await getOrRegisterClient();
@@ -172,7 +172,15 @@ async function refresh(tokens: TokenSet): Promise<TokenSet> {
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body,
   });
-  if (!res.ok) throw new Error(`Token refresh failed: ${res.status}`);
+  if (!res.ok) {
+    // 4xx on refresh = token is dead. Don't keep retrying it forever;
+    // surface as HiggsfieldNotConnected so the caller can show the
+    // re-auth link instead of a cryptic "Token refresh failed: 400".
+    if (res.status >= 400 && res.status < 500) {
+      throw new HiggsfieldNotConnected();
+    }
+    throw new Error(`Token refresh failed: ${res.status}`);
+  }
   const t = (await res.json()) as {
     access_token: string;
     refresh_token?: string;
