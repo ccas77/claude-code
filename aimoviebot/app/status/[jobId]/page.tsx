@@ -95,17 +95,27 @@ export default function StatusPage({ params }: { params: Promise<{ jobId: string
     }
   }
 
+  // Elapsed-seconds ticker for the currently-regenerating asset, so the
+  // button shows progress instead of a static "Regen…" that looks hung.
+  const [regenElapsed, setRegenElapsed] = useState(0);
+  useEffect(() => {
+    if (!regenerating) {
+      setRegenElapsed(0);
+      return;
+    }
+    const start = Date.now();
+    const id = setInterval(() => {
+      setRegenElapsed(Math.floor((Date.now() - start) / 1000));
+    }, 500);
+    return () => clearInterval(id);
+  }, [regenerating]);
+
   async function regenerateAsset(
     kind: "storyboard" | "clip",
     chunkIndex: number,
   ) {
     const marker = `${kind}:${chunkIndex}`;
     if (regenerating) return;
-    const confirmText =
-      kind === "storyboard"
-        ? `Regenerate storyboard ${chunkIndex + 1}? One Higgsfield image call. AFTER it imports you'll be asked if you also want to re-render clip ${chunkIndex + 1} against the new storyboard (one Seedance call + auto re-stitch) — otherwise the final video keeps using the old clip.`
-        : `Regenerate clip ${chunkIndex + 1}? One Seedance video call + a fresh stitch + caption pass. The final stitched video will be replaced.`;
-    if (!confirm(confirmText)) return;
     setRegenerating(marker);
     setError(null);
     try {
@@ -116,27 +126,9 @@ export default function StatusPage({ params }: { params: Promise<{ jobId: string
       });
       const json = (await res.json()) as { error?: string };
       if (!res.ok) throw new Error(json.error ?? `HTTP ${res.status}`);
-      // Pull fresh state so the new image actually shows up in the UI
-      // (polling has stopped on done jobs and won't re-fire on its own).
+      // Pull fresh state so the new image/clip actually shows up in the
+      // UI — polling has stopped on done jobs and won't re-fire alone.
       await reloadJob();
-      // After a storyboard regen, the matching clip is now stale (it
-      // was rendered against the old storyboard). Offer the chain.
-      if (kind === "storyboard") {
-        const wantClip = confirm(
-          `New storyboard ${chunkIndex + 1} imported. Re-render clip ${chunkIndex + 1} now against the new storyboard, and re-stitch the final video?\n\nClick OK to spend one Seedance call. Click Cancel to keep the existing clip (the final video won't reflect the new storyboard).`,
-        );
-        if (wantClip) {
-          setRegenerating(`clip:${chunkIndex}`);
-          const r2 = await fetch("/api/video/regenerate-asset", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ jobId, kind: "clip", chunkIndex }),
-          });
-          const j2 = (await r2.json()) as { error?: string };
-          if (!r2.ok) throw new Error(j2.error ?? `HTTP ${r2.status}`);
-          await reloadJob();
-        }
-      }
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -503,7 +495,9 @@ export default function StatusPage({ params }: { params: Promise<{ jobId: string
                       className="text-xs text-red-700 border border-red-200 rounded px-2 py-0.5 hover:bg-red-50 disabled:text-stone-300 disabled:border-stone-200"
                       title="Send this clip back to Seedance and re-stitch the final video. Other clips stay as-is."
                     >
-                      {busy ? "Regen…" : "Regenerate"}
+                      {busy
+                        ? `Regen ${regenElapsed}s…`
+                        : "Regenerate"}
                     </button>
                   </div>
                 </div>
@@ -609,9 +603,11 @@ export default function StatusPage({ params }: { params: Promise<{ jobId: string
                 onClick={() => regenerateAsset("storyboard", i)}
                 disabled={Boolean(regenerating)}
                 className="mt-2 w-full text-xs text-red-700 border border-red-200 rounded px-2 py-1 hover:bg-red-50 disabled:text-stone-300 disabled:border-stone-200"
-                title="Send this storyboard back to Higgsfield. Other storyboards stay. (Note: the matching clip will still be the old one until you regenerate it too.)"
+                title="Send this storyboard back to Higgsfield. The matching clip stays as-is — use the clip's own Regenerate button to re-render it against the new storyboard."
               >
-                {busy ? "Regen…" : "Regenerate storyboard"}
+                {busy
+                  ? `Regenerating ${regenElapsed}s…`
+                  : "Regenerate storyboard"}
               </button>
             </div>
           );

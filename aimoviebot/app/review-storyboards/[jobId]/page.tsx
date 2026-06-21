@@ -26,6 +26,20 @@ export default function ReviewStoryboardsPage({
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [regenerating, setRegenerating] = useState<number | null>(null);
+  // Elapsed-seconds ticker so the regen button doesn't look hung during
+  // the 30-60s Higgsfield call.
+  const [regenElapsed, setRegenElapsed] = useState(0);
+  useEffect(() => {
+    if (regenerating === null) {
+      setRegenElapsed(0);
+      return;
+    }
+    const start = Date.now();
+    const id = setInterval(() => {
+      setRegenElapsed(Math.floor((Date.now() - start) / 1000));
+    }, 500);
+    return () => clearInterval(id);
+  }, [regenerating]);
 
   async function load() {
     try {
@@ -44,12 +58,6 @@ export default function ReviewStoryboardsPage({
   }, [jobId]);
 
   async function regenerate(chunkIndex: number) {
-    if (
-      !confirm(
-        `Regenerate storyboard ${chunkIndex + 1}? One Higgsfield image call. Other storyboards stay as they are.`,
-      )
-    )
-      return;
     setRegenerating(chunkIndex);
     setError(null);
     try {
@@ -173,7 +181,9 @@ export default function ReviewStoryboardsPage({
                   disabled={regenerating !== null || submitting}
                   className="w-full text-xs text-red-700 border border-red-200 rounded px-2 py-1 hover:bg-red-50 disabled:text-stone-300 disabled:border-stone-200"
                 >
-                  {busy ? "Regenerating…" : "Regenerate this storyboard"}
+                  {busy
+                    ? `Regenerating ${regenElapsed}s…`
+                    : "Regenerate this storyboard"}
                 </button>
               </div>
             </div>
