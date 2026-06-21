@@ -1,12 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { del } from "@vercel/blob";
-import {
-  keys,
-  readJob,
-  setStatus,
-  updateJob,
-} from "@/lib/video-module/storage";
+import { readJob, setStatus, updateJob } from "@/lib/video-module/storage";
 import {
   stage4OneStoryboard,
   stage5OneClip,
@@ -45,21 +39,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Job not found" }, { status: 404 });
     }
 
-    // Delete the existing blob so stage4OneStoryboard / stage5OneClip's
-    // head() idempotency check doesn't short-circuit and reuse the old
-    // (bad) artifact.
-    const existingUrl =
-      kind === "storyboard"
-        ? job.artifacts.storyboardUrls?.[chunkIndex]
-        : job.artifacts.clipUrls?.[chunkIndex];
-    if (existingUrl) {
-      try {
-        await del(existingUrl);
-      } catch {
-        // If del fails (already gone, etc.), proceed — head() in the
-        // stage helper will simply miss and regenerate.
-      }
-    }
+    // No need to delete the old blob: assets are content-addressed
+    // so the regen lands at a NEW URL, the job state pointer flips
+    // to that URL, and the browser/CDN refetch automatically. Old
+    // versions stay in Blob as audit history (cheap).
 
     if (kind === "storyboard") {
       const result = await stage4OneStoryboard(jobId, chunkIndex, {

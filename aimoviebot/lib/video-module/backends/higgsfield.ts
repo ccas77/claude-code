@@ -321,13 +321,21 @@ async function pollUntilDone(
 
 // ---- Public surface ----
 
+// Inflight context: who is calling, so we can record + clear the row
+// on job state. EVERY image/video call through this module takes one,
+// and the inflight row is cleared in a try/finally regardless of how
+// the call ends (success, NSFW reject, timeout, exception). No more
+// ghost "in flight" entries piling up on the status page.
+export type InflightContext = {
+  jobId: string;
+  stage: "stage1" | "stage2" | "stage4" | "stage5";
+  label: string;
+};
+
 export async function generateImage(args: {
   prompt: string;
   imageRefs: string[];
-  // Called as soon as Higgsfield returns a jobId, BEFORE polling. Lets the
-  // caller persist the in-flight jobId so the UI can show "Higgsfield is
-  // working on this" with a link, instead of "pending" with no detail.
-  onSubmit?: (hfJobId: string) => Promise<void>;
+  inflight: InflightContext;
   // Per-call model override (used by retry-with-different-model). Falls back
   // to the configured default (MODELS.image.higgsfield) when not provided.
   modelOverride?: string;
@@ -349,23 +357,32 @@ export async function generateImage(args: {
   if (!submitted.jobId) {
     throw new HiggsfieldError("generate_image returned no jobId and no imageUrl");
   }
-  if (args.onSubmit) {
-    try {
-      await args.onSubmit(submitted.jobId);
-    } catch {
-      // Tracking failure is not a blocker for the actual gen.
+  const hfJobId = submitted.jobId;
+  const storage = await import("../storage");
+  await storage
+    .trackInflightHiggsfieldJob(args.inflight.jobId, {
+      hfJobId,
+      stage: args.inflight.stage,
+      label: args.inflight.label,
+      submittedAt: new Date().toISOString(),
+    })
+    .catch(() => {});
+  try {
+    const final = await pollUntilDone(hfJobId, {
+      timeoutMs: 4 * 60 * 1000,
+      kind: "image",
+    });
+    if (!final.imageUrl) {
+      throw new HiggsfieldError(
+        `Higgsfield image job ${hfJobId} completed without a URL: ${JSON.stringify(final.raw).slice(0, 400)}`,
+      );
     }
+    return { url: final.imageUrl, hfJobId };
+  } finally {
+    await storage
+      .clearInflightHiggsfieldJob(args.inflight.jobId, hfJobId)
+      .catch(() => {});
   }
-  const final = await pollUntilDone(submitted.jobId, {
-    timeoutMs: 4 * 60 * 1000,
-    kind: "image",
-  });
-  if (!final.imageUrl) {
-    throw new HiggsfieldError(
-      `Higgsfield image job ${submitted.jobId} completed without a URL: ${JSON.stringify(final.raw).slice(0, 400)}`,
-    );
-  }
-  return { url: final.imageUrl, hfJobId: submitted.jobId };
 }
 
 // ---- show_generations (history browse) ----
@@ -437,7 +454,7 @@ export async function generateVideo(args: {
   mode: "std" | "fast";
   duration: number;
   startImageUrl?: string;
-  onSubmit?: (hfJobId: string) => Promise<void>;
+  inflight: InflightContext;
 }): Promise<{ url: string; hfJobId?: string }> {
   if (!GENERATE_AUDIO) {
     throw new Error("generate_audio guard tripped: AI Movie Bot requires audio ON");
@@ -481,21 +498,30 @@ export async function generateVideo(args: {
       `generate_video returned no jobId after preset decline: ${JSON.stringify(submitted.raw).slice(0, 400)}`,
     );
   }
-  if (args.onSubmit) {
-    try {
-      await args.onSubmit(submitted.jobId);
-    } catch {
-      // ignore
+  const hfJobId = submitted.jobId;
+  const storage = await import("../storage");
+  await storage
+    .trackInflightHiggsfieldJob(args.inflight.jobId, {
+      hfJobId,
+      stage: args.inflight.stage,
+      label: args.inflight.label,
+      submittedAt: new Date().toISOString(),
+    })
+    .catch(() => {});
+  try {
+    const final = await pollUntilDone(hfJobId, {
+      timeoutMs: 12 * 60 * 1000,
+      kind: "video",
+    });
+    if (!final.videoUrl && !final.imageUrl) {
+      throw new HiggsfieldError(
+        `Higgsfield video job ${hfJobId} completed without a URL: ${JSON.stringify(final.raw).slice(0, 400)}`,
+      );
     }
+    return { url: final.videoUrl ?? final.imageUrl!, hfJobId };
+  } finally {
+    await storage
+      .clearInflightHiggsfieldJob(args.inflight.jobId, hfJobId)
+      .catch(() => {});
   }
-  const final = await pollUntilDone(submitted.jobId, {
-    timeoutMs: 12 * 60 * 1000,
-    kind: "video",
-  });
-  if (!final.videoUrl && !final.imageUrl) {
-    throw new HiggsfieldError(
-      `Higgsfield video job ${submitted.jobId} completed without a URL: ${JSON.stringify(final.raw).slice(0, 400)}`,
-    );
-  }
-  return { url: final.videoUrl ?? final.imageUrl!, hfJobId: submitted.jobId };
 }

@@ -1,3 +1,4 @@
+import crypto from "node:crypto";
 import { put } from "@vercel/blob";
 import { Redis } from "@upstash/redis";
 import type {
@@ -54,33 +55,50 @@ export const keys = {
   shotListPrefix: (jobId: string) => `jobs/${jobId}/stage3-shotlist-`,
 };
 
+// Insert a 12-char content hash before the file extension so URLs
+// change when content changes. e.g.:
+//   jobs/abc/stage4-storyboard-2.png
+// becomes
+//   jobs/abc/stage4-storyboard-2-9f3a1b8c0d2e.png
+// Browsers and CDNs cache by URL, so every regen produces a fresh URL
+// that bypasses all caches automatically. No ?v= query-string hacks.
+// Old versions stay in Blob as history — Blob storage is cheap and
+// having the audit trail is useful.
+function withContentHash(baseKey: string, bytes: Uint8Array): string {
+  const hash = crypto
+    .createHash("sha256")
+    .update(bytes)
+    .digest("hex")
+    .slice(0, 12);
+  const dot = baseKey.lastIndexOf(".");
+  if (dot < 0) return `${baseKey}-${hash}`;
+  return `${baseKey.slice(0, dot)}-${hash}${baseKey.slice(dot)}`;
+}
+
 // Save an artifact returned by a backend (HTTPS URL or data: URL) to a
-// deterministic Blob key. Used for binary artifacts only.
+// content-addressed Blob key. Used for binary artifacts only.
 export async function persistArtifact(
-  k: string,
+  baseKey: string,
   sourceUrl: string,
   contentType?: string,
 ): Promise<string> {
+  let bytes: Uint8Array;
+  let ct: string | undefined;
   if (sourceUrl.startsWith("data:")) {
     const match = sourceUrl.match(/^data:([^;]+);base64,(.+)$/);
     if (!match) throw new Error("Malformed data URL");
-    const ct = contentType ?? match[1];
-    const bytes = Uint8Array.from(Buffer.from(match[2], "base64"));
-    const blob = await put(k, new Blob([bytes], { type: ct }), {
-      access: "public",
-      addRandomSuffix: false,
-      contentType: ct,
-      allowOverwrite: true,
-    });
-    return blob.url;
+    ct = contentType ?? match[1];
+    bytes = Uint8Array.from(Buffer.from(match[2], "base64"));
+  } else {
+    const res = await fetch(sourceUrl);
+    if (!res.ok) {
+      throw new Error(`Could not fetch artifact ${sourceUrl}: ${res.status}`);
+    }
+    ct = contentType ?? res.headers.get("content-type") ?? undefined;
+    bytes = new Uint8Array(await res.arrayBuffer());
   }
-  const res = await fetch(sourceUrl);
-  if (!res.ok) {
-    throw new Error(`Could not fetch artifact ${sourceUrl}: ${res.status}`);
-  }
-  const ct = contentType ?? res.headers.get("content-type") ?? undefined;
-  const buf = await res.arrayBuffer();
-  const blob = await put(k, buf, {
+  const key = withContentHash(baseKey, bytes);
+  const blob = await put(key, new Blob([bytes], { type: ct }), {
     access: "public",
     addRandomSuffix: false,
     ...(ct ? { contentType: ct } : {}),

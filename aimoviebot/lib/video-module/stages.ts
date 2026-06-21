@@ -20,13 +20,11 @@ import {
   renderStage5,
 } from "./prompts";
 import {
-  clearInflightHiggsfieldJob,
   keys,
   mergeArtifacts,
   persistArtifact,
   readJob,
   recordBackend,
-  trackInflightHiggsfieldJob,
   updateJob,
   writeShotList,
 } from "./storage";
@@ -185,20 +183,20 @@ export async function stage1(
     }
   }
 
-  // 2. Per-job idempotency: if the per-job blob already exists from an
-  //    earlier attempt, reuse without resubmitting Higgsfield.
+  // 2. Per-job idempotency: if a previous step already wrote this
+  //    character's sheet to job state, reuse the URL.
   const perJobKey = keys.characterSheet(jobId, character.name);
-  try {
-    const { head } = await import("@vercel/blob");
-    const existing = await head(perJobKey);
+  const job = await readJob(jobId);
+  const alreadySet = job?.artifacts.characterSheets?.find(
+    (s) => s.name === character.name,
+  );
+  if (alreadySet) {
     return {
       name: character.name,
-      url: existing.url,
+      url: alreadySet.url,
       backend: "higgsfield",
       reusedFromCache: false,
     };
-  } catch {
-    // not yet generated for this job — fall through
   }
 
   const prompt = await renderStage1(character.name);
@@ -207,16 +205,13 @@ export async function stage1(
     prompt,
     imageRefs: [character.imageUrl],
     modelOverride,
-    onSubmit: (hfJobId) =>
-      trackInflightHiggsfieldJob(jobId, {
-        hfJobId,
-        stage: "stage1",
-        label: `Character: ${character.name}`,
-        submittedAt: new Date().toISOString(),
-      }),
+    inflight: {
+      jobId,
+      stage: "stage1",
+      label: `Character: ${character.name}`,
+    },
   });
   const url = await persistArtifact(perJobKey, result.url);
-  if (result.hfJobId) await clearInflightHiggsfieldJob(jobId, result.hfJobId);
 
   // 3. Write to cache so the NEXT render with the same source reuses.
   await writeSheetCache({
@@ -245,12 +240,13 @@ export async function stage2(
   }
 
   const perJobKey = keys.locationSheet(jobId);
-  try {
-    const { head } = await import("@vercel/blob");
-    const existing = await head(perJobKey);
-    return { url: existing.url, backend: "higgsfield", reusedFromCache: false };
-  } catch {
-    // fall through
+  const job = await readJob(jobId);
+  if (job?.artifacts.locationSheetUrl) {
+    return {
+      url: job.artifacts.locationSheetUrl,
+      backend: "higgsfield",
+      reusedFromCache: false,
+    };
   }
 
   const prompt = await renderStage2();
@@ -259,16 +255,9 @@ export async function stage2(
     prompt,
     imageRefs: [locationImageUrl],
     modelOverride,
-    onSubmit: (hfJobId) =>
-      trackInflightHiggsfieldJob(jobId, {
-        hfJobId,
-        stage: "stage2",
-        label: "Location",
-        submittedAt: new Date().toISOString(),
-      }),
+    inflight: { jobId, stage: "stage2", label: "Location" },
   });
   const url = await persistArtifact(perJobKey, result.url);
-  if (result.hfJobId) await clearInflightHiggsfieldJob(jobId, result.hfJobId);
 
   await writeSheetCache({
     kind: "location",
@@ -394,23 +383,19 @@ export async function stage4OneStoryboard(
   chunkIndex: number,
   opts: { force?: boolean } = {},
 ): Promise<{ url: string; backend: Backend }> {
-  const perJobKey = keys.storyboardChunk(jobId, chunkIndex + 1);
-  // Idempotency via head() — if the blob already exists, reuse. Skipped
-  // when force=true (per-asset regenerate path): Vercel Blob's del()
-  // has eventual consistency, so head() might still report a freshly
-  // deleted blob for a beat, causing the regen to silently return the
-  // old URL. force=true makes the regen actually happen.
-  if (!opts.force) {
-    try {
-      const { head } = await import("@vercel/blob");
-      const existing = await head(perJobKey);
-      return { url: existing.url, backend: "higgsfield" };
-    } catch {
-      // fall through
-    }
+  // Idempotency comes from job state (KV — strongly consistent). Skipped
+  // when force=true (per-asset regenerate path). Asset URLs are now
+  // content-addressed, so a regen produces a NEW URL and the browser
+  // refetches automatically.
+  const existing = await readJob(jobId);
+  if (!opts.force && existing?.artifacts.storyboardUrls?.[chunkIndex]) {
+    return {
+      url: existing.artifacts.storyboardUrls[chunkIndex],
+      backend: "higgsfield",
+    };
   }
 
-  const job = await readJob(jobId);
+  const job = existing;
   if (!job) throw new Error(`Job ${jobId} not found`);
   const shots = job.artifacts.shotList;
   // Same staleness-resilience pattern as stage5OneClip: try the job
@@ -462,17 +447,14 @@ export async function stage4OneStoryboard(
       prompt,
       imageRefs: refs,
       modelOverride: model,
-      onSubmit: (hfJobId) =>
-        trackInflightHiggsfieldJob(jobId, {
-          hfJobId,
-          stage: "stage4",
-          label: `Storyboard ${chunkIndex + 1}/${total}`,
-          submittedAt: new Date().toISOString(),
-        }),
+      inflight: {
+        jobId,
+        stage: "stage4",
+        label: `Storyboard ${chunkIndex + 1}/${total}`,
+      },
     }),
   );
   const url = await persistArtifact(perJobKey, r.url);
-  if (r.hfJobId) await clearInflightHiggsfieldJob(jobId, r.hfJobId);
   return { url, backend: "higgsfield" };
 }
 
@@ -506,13 +488,11 @@ export async function stage4(
           prompt,
           imageRefs: refs,
           modelOverride: model,
-          onSubmit: (hfJobId) =>
-            trackInflightHiggsfieldJob(jobId, {
-              hfJobId,
-              stage: "stage4",
-              label: `Storyboard ${i + 1}/${total}`,
-              submittedAt: new Date().toISOString(),
-            }),
+          inflight: {
+            jobId,
+            stage: "stage4",
+            label: `Storyboard ${i + 1}/${total}`,
+          },
         }),
       );
       const url = await persistArtifact(
@@ -607,25 +587,18 @@ export async function stage5OneClip(
   chunkIndex: number,
   opts: { force?: boolean } = {},
 ): Promise<{ url: string; backend: Backend }> {
-  const blobKey = keys.videoClip(jobId, chunkIndex + 1);
-
-  // 1. Idempotency: if the persisted clip already exists, reuse it. A
+  // 1. Idempotency: if job state already has the clip URL, reuse it. A
   //    workflow retry of this step (after a sibling clip's step crashed)
-  //    must NOT re-submit Seedance. Skipped when force=true (per-asset
-  //    regenerate path): Blob's del() has eventual consistency, so the
-  //    head() check can return the just-deleted blob and silently
-  //    return the old clip instead of generating a new one.
-  if (!opts.force) {
-    try {
-      const { head } = await import("@vercel/blob");
-      const existing = await head(blobKey);
-      return { url: existing.url, backend: "higgsfield" };
-    } catch {
-      // not found — fall through to generate
-    }
+  //    must NOT re-submit Seedance. Skipped when force=true (regen).
+  const existing = await readJob(jobId);
+  if (!opts.force && existing?.artifacts.clipUrls?.[chunkIndex]) {
+    return {
+      url: existing.artifacts.clipUrls[chunkIndex],
+      backend: "higgsfield",
+    };
   }
 
-  const job = await readJob(jobId);
+  const job = existing;
   if (!job) throw new Error(`Job ${jobId} not found`);
   const shots = job.artifacts.shotList;
   // Vercel Blob's list() is occasionally stale, so the job snapshot
@@ -733,13 +706,11 @@ export async function stage5OneClip(
         mode,
         duration: secondsPerChunk,
         startImageUrl: storyboardUrl,
-        onSubmit: (hfJobId) =>
-          trackInflightHiggsfieldJob(jobId, {
-            hfJobId,
-            stage: "stage5",
-            label: `Video clip ${chunkIndex + 1}/${total}`,
-            submittedAt: new Date().toISOString(),
-          }),
+        inflight: {
+          jobId,
+          stage: "stage5",
+          label: `Video clip ${chunkIndex + 1}/${total}`,
+        },
       }),
     () =>
       gatewayGenerateVideo({
@@ -756,7 +727,6 @@ export async function stage5OneClip(
   //    a sibling clip's failure — once this returns, the head() check
   //    above will short-circuit any future retry.
   const persistedUrl = await persistArtifact(blobKey, result.url, "video/mp4");
-  if (result.hfJobId) await clearInflightHiggsfieldJob(jobId, result.hfJobId);
   return { url: persistedUrl, backend: servedBy };
 }
 
@@ -841,13 +811,11 @@ export async function stage5(
             mode,
             duration: secondsPerChunk,
             startImageUrl: args.storyboardUrls[i],
-            onSubmit: (hfJobId) =>
-              trackInflightHiggsfieldJob(jobId, {
-                hfJobId,
-                stage: "stage5",
-                label: `Video clip ${i + 1}/${total}`,
-                submittedAt: new Date().toISOString(),
-              }),
+            inflight: {
+              jobId,
+              stage: "stage5",
+              label: `Video clip ${i + 1}/${total}`,
+            },
           }),
         () =>
           gatewayGenerateVideo({
