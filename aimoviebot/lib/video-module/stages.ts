@@ -454,7 +454,7 @@ export async function stage4OneStoryboard(
       },
     }),
   );
-  const url = await persistArtifact(perJobKey, r.url);
+  const url = await persistArtifact(keys.storyboardChunk(jobId, chunkIndex + 1), r.url);
   return { url, backend: "higgsfield" };
 }
 
