@@ -40,11 +40,17 @@ export default function ReviewShotsPage({
       .then((r) => r.json())
       .then((d: Snapshot & { error?: string }) => {
         if (d.error) throw new Error(d.error);
+        // If the job is no longer at this gate, send the user to the
+        // single hub instead of leaving them on a stale editor.
+        if (d.status !== "awaiting_shotlist_approval") {
+          router.replace(`/status/${jobId}`);
+          return;
+        }
         setSnap(d);
         setShots(d.artifacts.shotList ?? null);
       })
       .catch((e) => setError(String(e)));
-  }, [jobId]);
+  }, [jobId, router]);
 
   function setShot(i: number, patch: Partial<Shot>) {
     setShots((cs) => (cs ? cs.map((s, idx) => (idx === i ? { ...s, ...patch } : s)) : cs));

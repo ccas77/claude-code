@@ -54,6 +54,24 @@ export default function ReviewPage({ params }: { params: Promise<{ jobId: string
         const data = (await res.json()) as ConceptDraft & { error?: string };
         if (!res.ok) throw new Error(data.error ?? `HTTP ${res.status}`);
         if (cancelled) return;
+        // Auto-redirect if the job has already moved past Gate 1.
+        // Otherwise the user stares at a stale form they cannot submit.
+        if (data.status === "awaiting_shotlist_approval") {
+          router.replace(`/review-shots/${jobId}`);
+          return;
+        }
+        if (data.status === "awaiting_storyboard_approval") {
+          router.replace(`/review-storyboards/${jobId}`);
+          return;
+        }
+        if (
+          data.status &&
+          data.status !== "awaiting_approval" &&
+          data.status !== "concept"
+        ) {
+          router.replace(`/status/${jobId}`);
+          return;
+        }
         setScene(data.artifacts.sceneDescription ?? "");
         setDialogue(data.artifacts.dialogue ?? []);
         setCast(data.characters ?? []);

@@ -10,6 +10,24 @@ type SavedLocation = { id: string; label: string; imageUrl: string };
 
 const MAX_CHARACTERS = 4;
 
+const STATUS_LABEL: Record<string, string> = {
+  queued: "Queued",
+  concept: "Drafting concept",
+  awaiting_approval: "Waiting on your scene + dialogue approval",
+  char_sheets: "Generating character sheets",
+  loc_sheet: "Generating location sheet",
+  shot_list: "Drafting shot list",
+  awaiting_shotlist_approval: "Waiting on your shot list approval",
+  storyboard: "Generating storyboards",
+  awaiting_storyboard_approval: "Waiting on your storyboard approval",
+  video: "Rendering video clips",
+  captioning: "Stitching + captions",
+};
+
+function humanStatus(s: string): string {
+  return STATUS_LABEL[s] ?? s;
+}
+
 function newCharacter(): CharacterDraft {
   return {
     id: Math.random().toString(36).slice(2),
@@ -29,6 +47,25 @@ export default function UploadPage() {
   const [savedCast, setSavedCast] = useState<SavedCharacter[]>([]);
   const [savedLocations, setSavedLocations] = useState<SavedLocation[]>([]);
   const [savingLibrary, setSavingLibrary] = useState(false);
+  // Active project: anything not in a terminal state (done/failed). The
+  // most recent one is surfaced as a "Resume" banner so the user never
+  // has to hunt for the right URL after closing the tab.
+  const [activeProject, setActiveProject] = useState<{
+    jobId: string;
+    status: string;
+  } | null>(null);
+
+  useEffect(() => {
+    fetch("/api/projects")
+      .then((r) => r.json())
+      .then((d: { projects: { jobId: string; status: string }[] }) => {
+        const active = (d.projects ?? []).find(
+          (p) => p.status !== "done" && p.status !== "failed",
+        );
+        if (active) setActiveProject(active);
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     fetch("/api/oauth/higgsfield/status")
@@ -198,6 +235,21 @@ export default function UploadPage() {
           characters (name + image each), pick a location, write a scene.
         </p>
       </header>
+
+      {activeProject ? (
+        <a
+          href={`/status/${activeProject.jobId}`}
+          className="block rounded-lg bg-violet-50 border border-violet-300 px-4 py-3 hover:bg-violet-100 transition"
+        >
+          <p className="text-sm text-violet-900 font-medium">
+            Resume your in-progress render →
+          </p>
+          <p className="text-xs text-violet-700 mt-0.5">
+            Status: {humanStatus(activeProject.status)} ·{" "}
+            <span className="font-mono">{activeProject.jobId.slice(0, 8)}</span>
+          </p>
+        </a>
+      ) : null}
 
       <div
         className={`rounded-lg px-4 py-3 text-sm border ${

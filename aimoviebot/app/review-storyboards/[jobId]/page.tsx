@@ -48,6 +48,10 @@ export default function ReviewStoryboardsPage({
       });
       const data = (await res.json()) as Snapshot & { error?: string };
       if (!res.ok) throw new Error(data.error ?? `HTTP ${res.status}`);
+      if (data.status !== "awaiting_storyboard_approval") {
+        router.replace(`/status/${jobId}`);
+        return;
+      }
       setSnap(data);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
