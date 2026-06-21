@@ -19,8 +19,12 @@ export const maxDuration = 300;
 const bodySchema = z.object({
   jobId: z.string().uuid(),
   kind: z.enum(["storyboard", "clip"]),
-  // 0-indexed chunk. 0..3 for the default 4-clip pipeline.
+  // 0-indexed chunk.
   chunkIndex: z.number().int().min(0).max(7),
+  // For "clip" regens: optional Seedance clip duration. Persisted to
+  // job.artifacts.chunkDurations[chunkIndex] before stage5OneClip runs
+  // so the Seedance call gets the new duration.
+  durationSec: z.number().int().min(4).max(15).optional(),
 });
 
 export async function POST(req: Request) {
@@ -29,7 +33,7 @@ export async function POST(req: Request) {
     if (!parsed.success) {
       return NextResponse.json({ error: parsed.error.message }, { status: 400 });
     }
-    const { jobId, kind, chunkIndex } = parsed.data;
+    const { jobId, kind, chunkIndex, durationSec } = parsed.data;
 
     const job = await readJob(jobId);
     if (!job) {
@@ -75,6 +79,27 @@ export async function POST(req: Request) {
     // separate "Restitch final video" button once they're satisfied
     // with all the new clips. That avoids wasting ffmpeg+Whisper passes
     // when the user is going to regen more clips next.
+    //
+    // If the request includes a durationSec, persist it BEFORE running
+    // stage5OneClip — stage5OneClip reads chunkDurations from job state
+    // to know how long a clip to ask Seedance for.
+    if (typeof durationSec === "number") {
+      await updateJob(jobId, (j) => {
+        const cc =
+          j.artifacts.storyboardUrls?.length ??
+          j.chunkCount ??
+          1;
+        const next = Array.from(
+          { length: cc },
+          (_, k) => j.artifacts.chunkDurations?.[k] ?? 4,
+        );
+        next[chunkIndex] = durationSec;
+        return {
+          ...j,
+          artifacts: { ...j.artifacts, chunkDurations: next },
+        };
+      });
+    }
     await setStatus(jobId, "video");
     const result = await stage5OneClip(jobId, chunkIndex, { force: true });
     await updateJob(jobId, (j) => {
