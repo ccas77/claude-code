@@ -206,13 +206,19 @@ import { del } from "@vercel/blob";
 export async function DELETE() {
   let cursor: string | undefined = undefined;
   let removed = 0;
-  do {
-    const page = await list({ prefix: PREFIX, limit: 1000, cursor });
+  // Cap iterations so a bug can't make this loop forever.
+  for (let i = 0; i < 50; i++) {
+    const page: Awaited<ReturnType<typeof list>> = await list({
+      prefix: PREFIX,
+      limit: 1000,
+      cursor,
+    });
     if (page.blobs.length === 0) break;
     const urls = page.blobs.map((b) => b.url);
     await del(urls);
     removed += urls.length;
     cursor = page.cursor ?? undefined;
-  } while (cursor);
+    if (!cursor) break;
+  }
   return NextResponse.json({ removed });
 }
