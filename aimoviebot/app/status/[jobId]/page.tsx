@@ -67,6 +67,7 @@ export default function StatusPage({ params }: { params: Promise<{ jobId: string
   const [retrying, setRetrying] = useState(false);
   const [finalizing, setFinalizing] = useState(false);
   const [clipUrlsRaw, setClipUrlsRaw] = useState("");
+  const [recovering, setRecovering] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -113,6 +114,37 @@ export default function StatusPage({ params }: { params: Promise<{ jobId: string
       setError(e instanceof Error ? e.message : String(e));
     } finally {
       setRetrying(false);
+    }
+  }
+
+  // Recover-from-Higgsfield. Takes the hfJobIds from inflightHiggsfieldJobs
+  // (stage 5 only, sorted by submittedAt so chunk order is preserved),
+  // POSTs to /api/video/recover-clips which pulls the existing video URLs
+  // from Higgsfield via job_status, persists each to Blob, then stitches
+  // + captions. No new Seedance submissions.
+  async function recoverFromHiggsfield(stage5Inflight: InflightHiggsfieldJob[]) {
+    if (stage5Inflight.length === 0) return;
+    setRecovering(true);
+    setError(null);
+    try {
+      const sorted = [...stage5Inflight].sort(
+        (a, b) =>
+          new Date(a.submittedAt).getTime() -
+          new Date(b.submittedAt).getTime(),
+      );
+      const hfJobIds = sorted.map((j) => j.hfJobId);
+      const res = await fetch("/api/video/recover-clips", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jobId, hfJobIds }),
+      });
+      const json = (await res.json()) as { error?: string };
+      if (!res.ok) throw new Error(json.error ?? `HTTP ${res.status}`);
+      setData(null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setRecovering(false);
     }
   }
 
@@ -259,6 +291,23 @@ export default function StatusPage({ params }: { params: Promise<{ jobId: string
               </li>
             ))}
           </ul>
+          {(() => {
+            const stage5Inflight = (a.inflightHiggsfieldJobs ?? []).filter(
+              (j) => j.stage === "stage5",
+            );
+            if (stage5Inflight.length === 0) return null;
+            return (
+              <button
+                onClick={() => recoverFromHiggsfield(stage5Inflight)}
+                disabled={recovering}
+                className="mt-2 bg-violet-700 text-white text-sm rounded px-3 py-1.5 disabled:bg-stone-300"
+              >
+                {recovering
+                  ? "Recovering…"
+                  : `Recover ${stage5Inflight.length} clip${stage5Inflight.length === 1 ? "" : "s"} from Higgsfield + stitch`}
+              </button>
+            );
+          })()}
         </section>
       ) : null}
 

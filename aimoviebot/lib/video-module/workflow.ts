@@ -127,32 +127,60 @@ async function runStage4Step(jobId: string) {
   );
 }
 
-async function runStage5Step(jobId: string) {
+// Per-clip durable step. One workflow step per chunk so a crash on
+// clip N leaves clips 1..N-1 saved. stage5OneClip is idempotent — on
+// retry it short-circuits if the persisted Blob already exists.
+async function runStage5OneClipStep(
+  jobId: string,
+  chunkIndex: number,
+): Promise<{ url: string; backend: Backend }> {
   "use step";
-  const { setStatus, readJob } = await import("./storage");
-  const { stage5 } = await import("./stages");
-  await setStatus(jobId, "video");
-  const job = await readJob(jobId);
-  if (!job) throw new Error(`Job ${jobId} disappeared`);
-  if (
-    !job.artifacts.shotList ||
-    !job.artifacts.characterSheets ||
-    job.artifacts.characterSheets.length === 0 ||
-    !job.artifacts.locationSheetUrl ||
-    !job.artifacts.storyboardUrls ||
-    job.artifacts.storyboardUrls.length === 0
-  ) {
-    throw new Error("Stage 5 missing upstream artifacts");
-  }
-  await fatal("Stage 5", () =>
-    stage5(jobId, {
-      shots: job.artifacts.shotList!,
-      characters: job.characters,
-      characterSheets: job.artifacts.characterSheets!,
-      locationSheetUrl: job.artifacts.locationSheetUrl!,
-      storyboardUrls: job.artifacts.storyboardUrls!,
-    }),
+  const { stage5OneClip } = await import("./stages");
+  return fatal(`Stage 5 clip ${chunkIndex + 1}`, () =>
+    stage5OneClip(jobId, chunkIndex),
   );
+}
+
+// After all per-clip steps complete, record their URLs in job state in
+// ONE write. (Per-clip steps don't write clipUrls themselves to avoid
+// parallel read-modify-write races on the job blob.)
+async function persistClipUrlsStep(
+  jobId: string,
+  clipUrls: string[],
+  backend: Backend,
+) {
+  "use step";
+  const { updateJob } = await import("./storage");
+  await updateJob(jobId, (j) => ({
+    ...j,
+    artifacts: { ...j.artifacts, clipUrls },
+    servedBy: { ...(j.servedBy ?? {}), stage5: backend },
+  }));
+}
+
+async function setVideoStatusStep(jobId: string) {
+  "use step";
+  const { setStatus } = await import("./storage");
+  await setStatus(jobId, "video");
+}
+
+// Stage 5 helper used INSIDE the workflow sandbox. Pure orchestration —
+// only calls "use step" functions. No Node-only code here, so it's safe
+// to live in the workflow VM scope. Promise.all of N per-clip steps; on
+// crash of any one, the others' results are still durably persisted
+// because each step's blob write is its own checkpoint.
+const STAGE5_CLIP_COUNT = 4; // must match VIDEO_CHUNKS.count in config.ts
+
+async function runStage5(jobId: string) {
+  await setVideoStatusStep(jobId);
+  const results = await Promise.all(
+    Array.from({ length: STAGE5_CLIP_COUNT }, (_, i) =>
+      runStage5OneClipStep(jobId, i),
+    ),
+  );
+  const clipUrls = results.map((r) => r.url);
+  const backend = results[0]?.backend ?? "higgsfield";
+  await persistClipUrlsStep(jobId, clipUrls, backend);
 }
 
 async function runStage6Step(jobId: string) {
@@ -256,7 +284,7 @@ export async function approvedVideoWorkflow(
     });
     await hook;
     await runStage4Step(jobId);
-    await runStage5Step(jobId);
+    await runStage5(jobId);
     await runStage6Step(jobId);
     await markDone(jobId);
   } catch (err) {
@@ -317,7 +345,7 @@ export async function retryFromStage(jobId: string, fromStage: 1 | 2 | 3 | 4 | 5
       await hook;
     }
     if (fromStage <= 4) await runStage4Step(jobId);
-    if (fromStage <= 5) await runStage5Step(jobId);
+    if (fromStage <= 5) await runStage5(jobId);
     await runStage6Step(jobId);
     await markDone(jobId);
   } catch (err) {

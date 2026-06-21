@@ -303,6 +303,130 @@ async function tryWithNsfwFallback<T>(
   }
 }
 
+// Stage 5 ONE-CLIP renderer. Idempotent: if the chunk's video already
+// exists in Blob at its deterministic key, returns the existing URL with
+// zero Higgsfield / Seedance calls. This is what the workflow calls per
+// chunk so a crash on clip N leaves clips 1..N-1 saved durably.
+//
+// Reads everything it needs (shotList, characters, sheets, storyboards)
+// from job state so the workflow VM doesn't have to thread args through
+// from the orchestrator.
+export async function stage5OneClip(
+  jobId: string,
+  chunkIndex: number,
+): Promise<{ url: string; backend: Backend }> {
+  const blobKey = keys.videoClip(jobId, chunkIndex + 1);
+
+  // 1. Idempotency: if the persisted clip already exists, reuse it. A
+  //    workflow retry of this step (after a sibling clip's step crashed)
+  //    must NOT re-submit Seedance.
+  try {
+    const { head } = await import("@vercel/blob");
+    const existing = await head(blobKey);
+    return { url: existing.url, backend: "higgsfield" };
+  } catch {
+    // not found — fall through to generate
+  }
+
+  const job = await readJob(jobId);
+  if (!job) throw new Error(`Job ${jobId} not found`);
+  const shots = job.artifacts.shotList;
+  const characterSheets = job.artifacts.characterSheets;
+  const locationSheetUrl = job.artifacts.locationSheetUrl;
+  const storyboardUrls = job.artifacts.storyboardUrls;
+  if (
+    !shots ||
+    !characterSheets ||
+    characterSheets.length === 0 ||
+    !locationSheetUrl ||
+    !storyboardUrls ||
+    storyboardUrls.length === 0
+  ) {
+    throw new Error(
+      `Stage 5 clip ${chunkIndex + 1}: missing upstream artifacts (shotList/characterSheets/locationSheet/storyboardUrls)`,
+    );
+  }
+
+  if (!GENERATE_AUDIO) {
+    throw new Error(
+      "Stage 5 refused: GENERATE_AUDIO must remain true. Seedance bakes the spoken dialogue from the prompt.",
+    );
+  }
+  if (ASPECT_RATIO !== "9:16") {
+    throw new Error(
+      "Stage 5 refused: ASPECT_RATIO drifted from 9:16. Aborting render.",
+    );
+  }
+  const secondsPerChunk = VIDEO_CHUNKS.secondsPerChunk;
+  if (secondsPerChunk < 4 || secondsPerChunk > 15) {
+    throw new Error(
+      `Stage 5 refused: secondsPerChunk ${secondsPerChunk}s outside Seedance's 4-15s range.`,
+    );
+  }
+
+  const chunks = chunkShots(shots, VIDEO_CHUNKS.count);
+  if (chunkIndex < 0 || chunkIndex >= chunks.length) {
+    throw new Error(
+      `Stage 5: chunk index ${chunkIndex} out of range 0..${chunks.length - 1}`,
+    );
+  }
+  if (chunks.length !== storyboardUrls.length) {
+    throw new Error(
+      `Stage 5 refused: ${chunks.length} shot chunks but ${storyboardUrls.length} storyboards.`,
+    );
+  }
+
+  const chunkShotList = chunks[chunkIndex];
+  const storyboardUrl = storyboardUrls[chunkIndex];
+  const chunkPrompt = await renderStage5({
+    shots: chunkShotList,
+    characters: job.characters,
+  });
+  const sharedRefs = [
+    ...characterSheets.map((s) => s.url),
+    locationSheetUrl,
+  ];
+  const refs = [storyboardUrl, ...sharedRefs];
+  const total = chunks.length;
+  const resolution = VIDEO_DEFAULTS.resolution;
+  const mode = VIDEO_DEFAULTS.mode;
+
+  const { result, servedBy } = await withFallback(
+    () =>
+      hgVideo({
+        prompt: chunkPrompt,
+        imageRefs: refs,
+        resolution,
+        mode,
+        duration: secondsPerChunk,
+        startImageUrl: storyboardUrl,
+        onSubmit: (hfJobId) =>
+          trackInflightHiggsfieldJob(jobId, {
+            hfJobId,
+            stage: "stage5",
+            label: `Video clip ${chunkIndex + 1}/${total}`,
+            submittedAt: new Date().toISOString(),
+          }),
+      }),
+    () =>
+      gatewayGenerateVideo({
+        prompt: chunkPrompt,
+        imageRefs: refs,
+        resolution,
+        mode,
+        duration: secondsPerChunk,
+        startImageUrl: storyboardUrl,
+      }),
+  );
+
+  // 2. Persist immediately. The persistArtifact write is what survives
+  //    a sibling clip's failure — once this returns, the head() check
+  //    above will short-circuit any future retry.
+  const persistedUrl = await persistArtifact(blobKey, result.url, "video/mp4");
+  if (result.hfJobId) await clearInflightHiggsfieldJob(jobId, result.hfJobId);
+  return { url: persistedUrl, backend: servedBy };
+}
+
 // Stage 5: multi-clip video render. Splits the 16 shots into N chunks,
 // renders each as its OWN short Seedance call (against its own
 // mini-storyboard from stage 4) in parallel, then persists the raw clip
@@ -311,6 +435,11 @@ async function tryWithNsfwFallback<T>(
 //   - aspect ratio must be 9:16 (config const)
 //   - 1080p banned unless ALLOW_1080P flips
 //   - generate_audio must remain true
+//
+// Kept for the legacy single-step path. The workflow now uses
+// stage5OneClip per chunk so a partial failure doesn't lose persisted
+// siblings; this batched wrapper survives only for non-workflow callers
+// that want to render all clips inline.
 export async function stage5(
   jobId: string,
   args: {

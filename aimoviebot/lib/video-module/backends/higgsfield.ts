@@ -213,6 +213,14 @@ type JobStatusResult = {
   raw: unknown;
 };
 
+// Public helper: ask Higgsfield for the current status of a previously
+// submitted job and (if completed) the result URL. Used by the recovery
+// endpoint to pull existing clip outputs after a workflow crash, without
+// re-submitting a new Seedance call.
+export async function getJobStatus(jobId: string): Promise<JobStatusResult> {
+  return callJobStatus(jobId);
+}
+
 async function callJobStatus(jobId: string): Promise<JobStatusResult> {
   return withClient(async (client) => {
     const res = await client.callTool({
