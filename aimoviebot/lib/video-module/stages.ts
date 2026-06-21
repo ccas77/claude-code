@@ -5,6 +5,7 @@ import {
   MODELS,
   VIDEO_CHUNKS,
   VIDEO_DEFAULTS,
+  chunkCountForDuration,
 } from "./config";
 import {
   generateImage as hgImage,
