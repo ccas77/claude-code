@@ -683,6 +683,7 @@ export async function stage5OneClip(
   const chunkPrompt = await renderStage5({
     shots: chunkShotList,
     characters: job.characters,
+    seconds: secondsPerChunk,
   });
   // Pass ONLY what this clip needs:
   //   - the storyboard for THIS chunk (as start_image — the seed frame
@@ -812,6 +813,7 @@ export async function stage5(
       const chunkPrompt = await renderStage5({
         shots: chunkShotList,
         characters: args.characters,
+        seconds: secondsPerChunk,
       });
       const refs = [args.storyboardUrls[i], ...sharedRefs];
       const { result, servedBy } = await withFallback(

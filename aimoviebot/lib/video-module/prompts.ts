@@ -124,6 +124,26 @@ const spokenBlock = (shots: Shot[]) =>
     )
     .join("\n") || "(no dialogue; wordless scene)";
 
+// Compose a chunk's shots into ONE flowing scene description for
+// Seedance: action, then performance, then any dialogue lines spoken
+// in that beat — interleaved, no "(Shot N)" labels, no separate
+// dialogue section. Seedance reads it as a single continuous moment.
+// This is what makes the per-clip prompt feel like a film direction
+// rather than a list of disjoint storyboard panels.
+const sceneBlock = (shots: Shot[]) => {
+  const parts = shots.map((s) => {
+    const bits: string[] = [];
+    if (s.action) bits.push(s.action.trim().replace(/\.$/, "") + ".");
+    if (s.performance)
+      bits.push(s.performance.trim().replace(/\.$/, "") + ".");
+    for (const d of s.dialogue) {
+      bits.push(`${d.speaker} says aloud: "${d.line}"`);
+    }
+    return bits.join(" ");
+  });
+  return parts.join(" ").trim() || "(wordless beat)";
+};
+
 // Replace {placeholder} tokens. Unknown placeholders are left as-is so a
 // user-edited template with a typo doesn't silently lose its data.
 export function render(
@@ -329,34 +349,23 @@ Cast:
 Insert the 16 shots below (separators are single vertical bars):
 {shots}`,
 
-  stage5: `Cinematic 9:16 vertical clip. The storyboard sheet is the
-primary source of truth for camera, framing, and sequence. Each character
-has their own reference sheet (named below). Keep face, hair, clothing,
-and proportions consistent with the right sheet on every shot. The
-location sheet defines the environment.
+  stage5: `PHOTOREALISTIC 9:16 vertical film clip, {seconds} seconds, with
+spoken dialogue baked into the audio. Strictly photographic — no cartoon,
+anime, illustration, painting, comic, sketch, 3D render, or stylised look.
 
-PERFORMANCE (load-bearing): the characters must MOVE LIKE PEOPLE, not
-pose like mannequins. Render natural body weight, shifting balance,
-breath, micro-expressions (eye flicker, lip part, swallow, jaw set),
-small involuntary gestures (a hand at the collar, fingers brushing a
-sleeve, a glance away then back). When two characters share a frame,
-render the physical relationship between them: distance, lean-in,
-restraint, the gap that closes or opens between bodies. Camera movement
-is motivated by the performance, not the other way around. Do NOT animate
-anyone standing flat-footed or staring with a neutral expression at the
-camera.
+Attached images: the storyboard frame defines camera + composition; each
+character has their own reference sheet ({cast}) — preserve face, hair,
+clothing, proportions exactly; the location sheet defines the environment.
 
-Cast (each name corresponds to its own reference sheet image):
-{cast}
+Render people, not mannequins: natural body weight, breath, micro-
+expressions, small involuntary gestures, the felt distance between bodies.
+Camera movement follows the performance, never the other way around.
 
-SHOT ACTIONS (in order, each line carries the directed body acting and
-camera intent for that shot):
-{performance}
+SCENE (one continuous beat over {seconds} seconds — the action, performance,
+and dialogue flow together; characters SPEAK each quoted line aloud at the
+moment it appears):
 
-DIALOGUE (the characters SPEAK these lines aloud, in order, matched to
-the shots indicated, voiced by the named character using the look and
-demeanor from their reference sheet):
-{spoken}`,
+{scene}`,
 };
 
 // ---- RENDER ENTRY POINTS ----
@@ -442,10 +451,13 @@ export async function renderStage4(args: {
 export async function renderStage5(args: {
   shots: Shot[];
   characters: Character[];
+  // Per-chunk clip duration (4/8/12/15s). Drives the {seconds}
+  // placeholder so Seedance knows the time budget.
+  seconds: number;
 }): Promise<string> {
   return render(await effectivePrompt("stage5"), {
     cast: castBlock(args.characters),
-    performance: performanceBlock(args.shots),
-    spoken: spokenBlock(args.shots),
+    scene: sceneBlock(args.shots),
+    seconds: String(args.seconds),
   });
 }
