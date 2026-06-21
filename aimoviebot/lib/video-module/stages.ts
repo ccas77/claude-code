@@ -52,20 +52,41 @@ async function tryHead(blobKey: string): Promise<string | null> {
   }
 }
 
-// Reconstructs the characterSheets array by checking the deterministic
-// per-character Blob key for each cast member. Missing characters drop
-// out — Stage 5's validator catches the empty case downstream.
+// Reconstructs the characterSheets array. Two fallback layers:
+//   1. Per-job blob (jobs/{jobId}/stage1-character-{slug}.png) — only
+//      exists if the sheet was freshly generated for this job.
+//   2. Library sheet cache (library/sheets/character/{hash}.json) —
+//      always exists if a previous render generated a sheet for this
+//      character's source upload URL. Critical when the character was
+//      a cache hit (no per-job blob was ever written).
 export async function rebuildCharacterSheetsFromBlob(
   jobId: string,
   characters: Character[],
 ): Promise<CharacterSheet[]> {
+  const { readSheetCache } = await import("./sheet-cache");
   const checked = await Promise.all(
     characters.map(async (c) => {
-      const url = await tryHead(keys.characterSheet(jobId, c.name));
-      return url ? { name: c.name, url } : null;
+      const perJob = await tryHead(keys.characterSheet(jobId, c.name));
+      if (perJob) return { name: c.name, url: perJob };
+      const cached = await readSheetCache("character", c.imageUrl);
+      if (cached) return { name: c.name, url: cached.sheetUrl };
+      return null;
     }),
   );
   return checked.filter((x): x is CharacterSheet => Boolean(x));
+}
+
+// Reconstructs locationSheetUrl with the same per-job → library-cache
+// fallback chain as character sheets. Returns null if neither has it.
+export async function rebuildLocationSheetUrlFromBlob(
+  jobId: string,
+  sourceLocationImageUrl: string,
+): Promise<string | null> {
+  const perJob = await tryHead(keys.locationSheet(jobId));
+  if (perJob) return perJob;
+  const { readSheetCache } = await import("./sheet-cache");
+  const cached = await readSheetCache("location", sourceLocationImageUrl);
+  return cached?.sheetUrl ?? null;
 }
 
 // Reconstructs the storyboardUrls array by checking each deterministic
@@ -396,7 +417,9 @@ export async function stage4OneStoryboard(
   }
   let locationSheetUrl = job.artifacts.locationSheetUrl;
   if (!locationSheetUrl) {
-    locationSheetUrl = (await tryHead(keys.locationSheet(jobId))) ?? undefined;
+    locationSheetUrl =
+      (await rebuildLocationSheetUrlFromBlob(jobId, job.locationImageUrl)) ??
+      undefined;
   }
   if (
     !shots ||
@@ -603,7 +626,9 @@ export async function stage5OneClip(
   }
   let locationSheetUrl = job.artifacts.locationSheetUrl;
   if (!locationSheetUrl) {
-    locationSheetUrl = (await tryHead(keys.locationSheet(jobId))) ?? undefined;
+    locationSheetUrl =
+      (await rebuildLocationSheetUrlFromBlob(jobId, job.locationImageUrl)) ??
+      undefined;
   }
   let storyboardUrls = job.artifacts.storyboardUrls;
   if (!storyboardUrls || storyboardUrls.length === 0) {

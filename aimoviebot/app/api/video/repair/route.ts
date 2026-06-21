@@ -3,6 +3,7 @@ import { z } from "zod";
 import { readJob, updateJob, keys } from "@/lib/video-module/storage";
 import {
   rebuildCharacterSheetsFromBlob,
+  rebuildLocationSheetUrlFromBlob,
   rebuildStoryboardUrlsFromBlob,
   rebuildClipUrlsFromBlob,
 } from "@/lib/video-module/stages";
@@ -53,9 +54,14 @@ export async function POST(req: Request) {
       const sheets = await rebuildCharacterSheetsFromBlob(jobId, job.characters);
       if (sheets.length > 0) rebuilt.characterSheets = sheets;
     }
-    // locationSheetUrl
+    // locationSheetUrl — checks per-job blob first, then library cache
+    // (which is where the URL lives when stage2 was a cache hit and
+    // therefore never wrote to the per-job key).
     if (!job.artifacts.locationSheetUrl) {
-      const u = await tryHead(keys.locationSheet(jobId));
+      const u = await rebuildLocationSheetUrlFromBlob(
+        jobId,
+        job.locationImageUrl,
+      );
       if (u) rebuilt.locationSheetUrl = u;
     }
     // storyboardUrls
