@@ -77,6 +77,24 @@ export default function StatusPage({ params }: { params: Promise<{ jobId: string
   // tiles' buttons stay enabled.
   const [regenerating, setRegenerating] = useState<string | null>(null);
 
+  // Force a fresh job-state fetch. Used after server-side mutations
+  // (regenerate, repair, etc.) because the passive polling stops once
+  // status is done/failed, so the UI wouldn't otherwise pick up the
+  // new state.
+  async function reloadJob() {
+    try {
+      const res = await fetch(`/api/video?jobId=${jobId}`, {
+        cache: "no-store",
+      });
+      const json = (await res.json()) as StatusResponse & { error?: string };
+      if (!res.ok)
+        throw new Error(json.error ?? `HTTP ${res.status}`);
+      setData(json);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    }
+  }
+
   async function regenerateAsset(
     kind: "storyboard" | "clip",
     chunkIndex: number,
@@ -85,7 +103,7 @@ export default function StatusPage({ params }: { params: Promise<{ jobId: string
     if (regenerating) return;
     const confirmText =
       kind === "storyboard"
-        ? `Regenerate storyboard ${chunkIndex + 1}? One Higgsfield image call. The matching clip will still be the OLD one — regenerate the clip too if you need it to use the new storyboard.`
+        ? `Regenerate storyboard ${chunkIndex + 1}? One Higgsfield image call. AFTER it imports you'll be asked if you also want to re-render clip ${chunkIndex + 1} against the new storyboard (one Seedance call + auto re-stitch) — otherwise the final video keeps using the old clip.`
         : `Regenerate clip ${chunkIndex + 1}? One Seedance video call + a fresh stitch + caption pass. The final stitched video will be replaced.`;
     if (!confirm(confirmText)) return;
     setRegenerating(marker);
@@ -98,7 +116,27 @@ export default function StatusPage({ params }: { params: Promise<{ jobId: string
       });
       const json = (await res.json()) as { error?: string };
       if (!res.ok) throw new Error(json.error ?? `HTTP ${res.status}`);
-      setData(null);
+      // Pull fresh state so the new image actually shows up in the UI
+      // (polling has stopped on done jobs and won't re-fire on its own).
+      await reloadJob();
+      // After a storyboard regen, the matching clip is now stale (it
+      // was rendered against the old storyboard). Offer the chain.
+      if (kind === "storyboard") {
+        const wantClip = confirm(
+          `New storyboard ${chunkIndex + 1} imported. Re-render clip ${chunkIndex + 1} now against the new storyboard, and re-stitch the final video?\n\nClick OK to spend one Seedance call. Click Cancel to keep the existing clip (the final video won't reflect the new storyboard).`,
+        );
+        if (wantClip) {
+          setRegenerating(`clip:${chunkIndex}`);
+          const r2 = await fetch("/api/video/regenerate-asset", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ jobId, kind: "clip", chunkIndex }),
+          });
+          const j2 = (await r2.json()) as { error?: string };
+          if (!r2.ok) throw new Error(j2.error ?? `HTTP ${r2.status}`);
+          await reloadJob();
+        }
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -117,7 +155,7 @@ export default function StatusPage({ params }: { params: Promise<{ jobId: string
       });
       const json = (await res.json()) as { error?: string };
       if (!res.ok) throw new Error(json.error ?? `HTTP ${res.status}`);
-      setData(null);
+      await reloadJob();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -187,8 +225,7 @@ export default function StatusPage({ params }: { params: Promise<{ jobId: string
       });
       const json = (await res.json()) as { error?: string };
       if (!res.ok) throw new Error(json.error ?? `HTTP ${res.status}`);
-      // Wipe the local snapshot so the next tick re-renders fresh state.
-      setData(null);
+      await reloadJob();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -219,7 +256,7 @@ export default function StatusPage({ params }: { params: Promise<{ jobId: string
       });
       const json = (await res.json()) as { error?: string };
       if (!res.ok) throw new Error(json.error ?? `HTTP ${res.status}`);
-      setData(null);
+      await reloadJob();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -250,7 +287,7 @@ export default function StatusPage({ params }: { params: Promise<{ jobId: string
       });
       const json = (await res.json()) as { error?: string };
       if (!res.ok) throw new Error(json.error ?? `HTTP ${res.status}`);
-      setData(null);
+      await reloadJob();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
