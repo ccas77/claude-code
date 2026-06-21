@@ -68,27 +68,46 @@ const putMutable = async (prefix: string, data: unknown) => {
   return blob.url;
 };
 
+// Vercel Blob's list() metadata index is occasionally stale — it can
+// return 0 blobs for a prefix that absolutely has writes you can see
+// in the dashboard. Symptom: API returns "Job not found" for a job
+// whose JSON blobs are right there. Retry with backoff on empty results
+// to mask the hiccup, since 90%+ of the time a re-poll returns the
+// expected set.
 async function readLatestJSON<T>(prefix: string): Promise<T | null> {
-  try {
-    const result = await list({ prefix });
-    if (result.blobs.length === 0) return null;
-    result.blobs.sort(
-      (a, b) =>
-        new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime(),
-    );
-    const latest = result.blobs[0];
-    const res = await fetch(latest.url, { cache: "no-store" });
-    if (!res.ok) {
-      console.log(`[readLatestJSON ${prefix}] fetch !ok ${res.status}`);
-      return null;
+  const attempts = [0, 400, 900]; // ms backoff between tries
+  for (let i = 0; i < attempts.length; i++) {
+    if (attempts[i] > 0) {
+      await new Promise((r) => setTimeout(r, attempts[i]));
     }
-    return (await res.json()) as T;
-  } catch (e) {
-    console.log(
-      `[readLatestJSON ${prefix}] threw: ${e instanceof Error ? e.message : String(e)}`,
-    );
-    return null;
+    try {
+      const result = await list({ prefix });
+      if (result.blobs.length === 0) {
+        console.log(
+          `[readLatestJSON ${prefix}] list returned 0 blobs (attempt ${i + 1}/${attempts.length})`,
+        );
+        continue;
+      }
+      result.blobs.sort(
+        (a, b) =>
+          new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime(),
+      );
+      const latest = result.blobs[0];
+      const res = await fetch(latest.url, { cache: "no-store" });
+      if (!res.ok) {
+        console.log(
+          `[readLatestJSON ${prefix}] fetch !ok ${res.status} (attempt ${i + 1})`,
+        );
+        continue;
+      }
+      return (await res.json()) as T;
+    } catch (e) {
+      console.log(
+        `[readLatestJSON ${prefix}] threw on attempt ${i + 1}: ${e instanceof Error ? e.message : String(e)}`,
+      );
+    }
   }
+  return null;
 }
 
 // Save an artifact returned by a backend (HTTPS URL or data: URL) to a
