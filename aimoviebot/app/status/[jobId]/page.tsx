@@ -234,19 +234,22 @@ export default function StatusPage({ params }: { params: Promise<{ jobId: string
     setSavingShots(true);
     setError(null);
     try {
-      const merged: Shot[] = data.artifacts.shotList.map((s, i) => {
-        if (!draftShots[i]) return s;
-        const draft = draftShots[i];
-        // Strip blank dialogue rows the user left in the editor — the
-        // /api/video/shots schema requires speaker + line both non-empty.
-        return {
-          ...s,
-          ...draft,
-          dialogue: draft.dialogue
-            .map((d) => ({ speaker: d.speaker.trim(), line: d.line.trim() }))
-            .filter((d) => d.speaker && d.line),
-        };
-      });
+      // 1) Apply draft edits, 2) drop shots the user marked for delete,
+      // 3) renumber n sequentially so the saved list is 1..N contiguous.
+      const merged: Shot[] = data.artifacts.shotList
+        .map((s, i) => {
+          if (!draftShots[i]) return s;
+          const draft = draftShots[i];
+          return {
+            ...s,
+            ...draft,
+            dialogue: draft.dialogue
+              .map((d) => ({ speaker: d.speaker.trim(), line: d.line.trim() }))
+              .filter((d) => d.speaker && d.line),
+          };
+        })
+        .filter((_, i) => !deletedShotIndexes.has(i))
+        .map((s, i) => ({ ...s, n: i + 1 }));
       const res = await fetch("/api/video/shots", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -255,6 +258,7 @@ export default function StatusPage({ params }: { params: Promise<{ jobId: string
       const json = (await res.json()) as { error?: string };
       if (!res.ok) throw new Error(json.error ?? `HTTP ${res.status}`);
       setDraftShots(null);
+      setDeletedShotIndexes(new Set());
       await reloadJob();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -587,8 +591,10 @@ export default function StatusPage({ params }: { params: Promise<{ jobId: string
                         if (expanded) {
                           setExpandedTile(null);
                           setDraftShots(null);
+                          setDeletedShotIndexes(new Set());
                         } else {
                           setExpandedTile(i);
+                          setDeletedShotIndexes(new Set());
                           const seed: Record<number, Shot> = {};
                           for (const idx of shotIdxs) {
                             const s = (a.shotList ?? [])[idx];
@@ -666,13 +672,41 @@ export default function StatusPage({ params }: { params: Promise<{ jobId: string
                             ...(d ?? {}),
                             [idx]: { ...draft, ...p },
                           }));
+                        const isDeleted = deletedShotIndexes.has(idx);
                         return (
                           <div
                             key={`shot-${idx}`}
-                            className="space-y-3 pb-3 border-b border-stone-100 last:border-b-0"
+                            className={`space-y-3 pb-3 border-b border-stone-100 last:border-b-0 ${
+                              isDeleted ? "opacity-40" : ""
+                            }`}
                           >
-                            <div className="font-semibold text-stone-800">
-                              Shot {draft.n}
+                            <div className="flex items-center justify-between">
+                              <div
+                                className={`font-semibold text-stone-800 ${
+                                  isDeleted ? "line-through" : ""
+                                }`}
+                              >
+                                Shot {draft.n}
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setDeletedShotIndexes((s) => {
+                                    const next = new Set(s);
+                                    if (next.has(idx)) next.delete(idx);
+                                    else next.add(idx);
+                                    return next;
+                                  })
+                                }
+                                className={`text-xs rounded border px-2 py-0.5 ${
+                                  isDeleted
+                                    ? "border-stone-300 text-stone-600 hover:bg-stone-50"
+                                    : "border-red-200 text-red-700 hover:bg-red-50"
+                                }`}
+                                title="Mark this shot for deletion. Applied on Save shot edits. Chunks will redistribute across the remaining shots."
+                              >
+                                {isDeleted ? "Undo delete" : "× Delete shot"}
+                              </button>
                             </div>
                             <label className="block space-y-1">
                               <span className="text-xs uppercase tracking-wide text-stone-500">
@@ -788,13 +822,25 @@ export default function StatusPage({ params }: { params: Promise<{ jobId: string
                           </div>
                         );
                       })}
+                      {deletedShotIndexes.size > 0 ? (
+                        <p className="text-xs text-red-700 bg-red-50 border border-red-200 rounded p-2">
+                          {deletedShotIndexes.size} shot
+                          {deletedShotIndexes.size === 1 ? "" : "s"} will be
+                          removed on Save. Chunks redistribute across the
+                          remaining shots.
+                        </p>
+                      ) : null}
                       <div className="flex gap-2">
                         <button
                           onClick={saveShotEdits}
                           disabled={savingShots}
                           className="flex-1 text-sm bg-violet-700 text-white rounded px-3 py-2 disabled:bg-stone-300"
                         >
-                          {savingShots ? "Saving…" : "Save shot edits"}
+                          {savingShots
+                            ? "Saving…"
+                            : deletedShotIndexes.size > 0
+                              ? `Save edits + delete ${deletedShotIndexes.size}`
+                              : "Save shot edits"}
                         </button>
                         <button
                           onClick={() => regenerateAsset("storyboard", i)}
@@ -1312,8 +1358,10 @@ export default function StatusPage({ params }: { params: Promise<{ jobId: string
                             if (expanded) {
                               setExpandedTile(null);
                               setDraftShots(null);
+                              setDeletedShotIndexes(new Set());
                             } else {
                               setExpandedTile(i);
+                              setDeletedShotIndexes(new Set());
                               const seed: Record<number, Shot> = {};
                               for (const idx of shotIdxs) {
                                 const s = (a.shotList ?? [])[idx];
@@ -1389,13 +1437,41 @@ export default function StatusPage({ params }: { params: Promise<{ jobId: string
                                 ...(d ?? {}),
                                 [idx]: { ...draft, ...p },
                               }));
+                            const isDeleted = deletedShotIndexes.has(idx);
                             return (
                               <div
                                 key={`shot-${idx}`}
-                                className="space-y-3 pb-3 border-b border-stone-100 last:border-b-0"
+                                className={`space-y-3 pb-3 border-b border-stone-100 last:border-b-0 ${
+                                  isDeleted ? "opacity-40" : ""
+                                }`}
                               >
-                                <div className="font-semibold text-stone-800">
-                                  Shot {draft.n}
+                                <div className="flex items-center justify-between">
+                                  <div
+                                    className={`font-semibold text-stone-800 ${
+                                      isDeleted ? "line-through" : ""
+                                    }`}
+                                  >
+                                    Shot {draft.n}
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      setDeletedShotIndexes((s) => {
+                                        const next = new Set(s);
+                                        if (next.has(idx)) next.delete(idx);
+                                        else next.add(idx);
+                                        return next;
+                                      })
+                                    }
+                                    className={`text-xs rounded border px-2 py-0.5 ${
+                                      isDeleted
+                                        ? "border-stone-300 text-stone-600 hover:bg-stone-50"
+                                        : "border-red-200 text-red-700 hover:bg-red-50"
+                                    }`}
+                                    title="Mark this shot for deletion. Applied on Save shot edits. Chunks will redistribute across the remaining shots."
+                                  >
+                                    {isDeleted ? "Undo delete" : "× Delete shot"}
+                                  </button>
                                 </div>
                                 <label className="block space-y-1">
                                   <span className="text-xs uppercase tracking-wide text-stone-500">
@@ -1512,12 +1588,24 @@ export default function StatusPage({ params }: { params: Promise<{ jobId: string
                               </div>
                             );
                           })}
+                          {deletedShotIndexes.size > 0 ? (
+                            <p className="text-xs text-red-700 bg-red-50 border border-red-200 rounded p-2">
+                              {deletedShotIndexes.size} shot
+                              {deletedShotIndexes.size === 1 ? "" : "s"} will
+                              be removed on Save. Chunks redistribute across
+                              the remaining shots.
+                            </p>
+                          ) : null}
                           <button
                             onClick={saveShotEdits}
                             disabled={savingShots}
                             className="w-full text-sm bg-violet-700 text-white rounded px-3 py-2 disabled:bg-stone-300"
                           >
-                            {savingShots ? "Saving…" : "Save shot edits"}
+                            {savingShots
+                              ? "Saving…"
+                              : deletedShotIndexes.size > 0
+                                ? `Save edits + delete ${deletedShotIndexes.size}`
+                                : "Save shot edits"}
                           </button>
                         </div>
                       ) : null}
