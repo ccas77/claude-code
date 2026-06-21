@@ -99,11 +99,9 @@ export async function persistArtifact(
   }
   const key = withContentHash(baseKey, bytes);
   // Blob constructor in this TS lib version doesn't accept Uint8Array
-  // directly — wrap into an ArrayBuffer slice.
-  const ab = bytes.buffer.slice(
-    bytes.byteOffset,
-    bytes.byteOffset + bytes.byteLength,
-  );
+  // directly. Round through a fresh ArrayBuffer to satisfy BlobPart.
+  const ab = new ArrayBuffer(bytes.byteLength);
+  new Uint8Array(ab).set(bytes);
   const blob = await put(key, new Blob([ab], { type: ct }), {
     access: "public",
     addRandomSuffix: false,
