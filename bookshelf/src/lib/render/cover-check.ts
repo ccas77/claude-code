@@ -18,22 +18,22 @@ const Verdict = z.object({
   coverArtMatches: z
     .boolean()
     .describe(
-      'Same illustration / subject / composition / colour scheme as the reference cover. Artistic reinterpretation, brush-stroke differences, and minor colour shifts are fine - the question is whether it is recognisably the same artwork. FALSE only if the cover art is clearly a different image.',
+      'This is the THIS-EXACT-ARTWORK test, not the same-vibe test. Mark TRUE only when the illustration, layout, AND composition match the reference one-for-one. If the reference has heavy splatter and tentacles in all four corners and the render shows tentacles in two corners with a clean background, that is a re-imagined cover - FALSE, even if the same kinds of elements are present. If the reference shows three specific items in a specific arrangement and the render shows different items or a different arrangement, FALSE. Lighting, brush-stroke fidelity, and minor colour shifts to fit the scene are fine; structural composition changes are not. Imagine showing the rendered book to someone hunting that exact book in a shop: if they would walk past the rendered one because the cover looks different, mark FALSE.',
     ),
   titleMatches: z
     .boolean()
     .describe(
-      'Title text says the same words as the reference, where you can read it. If the title is angled, small, partially obscured, or unreadable but nothing about it contradicts the reference, mark TRUE - that is the book just photographed at an angle. Mark FALSE only when you can clearly read DIFFERENT words.',
+      'Title text says the same words as the reference. Photographic angle, small size, or partial shadow is fine if the visible portion is consistent with the reference. Mark FALSE if you can read clearly DIFFERENT words, OR if the title appears in a substantially different typographic style (e.g. reference uses a heavy condensed all-caps with splatter texture and the render uses a clean serif).',
     ),
   authorMatches: z
     .boolean()
     .describe(
-      'Author name matches the reference where legible. Same rule as title: unreadable does not fail it; only clearly-different words fail it.',
+      'Author name matches the reference where legible. Same rule as title: angled or in shadow is fine if consistent; clearly-different words OR significantly different placement (top vs bottom of cover, etc.) is FALSE.',
     ),
   notAStandin: z
     .boolean()
     .describe(
-      'This is the actual book from the reference, not a generic stand-in fitting the same genre. A stand-in is when the cover art is clearly different but happens to vibe similarly. If the cover art matches you can trust this one.',
+      'This is the actual book, not a generic stand-in with similar genre vibes. A stand-in is when the cover has the right subject matter (tentacles, skulls, knives, whatever) but is not THIS book - the specific composition and details are different. If coverArtMatches is FALSE for compositional reasons, notAStandin is also FALSE.',
     ),
   reason: z
     .string()
@@ -62,7 +62,7 @@ export async function verifyCoverMatch(
         {
           type: 'text',
           text:
-            'You are a fair-but-careful visual verifier. The reference is a flat cover image; the generated image is a photograph of the book in a scene, so the book may be tilted, small, or partly shadowed. Identity is what matters, not whether every word is legible. The only criterion to mark FALSE is one where you have clear evidence AGAINST it - never on "I cannot tell." If the cover art clearly matches the reference, the book is the right book. The single failure case you must catch is a stand-in: a cover whose art is clearly different but feels genre-adjacent. ' +
+            'You are a careful visual verifier. The reference is a flat cover image; the generated image is a photograph of the book in a scene. Photographic angle, lighting, and minor cropping are fine. What you are checking is whether the rendered book IS the reference book - same artwork, same title, same author, same compositional layout - not just "vibes the same way." A re-imagined cover that uses the same kinds of elements (tentacles, skulls, knives) in a different composition is NOT a match; it is a stand-in. The viewer of this video should be able to walk into a shop, find the rendered book on a shelf, and pick it up without doubt. ' +
             instruction,
         },
         { type: 'text', text: labelA },
