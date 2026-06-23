@@ -85,14 +85,41 @@ export async function runPost({ cardId, jobId }: RunArgs): Promise<void> {
     const ownerEmail = await getOwnerEmail(card.ownerId);
     const apiKey = getPostBridgeKeyForEmail(ownerEmail);
 
-    const mediaId = await uploadVideo(apiKey, card.videoBlobUrl, `card-${cardId}.mp4`);
-
-    const published = await createPost(apiKey, {
-      caption,
-      mediaIds: [mediaId],
-      accountIds: [accountId],
-      platform: card.platform as PostBridgePlatform,
-    });
+    // Idempotency guard. pg-boss retries the whole job on any throw - if
+    // step 1 (createPost) succeeded but a later step (results fetch, DB
+    // update on a flaky Neon connection) failed, the retry will call
+    // createPost AGAIN and Post Bridge will publish a SECOND time. If we
+    // already have a Post Bridge post id on this card, that means a
+    // previous attempt already created the post; skip straight to the
+    // result lookup and status update, do NOT call createPost again.
+    let publishedId: string;
+    if (card.postBridgePostId) {
+      await db.insert(schema.eventLog).values({
+        ownerId: card.ownerId,
+        cardId,
+        stage: 'post.retry_skip_create',
+        level: 'warn',
+        message: `runPost retry detected existing post_bridge_post_id; skipping createPost to avoid duplicate publish`,
+        payload: { jobId, existingPostId: card.postBridgePostId },
+      });
+      publishedId = card.postBridgePostId;
+    } else {
+      const mediaId = await uploadVideo(apiKey, card.videoBlobUrl, `card-${cardId}.mp4`);
+      const created = await createPost(apiKey, {
+        caption,
+        mediaIds: [mediaId],
+        accountIds: [accountId],
+        platform: card.platform as PostBridgePlatform,
+      });
+      publishedId = created.id;
+      // Stamp the post id IMMEDIATELY so a retry from this point on hits
+      // the guard above instead of double-posting.
+      await db
+        .update(schema.cards)
+        .set({ postBridgePostId: publishedId, updatedAt: new Date() })
+        .where(eq(schema.cards.id, cardId));
+    }
+    const published = { id: publishedId };
 
     // Per the toolkit pattern: immediately fetch per-post results to capture
     // share_url + post_result_id on our row. Don't paginate /v1/post-results
