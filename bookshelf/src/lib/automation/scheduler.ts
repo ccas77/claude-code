@@ -250,10 +250,15 @@ async function maybeFireOne(
     })
     .returning();
 
+  // Advance BOTH pointers so the next fire picks the next book AND the
+  // next clip from that book's eligible pool. Previously only bookPointer
+  // advanced; musicPointer was stuck at 0 forever, which meant every fire
+  // picked pool slot 0 - same clip every time, even with a 23-clip pool.
   await db
     .update(schema.automationConfigs)
     .set({
       bookPointer: (cfg.bookPointer + 1) % books.length,
+      musicPointer: cfg.musicPointer + 1,
       lastPostedAt: now,
       updatedAt: now,
     })
