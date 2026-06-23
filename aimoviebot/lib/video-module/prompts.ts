@@ -247,11 +247,59 @@ so aim for ~2 panels per clip — enough to breathe, not enough to rush.
 Use the uploaded character + location images as the sole sources of
 truth for identity and environment.
 
-ALL shots are composed for 9:16 VERTICAL framing. Favor full-body or
-medium verticals, stacked foreground/background depth, low and high
-angles, close-ups. Use wide shots sparingly and only ones that work in
-portrait. Vary shot sizes (EWS to ECU) and angles (eye/low/high/OTS/
-POV/tracking).
+ALL shots are composed for 9:16 VERTICAL framing.
+
+CAMERA APPROACH — standard two-person dialogue coverage. This is a
+conversation between two people in a location; cover it the way TV and
+film conventionally do, NOT as a montage of dynamic action angles.
+
+The shot vocabulary, and ONLY these:
+  - Wide TWO-SHOT: both characters in frame, establishes them in the
+    space.
+  - Over-the-shoulder (OTS) favoring each character: camera sits behind
+    one character's near shoulder, looking at the other. One OTS favors
+    A; the matching reverse OTS favors B.
+  - Close-up of each character SPEAKING: their face fills frame as they
+    deliver a line.
+  - Reaction close-up of each character LISTENING: the non-speaking
+    character's face while the other speaks.
+  - Optional cutaway / insert: a tight static shot of an object the
+    dialogue explicitly references (a ring, a key, a doorway). Sparingly,
+    only when the dialogue points to the object.
+
+NOT in the vocabulary, do not produce these:
+  - No low-angle hero shots, no high-angle bird's-eye, no Dutch angles.
+  - No tracking, dolly, crane, drone, or floating cameras.
+  - No POV unless the scene genuinely warrants it (a deliberate reveal of
+    what one character sees), and only once if at all.
+  - No 360-degree orbits, whip-pans, or Snorricam.
+
+CUTTING PATTERN:
+  - OPEN on the two-shot to establish the characters' spatial
+    relationship.
+  - Then alternate between speakers and reactions: speaker CU -> listener
+    reaction CU -> speaker OTS -> reverse OTS, varying as the dialogue
+    progresses.
+  - VARY shot size between consecutive shots. Never cut from a medium to
+    another near-identical medium. Alternate close-up / OTS / two-shot.
+  - Hold the 180-DEGREE LINE. Once you establish screen direction
+    (character A on screen-left, character B on screen-right), every
+    subsequent shot keeps them on those sides. Do not flip across the
+    line.
+
+CAMERA MOVEMENT:
+  - DEFAULT IS LOCKED-OFF / STATIC. The camera does not drift, pan, tilt,
+    track, dolly, or float. The framing is set and held.
+  - One allowed exception: a slow PUSH-IN reserved for the emotional peak
+    of the scene — a revelation, a turn, the moment the balance shifts.
+    Use AT MOST ONCE across the entire {shotCount}-shot list. Not every
+    shot, not multiple shots.
+  - No handheld, no shake.
+
+PERFORMANCE STAYS PHYSICALLY ACTIVE even though the camera holds still.
+Characters keep reacting, breathing, shifting weight, micro-gesturing
+throughout. A static camera does not mean static people; the body acting
+in the action and performance fields stays charged and specific.
 
 Refer to characters BY NAME in action and performance (e.g. "Mira
 leans against the door"), so the right reference image is used for
@@ -297,7 +345,10 @@ OUTPUT FORMAT: return JSON ONLY (no prose, no fences). The top-level
 value is an array of exactly {shotCount} shot objects, each shaped:
 {
   "n": 1..{shotCount} (1-indexed, in order),
-  "camera": "framing/angle/movement",
+  "camera": "shot type from the coverage vocabulary (wide two-shot / OTS
+             favoring NAME / CU NAME speaking / CU NAME reacting / insert
+             of OBJECT) plus framing detail. Static unless this is the one
+             allowed slow push-in.",
   "action": "the ONE physical intention in this shot. Character by name.
              No body-direction here (that goes in performance).",
   "performance": "the ONE committed body beat. Vivid, specific, four-

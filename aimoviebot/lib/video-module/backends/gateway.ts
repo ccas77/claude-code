@@ -1,4 +1,4 @@
-import { generateText } from "ai";
+import { generateImage, generateText } from "ai";
 import { gateway } from "@ai-sdk/gateway";
 import {
   ASPECT_RATIO,
@@ -114,9 +114,33 @@ export async function gatewayGenerateJSON<T>(args: {
   }
 }
 
-// Image gen via Gateway was removed. All image stages now route through
-// Higgsfield with model="gpt_image_2" (see lib/video-module/backends/
-// higgsfield.ts generateImage). Single backend, no double auth surface.
+// ---- image gen (storyboard fallback) ----
+// Used when Higgsfield is fully down (Cloudflare 504, MCP transport error,
+// etc.) and stage 4 needs a storyboard rendered. The Gateway hosts
+// openai/gpt-image-2 — the same model family Higgsfield serves — so the
+// existing stage-4 prompts work without modification. Reference images
+// (character sheets + location sheet) are passed through to preserve
+// character identity. Returns a data: URL that persistArtifact knows how
+// to decode straight to Blob.
+export async function gatewayGenerateImage(args: {
+  prompt: string;
+  imageRefs: string[];
+}): Promise<{ url: string; hfJobId?: string }> {
+  const refs = await Promise.all(
+    args.imageRefs.map((u) => fetchImageWithCorrectMediaType(u)),
+  );
+  const result = await generateImage({
+    model: gateway.imageModel(MODELS.image.gateway),
+    prompt: {
+      text: args.prompt,
+      images: refs.map((r) => r.data),
+    },
+    aspectRatio: ASPECT_RATIO,
+  });
+  const file = result.image;
+  const mediaType = file.mediaType ?? "image/png";
+  return { url: `data:${mediaType};base64,${file.base64}` };
+}
 
 // ---- video gen ----
 // Gateway video for Seedance. The AI SDK doesn't (as of 6.x) expose a stable

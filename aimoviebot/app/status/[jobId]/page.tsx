@@ -703,7 +703,7 @@ export default function StatusPage({ params }: { params: Promise<{ jobId: string
                                     ? "border-stone-300 text-stone-600 hover:bg-stone-50"
                                     : "border-red-200 text-red-700 hover:bg-red-50"
                                 }`}
-                                title="Mark this shot for deletion. Applied on Save shot edits. Chunks will redistribute across the remaining shots."
+                                title="Mark this shot for deletion. Applied on Save shot edits."
                               >
                                 {isDeleted ? "Undo delete" : "× Delete shot"}
                               </button>
@@ -822,14 +822,6 @@ export default function StatusPage({ params }: { params: Promise<{ jobId: string
                           </div>
                         );
                       })}
-                      {deletedShotIndexes.size > 0 ? (
-                        <p className="text-xs text-red-700 bg-red-50 border border-red-200 rounded p-2">
-                          {deletedShotIndexes.size} shot
-                          {deletedShotIndexes.size === 1 ? "" : "s"} will be
-                          removed on Save. Chunks redistribute across the
-                          remaining shots.
-                        </p>
-                      ) : null}
                       <div className="flex gap-2">
                         <button
                           onClick={saveShotEdits}
@@ -1468,7 +1460,7 @@ export default function StatusPage({ params }: { params: Promise<{ jobId: string
                                         ? "border-stone-300 text-stone-600 hover:bg-stone-50"
                                         : "border-red-200 text-red-700 hover:bg-red-50"
                                     }`}
-                                    title="Mark this shot for deletion. Applied on Save shot edits. Chunks will redistribute across the remaining shots."
+                                    title="Mark this shot for deletion. Applied on Save shot edits."
                                   >
                                     {isDeleted ? "Undo delete" : "× Delete shot"}
                                   </button>
@@ -1588,14 +1580,6 @@ export default function StatusPage({ params }: { params: Promise<{ jobId: string
                               </div>
                             );
                           })}
-                          {deletedShotIndexes.size > 0 ? (
-                            <p className="text-xs text-red-700 bg-red-50 border border-red-200 rounded p-2">
-                              {deletedShotIndexes.size} shot
-                              {deletedShotIndexes.size === 1 ? "" : "s"} will
-                              be removed on Save. Chunks redistribute across
-                              the remaining shots.
-                            </p>
-                          ) : null}
                           <button
                             onClick={saveShotEdits}
                             disabled={savingShots}

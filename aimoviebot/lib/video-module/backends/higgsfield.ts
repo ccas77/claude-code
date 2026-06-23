@@ -102,7 +102,15 @@ function firstResultRecord(
 // Higgsfield doesn't accept raw external URLs as media inputs; everything
 // must be imported first and referenced by media_id. We give it Blob URLs
 // and get back a Higgsfield-internal id.
-export async function importMedia(blobUrl: string): Promise<string> {
+//
+// Higgsfield's import-fetch is flaky and sometimes returns
+// "Something went wrong. Please try again. Request ID: …". Storyboard
+// regen kicks off N imports in parallel via Promise.all, so a single
+// transient import failure aborts the whole regen. We retry the import
+// up to 3 times total with linear backoff before surfacing the error.
+// media_import_url is idempotent (it just registers a fetchable URL on
+// their side), so retrying is safe.
+async function importMediaOnce(blobUrl: string): Promise<string> {
   return withClient(async (client) => {
     const res = await client.callTool({
       name: "media_import_url",
@@ -134,6 +142,21 @@ export async function importMedia(blobUrl: string): Promise<string> {
     }
     return mediaId;
   });
+}
+
+export async function importMedia(blobUrl: string): Promise<string> {
+  let lastErr: unknown;
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      return await importMediaOnce(blobUrl);
+    } catch (e) {
+      lastErr = e;
+      if (attempt < 3) {
+        await new Promise((r) => setTimeout(r, attempt * 1500));
+      }
+    }
+  }
+  throw lastErr;
 }
 
 // ---- generate_image / generate_video ----

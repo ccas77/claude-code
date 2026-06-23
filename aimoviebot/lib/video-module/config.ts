@@ -83,6 +83,10 @@ export const MODELS = {
     // literal setting, not as inspiration. If the slug name is wrong,
     // Higgsfield will tell us with a clear error.
     higgsfield: "gpt_image_2",
+    // Same model family via Vercel AI Gateway. Used as a fallback when
+    // Higgsfield's MCP server is unreachable so storyboard regen still
+    // works during their outages.
+    gateway: "openai/gpt-image-2",
   },
   shotList: { gateway: "anthropic/claude-sonnet-4.6" },
   video: {

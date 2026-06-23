@@ -12,7 +12,11 @@ import {
   generateImage as hgImage,
   generateVideo as hgVideo,
 } from "./backends/higgsfield";
-import { gatewayGenerateVideo } from "./backends/gateway";
+import {
+  gatewayGenerateImage,
+  gatewayGenerateText,
+  gatewayGenerateVideo,
+} from "./backends/gateway";
 import { withFallback } from "./backends/withFallback";
 import {
   renderStage1,
@@ -445,20 +449,32 @@ export async function stage4OneStoryboard(
     characters: job.characters,
   });
   const modelOverride = await loadImageModelOverride(jobId);
-  const r = await tryWithNsfwFallback(modelOverride, async (model) =>
-    hgImage({
-      prompt,
-      imageRefs: refs,
-      modelOverride: model,
-      inflight: {
-        jobId,
-        stage: "stage4",
-        label: `Storyboard ${chunkIndex + 1}/${total}`,
-      },
-    }),
+  // Primary: Higgsfield (with NSFW model swap + prompt softening chain).
+  // Fallback: Vercel AI Gateway with the same gpt-image-2 model. The
+  // fallback fires when Higgsfield's MCP server is unreachable (Cloudflare
+  // 504, transport error, etc.) so a storyboard regen still resolves
+  // during Higgsfield outages.
+  const { result, servedBy } = await withFallback(
+    () =>
+      tryWithNsfwFallbackAndSoftening({
+        prompt,
+        modelOverride,
+        call: async (model, p) =>
+          hgImage({
+            prompt: p,
+            imageRefs: refs,
+            modelOverride: model,
+            inflight: {
+              jobId,
+              stage: "stage4",
+              label: `Storyboard ${chunkIndex + 1}/${total}`,
+            },
+          }),
+      }),
+    () => gatewayGenerateImage({ prompt, imageRefs: refs }),
   );
-  const url = await persistArtifact(keys.storyboardChunk(jobId, chunkIndex + 1), r.url);
-  return { url, backend: "higgsfield" };
+  const url = await persistArtifact(keys.storyboardChunk(jobId, chunkIndex + 1), result.url);
+  return { url, backend: servedBy };
 }
 
 // Stage 4: storyboard grid image (legacy, batched). The workflow now
@@ -489,29 +505,42 @@ export async function stage4(
         shots: chunkShots,
         characters: args.characters,
       });
-      const r = await tryWithNsfwFallback(modelOverride, async (model) =>
-        hgImage({
-          prompt,
-          imageRefs: refs,
-          modelOverride: model,
-          inflight: {
-            jobId,
-            stage: "stage4",
-            label: `Storyboard ${i + 1}/${total}`,
-          },
-        }),
+      const { result, servedBy } = await withFallback(
+        () =>
+          tryWithNsfwFallbackAndSoftening({
+            prompt,
+            modelOverride,
+            call: async (model, p) =>
+              hgImage({
+                prompt: p,
+                imageRefs: refs,
+                modelOverride: model,
+                inflight: {
+                  jobId,
+                  stage: "stage4",
+                  label: `Storyboard ${i + 1}/${total}`,
+                },
+              }),
+          }),
+        () => gatewayGenerateImage({ prompt, imageRefs: refs }),
       );
       const url = await persistArtifact(
         keys.storyboardChunk(jobId, i + 1),
-        r.url,
+        result.url,
       );
-      return { url, hfJobId: r.hfJobId };
+      return { url, hfJobId: result.hfJobId, servedBy };
     }),
   );
   const storyboardUrls = results.map((r) => r.url);
   const burnedHfJobIds = results
     .map((r) => r.hfJobId)
     .filter((x): x is string => Boolean(x));
+  // If any chunk fell back to the gateway, record stage4 as gateway-served.
+  // We don't record per-chunk backend (storage doesn't model that today),
+  // so the overall stage label reflects whether any chunk needed fallback.
+  const stage4ServedBy = results.some((r) => r.servedBy === "gateway")
+    ? "gateway"
+    : "higgsfield";
   await updateJob(jobId, (j) => {
     const existing = j.artifacts.inflightHiggsfieldJobs ?? [];
     return {
@@ -523,7 +552,7 @@ export async function stage4(
           (e) => !burnedHfJobIds.includes(e.hfJobId),
         ),
       },
-      servedBy: { ...(j.servedBy ?? {}), stage4: "higgsfield" },
+      servedBy: { ...(j.servedBy ?? {}), stage4: stage4ServedBy },
     };
   });
   return { url: storyboardUrls[0], backend: "higgsfield" };
@@ -556,28 +585,123 @@ function chunkShots(shots: ShotList, n: number): ShotList[] {
   return out;
 }
 
+// NSFW moderation chain for stage 4 storyboard images.
+//
 // gpt_image_2 trips Higgsfield's NSFW moderation more aggressively than
 // nano_banana_pro (especially on stylized character art with implied
-// contact). If a single chunk fails with status=nsfw we retry just that
-// chunk with nano_banana_pro instead of failing the whole stage. The
-// other chunks (which may have succeeded already with gpt_image_2) keep
-// their default-model results.
-async function tryWithNsfwFallback<T>(
-  preferredOverride: string | undefined,
-  call: (model: string | undefined) => Promise<T>,
-): Promise<T> {
-  try {
-    return await call(preferredOverride);
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
-    const isNsfwOrIp = /\bnsfw\b|ip_detected/i.test(msg);
-    // If the user explicitly chose a model and it failed for moderation,
-    // honor that choice — don't silently switch.
-    if (!isNsfwOrIp || preferredOverride) {
-      throw e;
+// contact / sexually-coded violence). We walk a 4-attempt chain:
+//   1. preferred model + original prompt
+//   2. nano_banana_pro + original prompt
+//   3. preferred model + softened prompt (LLM-rewrites the trippy bits)
+//   4. nano_banana_pro + softened prompt
+//
+// IP_detected (Higgsfield's own copyright/IP guard) is a different beast —
+// it surfaces immediately and we don't try to soften around it.
+//
+// If the user explicitly chose a model (modelOverride), we honor it for
+// BOTH the original-prompt and softened-prompt passes — no silent switch.
+const NSFW_PATTERN = /\bnsfw\b/i;
+const IP_PATTERN = /ip_detected/i;
+
+function classifyImageError(e: unknown): "nsfw" | "ip" | "other" {
+  const msg = e instanceof Error ? e.message : String(e);
+  if (IP_PATTERN.test(msg)) return "ip";
+  if (NSFW_PATTERN.test(msg)) return "nsfw";
+  return "other";
+}
+
+// Ask the Gateway LLM to rewrite a stage-4 prompt so the explicit
+// violence/sexual-violence imagery softens but the dramatic tension and
+// camera direction survive. Output is a single string we feed straight
+// back to Higgsfield. Intentionally genre-neutral — the same softener
+// runs for any storyboard, regardless of the story's tone.
+async function softenImagePrompt(rawPrompt: string): Promise<string> {
+  const system = [
+    "You rewrite a storyboard image prompt so it passes strict image-generation moderation.",
+    "",
+    "Keep:",
+    "- The camera direction, framing, and shot composition exactly.",
+    "- The setting, props, lighting, character names, costume, and overall mood.",
+    "- The dramatic tension between the characters. The scene should still read as charged.",
+    "",
+    "Soften or remove:",
+    "- Explicit hands on throat, choking, strangling. Rewrite to a hand near the collarbone, jaw, or shoulder.",
+    "- Phrases that frame a character's throat as exposed, vulnerable, or offered.",
+    "- Sexualised dominance language (taking, claiming, possessing) — imply the dynamic via posture instead.",
+    "- BDSM-coded items mentioned by name (choker, collar, leash, restraints) — remove the named callout.",
+    "- Explicit struggle language (fighting the grip, wrenching free) — restate as standing firm, stepping back, holding ground.",
+    "",
+    "Do not bowdlerize. The rewritten prompt should still feel dangerous and cinematic, just not graphically violent or sexually coded.",
+    "Output ONLY the rewritten prompt text, no preamble, no commentary, no markdown fences.",
+  ].join("\n");
+  const text = await gatewayGenerateText({
+    prompt: `Rewrite this storyboard prompt:\n\n${rawPrompt}`,
+    system,
+  });
+  return text.trim();
+}
+
+async function tryWithNsfwFallbackAndSoftening<T>(args: {
+  prompt: string;
+  modelOverride: string | undefined;
+  call: (model: string | undefined, prompt: string) => Promise<T>;
+}): Promise<T> {
+  // Model chain. With a user-set override, both passes use only that
+  // model. Without override, gpt_image_2 (undefined => MODELS.image
+  // default) first, then nano_banana_pro.
+  const modelChain: (string | undefined)[] = args.modelOverride
+    ? [args.modelOverride]
+    : [undefined, "nano_banana_pro"];
+
+  let lastError: unknown;
+
+  // Pass 1: original prompt across the model chain.
+  for (const model of modelChain) {
+    try {
+      return await args.call(model, args.prompt);
+    } catch (e) {
+      lastError = e;
+      const kind = classifyImageError(e);
+      if (kind === "ip") throw e;
+      if (kind === "other") throw e;
+      // NSFW: keep going through the chain.
     }
-    return await call("nano_banana_pro");
   }
+
+  // Every model rejected the original prompt for NSFW. Soften and retry.
+  let softened: string;
+  try {
+    softened = await softenImagePrompt(args.prompt);
+  } catch (softenErr) {
+    // Gateway/LLM failure during softening — surface the original NSFW
+    // error rather than a confusing softener error.
+    console.warn(
+      `[stage4] prompt softening failed; surfacing original NSFW error. softenErr=${
+        softenErr instanceof Error ? softenErr.message : String(softenErr)
+      }`,
+    );
+    throw lastError;
+  }
+  console.warn(
+    `[stage4] NSFW across all models; retrying with softened prompt. originalHead=${args.prompt.slice(0, 200)} softenedHead=${softened.slice(0, 200)}`,
+  );
+
+  // Pass 2: softened prompt across the model chain.
+  for (const model of modelChain) {
+    try {
+      return await args.call(model, softened);
+    } catch (e) {
+      lastError = e;
+      const kind = classifyImageError(e);
+      if (kind === "ip") throw e;
+      if (kind === "other") throw e;
+      // NSFW on softened prompt: continue to next model.
+    }
+  }
+
+  // All 4 attempts NSFW. Surface the last error so the UI shows the
+  // standard "Higgsfield image job ... ended in status nsfw" line.
+  throw lastError;
 }
 
 // Stage 5 ONE-CLIP renderer. Idempotent: if the chunk's video already
