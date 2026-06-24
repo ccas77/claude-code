@@ -82,7 +82,7 @@ export async function gatewayGenerateText(args: {
     userContent.push({ type: "image", image: data, mediaType });
   }
   const { text } = await generateText({
-    model: gateway(modelId),
+    model: gateway.languageModel(modelId),
     ...(args.system ? { system: args.system } : {}),
     messages: [{ role: "user", content: userContent }],
   });
