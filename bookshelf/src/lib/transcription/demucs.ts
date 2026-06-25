@@ -38,21 +38,38 @@ async function r<T>(path: string, init: RequestInit): Promise<T> {
   return res.json() as Promise<T>;
 }
 
-export async function separateVocals(audioUrl: string): Promise<string> {
-  const created = await r<Prediction>(
-    `/models/${MODEL_OWNER}/${MODEL_NAME}/predictions`,
-    {
-      method: 'POST',
-      body: JSON.stringify({
-        input: {
-          audio: audioUrl,
-          stem: 'vocals',
-          model: 'htdemucs',
-          output_format: 'mp3',
-        },
-      }),
-    },
+/**
+ * `ryan5453/demucs` is a community model on Replicate, so the
+ * `/v1/models/{owner}/{name}/predictions` shortcut (which only works for
+ * official Replicate models) returns 404. The supported path for
+ * community models is POSTing to `/v1/predictions` with a `version`
+ * field pinned to a specific version hash. We pull the latest version
+ * once per call so we don't have to keep a hash up to date in code.
+ */
+async function getLatestVersionId(): Promise<string> {
+  const versions = await r<{ results: { id: string }[] }>(
+    `/models/${MODEL_OWNER}/${MODEL_NAME}/versions`,
+    { method: 'GET' },
   );
+  const latest = versions.results?.[0]?.id;
+  if (!latest) throw new Error(`No published versions for ${MODEL_OWNER}/${MODEL_NAME}`);
+  return latest;
+}
+
+export async function separateVocals(audioUrl: string): Promise<string> {
+  const version = await getLatestVersionId();
+  const created = await r<Prediction>('/predictions', {
+    method: 'POST',
+    body: JSON.stringify({
+      version,
+      input: {
+        audio: audioUrl,
+        stem: 'vocals',
+        model: 'htdemucs',
+        output_format: 'mp3',
+      },
+    }),
+  });
 
   let pred = created;
   const startedAt = Date.now();
