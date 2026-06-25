@@ -4,50 +4,70 @@ import { z } from 'zod';
 /**
  * Cover identity verifier.
  *
- * The reference is a flat cover scan. The render is a photo of a styled
- * scene with the book sitting in it. The check we want is: locate the
- * book inside the photo and look ONLY at the cover artwork on that book.
- * Everything else in the photo (blanket, props, lighting, surface) is
- * meant to vary - it's the whole point of the render. We are not
- * comparing scene compositions; we are comparing the book's own cover.
+ * IMAGE A is the flat reference cover. IMAGE B is a styled scene
+ * photograph with the book sitting inside it. We are checking the
+ * book's own cover, not the photograph's composition. The blanket,
+ * props, lighting, and surroundings in B are deliberately varied
+ * scene dressing and never count toward this check.
  *
- * Past versions of this prompt told the model to enforce "compositional
- * layout one-for-one." The model read that against the whole frame and
- * rejected three correct renders out of five. The current version is
- * scoped tightly: find the book, compare the cover art, return one
- * verdict.
+ * The structure is: force the model to first WRITE DOWN what's on the
+ * rendered cover (illustration, title text, author text, top/bottom
+ * placement). Only then ask the per-criterion booleans. If the model
+ * has to commit to "I see an empty keyhole and the title 'THE KEYHOLE'
+ * at the top" before voting, it stops shrugging. All four booleans must
+ * pass; one failure is a failure.
  *
  * Model: google/gemini-2.5-pro via Vercel AI Gateway. Pro is much better
- * than Flash at small / angled subject detail (the keyhole graphic on a
- * 200px-wide book in a 1080-tall photo). Cost ~$0.0025 per check; renders
+ * than Flash at small / angled subject detail. ~$0.0025 per check; renders
  * run at most 3 attempts, so ~$0.0076 ceiling per render.
  */
 
 const MODEL = 'google/gemini-2.5-pro';
 
 const Verdict = z.object({
-  sameBook: z
+  referenceObservation: z
+    .string()
+    .max(220)
+    .describe(
+      'Describe IMAGE A (the flat reference cover) in one sentence: the central illustration / motif, the title text (exact words), the author text (exact words), and whether the title sits above or below the author. Example: "Central illustration is a keyhole with a small figure visible through it; title \'THE KEYHOLE\' sits below the keyhole; author \'GIGI STYX\' sits below the title."',
+    ),
+  renderedObservation: z
+    .string()
+    .max(220)
+    .describe(
+      "Find the book inside IMAGE B and describe ONLY its cover in one sentence (ignore the blanket, props, surface, lighting, skull, knife, key, plant, etc.): the central illustration / motif, the title text (exact words if legible, else 'not legible'), the author text (exact words if legible, else 'not legible'), and the relative placement (title above or below author). Be specific about the motif - 'keyhole with figure visible through it' is different from 'empty keyhole' is different from 'eye visible through keyhole'.",
+    ),
+  coverArtworkMatches: z
     .boolean()
     .describe(
-      'TRUE when the book shown in IMAGE B is the SAME book as IMAGE A. Look only at the book itself in IMAGE B - the props, surface, lighting, and surroundings are deliberately varied scene dressing and do NOT count. The cover artwork on that book must match the reference: same main illustration / motif, same title text, same author text, same arrangement of those elements on the cover. If the book in B is angled, small, partially in shadow, or slightly cropped, that is fine - read what you can see. FALSE if the cover art uses a different motif (e.g. reference has a keyhole with a figure inside it, render shows an empty keyhole or an eye instead), if the title or author text on the cover reads as different words where legible, or if title / author placement on the cover is flipped (e.g. reference has title above author, render has author above title).',
+      "Does the central illustration / motif on the rendered cover MATCH the reference? Compare your two observations above, not vibes. If the reference shows a keyhole with a figure inside it and the rendered cover shows an empty keyhole, FALSE - different motif. If the reference shows a figure in the keyhole and the rendered shows an eye in the keyhole, FALSE - different motif. Same kind-of-thing isn't enough; it must be the same specific illustration. Minor colour or lighting shifts from being photographed are fine.",
     ),
-  artworkObservation: z
-    .string()
-    .max(160)
+  titleTextMatches: z
+    .boolean()
     .describe(
-      "One short sentence describing what's on the cover IN IMAGE B (e.g. 'keyhole with small figure visible through it'). Forces you to actually look at the rendered cover instead of guessing.",
+      "Does the title text on the rendered cover read as the SAME WORDS as the reference, where legible? If the title is partially shadowed or angled but the visible letters are consistent with the reference, TRUE. If you can clearly read different words, FALSE. If the title is entirely not legible (deep shadow, extreme crop), default to TRUE - don't punish photographic conditions.",
+    ),
+  authorTextMatches: z
+    .boolean()
+    .describe(
+      "Does the author text on the rendered cover read as the SAME WORDS as the reference, where legible? Same rule as title: partial visibility consistent with the reference is TRUE; clearly-different words are FALSE; entirely unreadable defaults to TRUE.",
+    ),
+  layoutMatches: z
+    .boolean()
+    .describe(
+      "Is the title vs author PLACEMENT on the rendered cover the same as the reference (e.g. both have title above author, or both have title below author)? FALSE if the reference has title-above-author but the rendered cover has author-above-title, or vice versa. Use your two observations above. This is about the cover's own internal layout, NOT the photograph's framing.",
     ),
   reason: z
     .string()
     .max(240)
     .describe(
-      'If sameBook is FALSE, one short sentence on what differs on the cover. If TRUE, "matches".',
+      'If any boolean is FALSE, one short sentence naming which one and why (referencing your observations). If all TRUE, "matches".',
     ),
 });
 
-const SET_INSTRUCTION = `IMAGE A shows a set of books (a duet, trilogy, series). IMAGE B is a generated photograph featuring that set together inside a styled scene. Locate the books in B and look only at their covers. Each book in B must be the corresponding book from A - same cover art, same title, same author, same arrangement on each cover. A missing book or a stand-in cover for any one of them is FALSE. The props and surface around the books are deliberately varied scene dressing and do not count.`;
+const SET_INSTRUCTION = `IMAGE A shows a set of books (a duet, trilogy, series). IMAGE B is a generated scene with that set sitting inside it. Apply the cover criteria across the WHOLE set: a missing book OR a stand-in cover for any one of them fails the relevant criterion. The blanket, props, surface, lighting, etc. in B are deliberately varied and do NOT count toward this check.`;
 
-const SINGLE_INSTRUCTION = `IMAGE A is the original flat book cover. IMAGE B is a generated photograph of a styled scene with the book sitting in it. Locate the book in B and look only at its cover. Compare only the cover artwork on that book to IMAGE A. The blanket, table, props, skull, knife, key, plants, lighting, etc. in B are deliberately varied scene dressing and do not count - do NOT use them as evidence either way. You are not comparing the two whole images; you are comparing the cover of the book in B to IMAGE A.`;
+const SINGLE_INSTRUCTION = `IMAGE A is the flat reference cover. IMAGE B is a generated scene with the book sitting inside it. Locate the book in B and look ONLY at its cover. The blanket, table, props, skull, knife, key, plant, lighting, etc. in B are deliberately varied scene dressing and do NOT count toward this check. You are not comparing the two whole images; you are comparing the cover of the book in B to IMAGE A.`;
 
 export type CoverCheckResult = { ok: boolean; reason: string };
 
@@ -58,7 +78,7 @@ export async function verifyCoverMatch(
 ): Promise<CoverCheckResult> {
   const instruction = kind === 'set' ? SET_INSTRUCTION : SINGLE_INSTRUCTION;
   const labelA =
-    kind === 'set' ? 'IMAGE A (original cover set, flat):' : 'IMAGE A (original cover, flat):';
+    kind === 'set' ? 'IMAGE A (reference cover set, flat):' : 'IMAGE A (reference cover, flat):';
 
   const messages: ModelMessage[] = [
     {
@@ -69,7 +89,7 @@ export async function verifyCoverMatch(
           text:
             'You are verifying that the book shown inside a generated scene photograph is the same book as a reference cover. ' +
             instruction +
-            ' Photographic angle, lighting, partial shadow, and small size are fine - if you can see enough of the cover to make a call, make it. The bar: someone hunting this exact book in a shop should be able to pick up the rendered book and know it is the same one.',
+            ' First write down what you see on the reference cover, then write down what you see on the rendered cover (ignoring the scene around it), then answer the per-criterion booleans against your two observations. Do not skip the observation fields. Photographic angle, lighting, partial shadow, and small size are fine - if the visible portion is consistent with the reference, that criterion passes; if a portion is entirely unreadable, default to passing rather than punishing photographic conditions. The bar: someone hunting this exact book in a shop should be able to pick up the rendered book and know it is the same one.',
         },
         { type: 'text', text: labelA },
         { type: 'image', image: new URL(originalCoverUrl) },
@@ -86,10 +106,20 @@ export async function verifyCoverMatch(
       messages,
     });
     const v = result.object;
-    const reason = v.sameBook
-      ? `matches (${v.artworkObservation})`
-      : `${v.reason} | observed: ${v.artworkObservation}`.slice(0, 300);
-    return { ok: v.sameBook, reason };
+    const ok =
+      v.coverArtworkMatches &&
+      v.titleTextMatches &&
+      v.authorTextMatches &&
+      v.layoutMatches;
+    const failed: string[] = [];
+    if (!v.coverArtworkMatches) failed.push('cover artwork');
+    if (!v.titleTextMatches) failed.push('title text');
+    if (!v.authorTextMatches) failed.push('author text');
+    if (!v.layoutMatches) failed.push('layout');
+    const summary = ok
+      ? `matches | rendered: ${v.renderedObservation}`
+      : `${failed.join(', ')} failed. ${v.reason} | rendered: ${v.renderedObservation}`;
+    return { ok, reason: summary.slice(0, 360) };
   } catch (e) {
     return {
       ok: true,
