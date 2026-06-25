@@ -141,6 +141,14 @@ export async function runRender({ cardId, jobId }: RunArgs): Promise<void> {
           fallback: candidate.fallback || attempt > 0,
         });
         providers.push({ step: 'cover-check', provider: 'gemini-2.5-pro', fallback: false });
+        await db.insert(schema.eventLog).values({
+          ownerId: card.ownerId,
+          cardId,
+          stage: 'cover-check.accept',
+          level: 'info',
+          message: `attempt ${attempt + 1}/${MAX_IMAGE_ATTEMPTS} accepted: ${check.reason}`,
+          payload: { jobId, attempt, candidateUrl: candidate.url, referenceUrl: coverUrl },
+        });
         break;
       }
 
@@ -150,14 +158,14 @@ export async function runRender({ cardId, jobId }: RunArgs): Promise<void> {
         stage: 'cover-check.reject',
         level: 'warn',
         message: `attempt ${attempt + 1}/${MAX_IMAGE_ATTEMPTS} rejected: ${check.reason}`,
-        payload: { jobId, attempt, candidateUrl: candidate.url },
+        payload: { jobId, attempt, candidateUrl: candidate.url, referenceUrl: coverUrl },
       });
     }
 
     if (!image) {
       if (imageErr) throw imageErr;
       throw new Error(
-        `cover verification failed after ${MAX_IMAGE_ATTEMPTS} attempts; image gen kept hallucinating`,
+        `cover-check rejected all ${MAX_IMAGE_ATTEMPTS} generated images; see cover-check.reject events for the per-attempt observations`,
       );
     }
 
