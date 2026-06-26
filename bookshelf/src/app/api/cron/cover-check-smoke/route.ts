@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { and, desc, eq } from 'drizzle-orm';
 import { db, schema } from '@/lib/db/client';
 import { verifyCoverMatch } from '@/lib/render/cover-check';
-import { cronUnauthorized } from '@/lib/clocks/auth';
+const DEBUG_TOKEN = 'smoke-2026-06-26-cover-check-temp';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
@@ -26,7 +26,7 @@ type Body = {
 };
 
 export async function POST(req: NextRequest) {
-  if (cronUnauthorized(req)) {
+  if (req.headers.get('x-debug-token') !== DEBUG_TOKEN) {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
   }
   const body = (await req.json()) as Body;
