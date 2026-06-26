@@ -104,6 +104,7 @@ export async function verifyCoverMatch(
       model: MODEL,
       schema: Verdict,
       messages,
+      temperature: 0,
     });
     const v = result.object;
     const ok =
