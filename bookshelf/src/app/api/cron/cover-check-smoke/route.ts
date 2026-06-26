@@ -1,40 +1,42 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { eq } from 'drizzle-orm';
+import { db, schema } from '@/lib/db/client';
 import { verifyCoverMatch } from '@/lib/render/cover-check';
+import { cronUnauthorized } from '@/lib/clocks/auth';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
 
 /**
- * Smoke-test the cover-check verifier. POST a reference URL plus a list
- * of candidate URLs; get back one verdict per candidate. Used to confirm
- * a prompt change behaves correctly against a known-labelled set without
- * burning image-gen credits on a fresh render.
+ * Smoke-test the cover-check verifier. POST { bookId, candidates[] };
+ * the route looks up the book's reference cover URL and runs the verifier
+ * against each candidate. Used to confirm a prompt change behaves
+ * correctly against known-labelled images without burning a real render.
  */
 
-type Body = {
-  reference: string;
-  candidates: string[];
-  kind?: 'single' | 'set';
-};
+type Body = { bookId: string; candidates: string[]; kind?: 'single' | 'set' };
 
 export async function POST(req: NextRequest) {
-  const secret = process.env.CRON_SECRET;
-  if (secret && req.headers.get('authorization') !== `Bearer ${secret}`) {
+  if (cronUnauthorized(req)) {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
   }
   const body = (await req.json()) as Body;
-  if (!body.reference || !Array.isArray(body.candidates) || !body.candidates.length) {
-    return NextResponse.json({ error: 'reference and candidates required' }, { status: 400 });
+  if (!body.bookId || !Array.isArray(body.candidates) || !body.candidates.length) {
+    return NextResponse.json({ error: 'bookId and candidates required' }, { status: 400 });
+  }
+  const images = await db
+    .select()
+    .from(schema.bookImages)
+    .where(eq(schema.bookImages.bookId, body.bookId));
+  const reference = images[0]?.blobUrl;
+  if (!reference) {
+    return NextResponse.json({ error: 'book has no reference cover' }, { status: 404 });
   }
   const verdicts = await Promise.all(
     body.candidates.map(async (candidate) => {
       try {
-        const verdict = await verifyCoverMatch(
-          body.reference,
-          candidate,
-          body.kind ?? 'single',
-        );
-        return { candidate, ok: verdict.ok, reason: verdict.reason };
+        const v = await verifyCoverMatch(reference, candidate, body.kind ?? 'single');
+        return { candidate, ok: v.ok, reason: v.reason };
       } catch (e) {
         return {
           candidate,
@@ -44,5 +46,5 @@ export async function POST(req: NextRequest) {
       }
     }),
   );
-  return NextResponse.json({ verdicts });
+  return NextResponse.json({ reference, verdicts });
 }
