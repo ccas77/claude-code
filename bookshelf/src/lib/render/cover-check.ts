@@ -71,11 +71,13 @@ const SINGLE_INSTRUCTION = `IMAGE A is the flat reference cover. IMAGE B is a ge
 
 export type CoverCheckResult = { ok: boolean; reason: string };
 
-export async function verifyCoverMatch(
+const VOTES = 3;
+
+async function singleVote(
   originalCoverUrl: string,
   generatedImageUrl: string,
-  kind: 'single' | 'set' = 'single',
-): Promise<CoverCheckResult> {
+  kind: 'single' | 'set',
+): Promise<{ ok: boolean; failed: string[]; reason: string; rendered: string } | null> {
   const instruction = kind === 'set' ? SET_INSTRUCTION : SINGLE_INSTRUCTION;
   const labelA =
     kind === 'set' ? 'IMAGE A (reference cover set, flat):' : 'IMAGE A (reference cover, flat):';
@@ -117,14 +119,49 @@ export async function verifyCoverMatch(
     if (!v.titleTextMatches) failed.push('title text');
     if (!v.authorTextMatches) failed.push('author text');
     if (!v.layoutMatches) failed.push('layout');
-    const summary = ok
-      ? `matches | rendered: ${v.renderedObservation}`
-      : `${failed.join(', ')} failed. ${v.reason} | rendered: ${v.renderedObservation}`;
-    return { ok, reason: summary.slice(0, 360) };
-  } catch (e) {
+    return { ok, failed, reason: v.reason, rendered: v.renderedObservation };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Gemini 2.5 Pro is noisy on visual identity checks even at temperature 0:
+ * the same image / prompt pair can flip from pass to fail across calls. A
+ * single verdict is unreliable enough that a correct image can fail the
+ * render's whole attempt budget. We run the verifier N times in parallel
+ * and take majority; the noise averages out at ~3x the per-check cost
+ * (~$0.0075 per check, ~$0.023 per render across 3 image attempts).
+ */
+export async function verifyCoverMatch(
+  originalCoverUrl: string,
+  generatedImageUrl: string,
+  kind: 'single' | 'set' = 'single',
+): Promise<CoverCheckResult> {
+  const votes = await Promise.all(
+    Array.from({ length: VOTES }, () =>
+      singleVote(originalCoverUrl, generatedImageUrl, kind),
+    ),
+  );
+  const usable = votes.filter((v): v is NonNullable<typeof v> => v !== null);
+  if (!usable.length) {
     return {
       ok: true,
-      reason: `verifier unavailable (${e instanceof Error ? e.message.slice(0, 80) : 'unknown'}); accepting candidate`,
+      reason: `verifier unavailable across ${VOTES} votes; accepting candidate`,
     };
   }
+  const passes = usable.filter((v) => v.ok).length;
+  const ok = passes > usable.length / 2;
+  if (ok) {
+    const sample = usable.find((v) => v.ok) ?? usable[0];
+    return {
+      ok: true,
+      reason: `matches (${passes}/${usable.length} pass) | rendered: ${sample.rendered}`.slice(0, 360),
+    };
+  }
+  const failer = usable.find((v) => !v.ok) ?? usable[0];
+  return {
+    ok: false,
+    reason: `${failer.failed.join(', ')} failed (${passes}/${usable.length} pass). ${failer.reason} | rendered: ${failer.rendered}`.slice(0, 360),
+  };
 }
