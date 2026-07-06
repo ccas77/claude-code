@@ -130,6 +130,7 @@ export default function MusicEditPage({
   const [saving, setSaving] = useState(false);
   const [retranscribing, setRetranscribing] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [deleteArmed, setDeleteArmed] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const load = async () => {
@@ -282,11 +283,18 @@ export default function MusicEditPage({
   };
 
   const deleteClip = async () => {
-    if (!confirm(`Delete clip "${server?.name}"?`)) return;
+    if (!deleteArmed) {
+      setDeleteArmed(true);
+      setTimeout(() => setDeleteArmed(false), 4000);
+      return;
+    }
     setDeleting(true);
     const res = await fetch(`/api/music/${id}`, { method: 'DELETE' });
     if (res.ok) router.push('/library/music');
-    else setDeleting(false);
+    else {
+      setDeleting(false);
+      setDeleteArmed(false);
+    }
   };
 
   if (!server) return <p className="text-sm text-stone-600">Loading...</p>;
@@ -309,14 +317,6 @@ export default function MusicEditPage({
             <span aria-hidden className="text-base leading-none">+</span>
             Upload another
           </a>
-          <button
-            type="button"
-            onClick={deleteClip}
-            disabled={deleting}
-            className="rounded-md border border-red-200 px-3 py-1.5 text-sm text-red-700 hover:bg-red-50 disabled:opacity-50"
-          >
-            Delete
-          </button>
         </div>
       </div>
 
@@ -497,6 +497,21 @@ export default function MusicEditPage({
       </div>
 
       {error && <p className="text-sm text-red-600">{error}</p>}
+
+      <div className="mt-16 flex justify-end border-t border-stone-200 pt-4">
+        <button
+          type="button"
+          onClick={deleteClip}
+          disabled={deleting}
+          className={`rounded-md px-3 py-1.5 text-sm disabled:opacity-50 ${
+            deleteArmed
+              ? 'bg-red-600 text-white hover:bg-red-700'
+              : 'text-stone-500 hover:text-red-700'
+          }`}
+        >
+          {deleting ? 'Deleting...' : deleteArmed ? 'Click again to confirm' : 'Delete clip'}
+        </button>
+      </div>
 
       <UnsavedBar visible={dirty} saving={saving} onSave={save} onDiscard={discard} />
     </div>
