@@ -227,7 +227,7 @@ export default function MusicEditPage({
         });
         if (!res.ok) throw new Error((await res.json()).error ?? 'Failed');
       }
-      await load();
+      router.push('/library/music');
     } catch (e) {
       setError((e as Error).message);
     } finally {
