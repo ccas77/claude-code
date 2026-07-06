@@ -26,7 +26,6 @@ export default function NewMusicPage() {
   const [progress, setProgress] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [batch, setBatch] = useState<BatchResult | null>(null);
-  const [isPrimary, setIsPrimary] = useState(false);
   const [shared, setShared] = useState(false);
 
   useEffect(() => {
@@ -44,10 +43,6 @@ export default function NewMusicPage() {
           })),
         ),
       )
-      .catch(() => {});
-    fetch('/api/auth/session')
-      .then((r) => r.json())
-      .then((s) => setIsPrimary(Boolean(s?.user?.isPrimary)))
       .catch(() => {});
   }, []);
 
@@ -105,7 +100,7 @@ export default function NewMusicPage() {
               url: uploaded.url,
               pathname: uploaded.pathname,
               anyGenre: mode === 'free',
-              shared: isPrimary && shared,
+              shared,
               genreIds: mode === 'genres' ? genreIds : [],
               bookIds: mode === 'books' ? bookIds : [],
             }),
@@ -314,23 +309,21 @@ export default function NewMusicPage() {
             </div>
           )}
 
-          {isPrimary && (
-            <label className="mt-4 flex items-start gap-2 border-t border-stone-200 pt-3 text-sm">
-              <input
-                type="checkbox"
-                checked={shared}
-                onChange={(e) => setShared(e.target.checked)}
-                className="mt-1"
-              />
-              <span>
-                <span className="font-medium">Share with everyone</span>
-                <span className="block text-xs text-stone-500">
-                  This clip will appear in every user&apos;s music picker.
-                  Off by default; only tick it for clips you want everyone to have.
-                </span>
+          <label className="mt-4 flex items-start gap-2 border-t border-stone-200 pt-3 text-sm">
+            <input
+              type="checkbox"
+              checked={shared}
+              onChange={(e) => setShared(e.target.checked)}
+              className="mt-1"
+            />
+            <span>
+              <span className="font-medium">Share with everyone</span>
+              <span className="block text-xs text-stone-500">
+                This clip will appear in every user&apos;s music picker.
+                Off by default; only tick it for clips you want everyone to have.
               </span>
-            </label>
-          )}
+            </span>
+          </label>
         </div>
 
         {progress && <p className="text-sm text-stone-600">{progress}</p>}

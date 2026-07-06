@@ -3,7 +3,6 @@ import { desc, eq, inArray, or } from 'drizzle-orm';
 import { z } from 'zod';
 import { db, schema } from '@/lib/db/client';
 import { getOwnerId, mapError } from '@/lib/ownership';
-import { isPrimaryOwner } from '@/lib/owner-role';
 import { enqueue, JOB_NAMES } from '@/lib/queue';
 
 export const dynamic = 'force-dynamic';
@@ -82,9 +81,6 @@ export async function POST(req: NextRequest) {
   try {
     const ownerId = await getOwnerId();
     const input = CreateSchema.parse(await req.json());
-    // Only the primary owner can create shared clips. Silently coerce
-    // to false for anyone else so a spoofed body can't bypass the gate.
-    const shared = input.shared && (await isPrimaryOwner());
 
     const [created] = await db
       .insert(schema.musicClips)
@@ -95,7 +91,7 @@ export async function POST(req: NextRequest) {
         blobPathname: input.pathname,
         durationSeconds: input.durationSeconds ?? null,
         anyGenre: input.anyGenre ?? false,
-        shared: shared === true,
+        shared: input.shared === true,
       })
       .returning();
 

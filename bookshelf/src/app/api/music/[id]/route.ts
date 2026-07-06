@@ -10,6 +10,7 @@ export const dynamic = 'force-dynamic';
 const PatchSchema = z.object({
   name: z.string().min(1).max(200).optional(),
   anyGenre: z.boolean().optional(),
+  shared: z.boolean().optional(),
   genreIds: z.array(z.string().uuid()).optional(),
   bookIds: z.array(z.string().uuid()).optional(),
 });
@@ -56,12 +57,17 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     await loadOwned(id);
     const input = PatchSchema.parse(await req.json());
 
-    if (input.name !== undefined || input.anyGenre !== undefined) {
+    if (
+      input.name !== undefined ||
+      input.anyGenre !== undefined ||
+      input.shared !== undefined
+    ) {
       await db
         .update(schema.musicClips)
         .set({
           ...(input.name !== undefined ? { name: input.name } : {}),
           ...(input.anyGenre !== undefined ? { anyGenre: input.anyGenre } : {}),
+          ...(input.shared !== undefined ? { shared: input.shared } : {}),
           updatedAt: new Date(),
         })
         .where(eq(schema.musicClips.id, id));

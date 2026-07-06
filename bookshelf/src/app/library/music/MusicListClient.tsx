@@ -8,6 +8,7 @@ type Clip = {
   id: string;
   name: string;
   anyGenre: boolean;
+  shared: boolean;
   transcriptionStatus: string;
 };
 
@@ -250,6 +251,11 @@ export function MusicListClient({
                     {m.name}
                     {m.anyGenre && (
                       <span className="ml-2 text-xs text-stone-500">any genre</span>
+                    )}
+                    {m.shared && (
+                      <span className="ml-2 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800">
+                        shared
+                      </span>
                     )}
                   </span>
                   <span className="text-xs text-stone-500">

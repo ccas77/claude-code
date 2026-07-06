@@ -9,6 +9,7 @@ type MusicClip = {
   name: string;
   blobUrl: string;
   anyGenre: boolean;
+  shared: boolean;
   transcriptionStatus: string;
 };
 
@@ -113,6 +114,7 @@ export default function MusicEditPage({
   const [draftMode, setDraftMode] = useState<'free' | 'genres' | 'books'>('free');
   const [draftGenres, setDraftGenres] = useState<string[]>([]);
   const [draftBooks, setDraftBooks] = useState<string[]>([]);
+  const [draftShared, setDraftShared] = useState(false);
   const [draftFullText, setDraftFullText] = useState('');
   const [draftReviewed, setDraftReviewed] = useState(false);
 
@@ -149,6 +151,7 @@ export default function MusicEditPage({
     setDraftMode(deriveMode(data.musicClip.anyGenre, data.bookIds ?? []));
     setDraftGenres(data.genreIds ?? []);
     setDraftBooks(data.bookIds ?? []);
+    setDraftShared(Boolean(data.musicClip.shared));
     setDraftFullText(data.caption?.fullText ?? '');
     setDraftReviewed(data.caption?.reviewed ?? false);
     if (genreRes.ok) {
@@ -178,6 +181,7 @@ export default function MusicEditPage({
     server !== null &&
     (draftName !== server.name ||
       draftMode !== serverMode ||
+      draftShared !== Boolean(server.shared) ||
       [...draftGenres].sort().join('|') !== [...serverGenres].sort().join('|') ||
       [...draftBooks].sort().join('|') !== [...serverBooks].sort().join('|'));
 
@@ -199,6 +203,7 @@ export default function MusicEditPage({
           body: JSON.stringify({
             name: draftName,
             anyGenre: draftMode === 'free',
+            shared: draftShared,
             genreIds: draftMode === 'genres' ? draftGenres : [],
             bookIds: draftMode === 'books' ? draftBooks : [],
           }),
@@ -235,6 +240,7 @@ export default function MusicEditPage({
     setDraftMode(deriveMode(server.anyGenre, serverBooks));
     setDraftGenres(serverGenres);
     setDraftBooks(serverBooks);
+    setDraftShared(Boolean(server.shared));
     setDraftFullText(caption?.fullText ?? '');
     setDraftReviewed(caption?.reviewed ?? false);
   };
@@ -421,6 +427,22 @@ export default function MusicEditPage({
             </div>
           </div>
         )}
+
+        <label className="mt-4 flex items-start gap-2 border-t border-stone-200 pt-3 text-sm">
+          <input
+            type="checkbox"
+            checked={draftShared}
+            onChange={(e) => setDraftShared(e.target.checked)}
+            className="mt-1"
+          />
+          <span>
+            <span className="font-medium">Share with everyone</span>
+            <span className="block text-xs text-stone-500">
+              When on, this clip appears in every user&apos;s music picker.
+              Untick to make it private again.
+            </span>
+          </span>
+        </label>
       </div>
 
       <div className="space-y-3">

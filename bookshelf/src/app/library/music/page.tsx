@@ -14,6 +14,7 @@ export default async function MusicList() {
         id: schema.musicClips.id,
         name: schema.musicClips.name,
         anyGenre: schema.musicClips.anyGenre,
+        shared: schema.musicClips.shared,
         transcriptionStatus: schema.musicClips.transcriptionStatus,
       })
       .from(schema.musicClips)
