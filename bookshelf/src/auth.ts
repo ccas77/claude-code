@@ -2,6 +2,7 @@ import NextAuth from 'next-auth';
 import Google from 'next-auth/providers/google';
 import { eq } from 'drizzle-orm';
 import { db, schema } from './lib/db/client';
+import { isPrimaryEmail } from './lib/owner-role';
 
 /**
  * Google sign-in with an email allowlist.
@@ -61,7 +62,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       return token;
     },
     async session({ session, token }) {
-      if (token.email && session.user) session.user.email = token.email as string;
+      if (token.email && session.user) {
+        session.user.email = token.email as string;
+        (session.user as { isPrimary?: boolean }).isPrimary = isPrimaryEmail(
+          token.email as string,
+        );
+      }
       return session;
     },
   },

@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { migrate } from 'drizzle-orm/postgres-js/migrator';
+import path from 'node:path';
+import { db } from '@/lib/db/client';
 import { boss } from '@/lib/queue';
 import { getHandler, getBatchSize, registeredQueues } from '@/lib/workers/registry';
 
@@ -25,6 +28,17 @@ export async function GET(req: NextRequest) {
   if (secret) {
     const auth = req.headers.get('authorization');
     if (auth !== `Bearer ${secret}`) return unauthorized();
+  }
+
+  // Idempotent - drizzle's journal table skips already-applied
+  // migrations. This means a new deploy picks up schema changes on the
+  // next cron tick (~1 min) instead of needing a manual migrate step.
+  try {
+    await migrate(db as never, {
+      migrationsFolder: path.join(process.cwd(), 'src/lib/db/migrations'),
+    });
+  } catch {
+    // Migration errors surface via cron logs; don't block worker.
   }
 
   const b = await boss();

@@ -1,4 +1,4 @@
-import { and, eq, gte, lte, sql } from 'drizzle-orm';
+import { and, eq, gte, lte, or, sql } from 'drizzle-orm';
 import { db, schema } from '../db/client';
 import type { IntervalWindow, ProviderUsage } from '../db/schema';
 import { enqueue, JOB_NAMES } from '../queue';
@@ -334,13 +334,20 @@ async function pickMusic(
     poolSize: 0,
   };
 
+  // Pool = own clips + everyone's shared clips. Shared clips still respect
+  // their own genre / book routing tags.
   const clips = await db
     .select({
       id: schema.musicClips.id,
       anyGenre: schema.musicClips.anyGenre,
     })
     .from(schema.musicClips)
-    .where(eq(schema.musicClips.ownerId, cfg.ownerId));
+    .where(
+      or(
+        eq(schema.musicClips.ownerId, cfg.ownerId),
+        eq(schema.musicClips.shared, true),
+      ),
+    );
   diagBase.ownedClips = clips.length;
   if (clips.length === 0) return { musicId: null, diag: diagBase };
 

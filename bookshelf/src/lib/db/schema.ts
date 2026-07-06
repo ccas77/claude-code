@@ -138,6 +138,7 @@ export const musicClips = pgTable(
     blobPathname: text('blob_pathname').notNull(),
     durationSeconds: integer('duration_seconds'),
     anyGenre: boolean('any_genre').notNull().default(false),
+    shared: boolean('shared').notNull().default(false),
     transcriptionStatus: transcriptionStatus('transcription_status').notNull().default('pending'),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),

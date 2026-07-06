@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { migrate } from 'drizzle-orm/postgres-js/migrator';
+import path from 'node:path';
+import { db } from '@/lib/db/client';
 import { enqueue, JOB_NAMES } from '@/lib/queue';
 import { cronUnauthorized } from '@/lib/clocks/auth';
 
@@ -18,6 +21,20 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
   }
 
+  // Drizzle's migrator is idempotent (tracks applied migrations in a
+  // journal table), so re-running it hourly is a no-op after the first
+  // pass. Doing it here means new deploys pick up schema changes without
+  // a manual /api/admin/migrate step.
+  let migrated: boolean | { error: string } = false;
+  try {
+    await migrate(db as never, {
+      migrationsFolder: path.join(process.cwd(), 'src/lib/db/migrations'),
+    });
+    migrated = true;
+  } catch (err) {
+    migrated = { error: (err as Error).message };
+  }
+
   const retryJob = await enqueue(
     JOB_NAMES.RETRY_FAILURES,
     { triggeredAt: new Date().toISOString() },
@@ -29,5 +46,5 @@ export async function GET(req: NextRequest) {
     { singletonKey: 'refresh-stats' },
   );
 
-  return NextResponse.json({ ok: true, retryJob, statsJob });
+  return NextResponse.json({ ok: true, migrated, retryJob, statsJob });
 }
