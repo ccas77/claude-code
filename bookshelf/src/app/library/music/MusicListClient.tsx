@@ -16,6 +16,10 @@ type Genre = { id: string; name: string };
 type Book = { id: string; title: string };
 
 type Mode = 'free' | 'genres' | 'books';
+type SortKey = 'updated' | 'name-asc' | 'name-desc' | 'status';
+type StatusFilter = 'all' | 'done' | 'pending' | 'processing' | 'failed';
+type ShareFilter = 'all' | 'shared' | 'private';
+type RestrictionFilter = 'all' | 'free' | 'genres' | 'books';
 
 export function MusicListClient({
   clips,
@@ -36,6 +40,46 @@ export function MusicListClient({
   const [working, setWorking] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const [sortKey, setSortKey] = useState<SortKey>('updated');
+  const [query, setQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [shareFilter, setShareFilter] = useState<ShareFilter>('all');
+  const [restrictionFilter, setRestrictionFilter] = useState<RestrictionFilter>('all');
+
+  const visibleClips = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    const filtered = clips.filter((c) => {
+      if (q && !c.name.toLowerCase().includes(q)) return false;
+      if (statusFilter !== 'all' && c.transcriptionStatus !== statusFilter) return false;
+      if (shareFilter === 'shared' && !c.shared) return false;
+      if (shareFilter === 'private' && c.shared) return false;
+      if (restrictionFilter === 'free' && !c.anyGenre) return false;
+      // genres / books restriction filters need link data we don't have on
+      // this row - server would need to send genreCount/bookCount for that.
+      return true;
+    });
+    const sorted = [...filtered];
+    switch (sortKey) {
+      case 'name-asc':
+        sorted.sort((a, b) => a.name.localeCompare(b.name));
+        break;
+      case 'name-desc':
+        sorted.sort((a, b) => b.name.localeCompare(a.name));
+        break;
+      case 'status':
+        sorted.sort((a, b) =>
+          a.transcriptionStatus.localeCompare(b.transcriptionStatus) ||
+          a.name.localeCompare(b.name),
+        );
+        break;
+      case 'updated':
+      default:
+        // Server already returned by updatedAt desc; preserve that order.
+        break;
+    }
+    return sorted;
+  }, [clips, query, statusFilter, shareFilter, restrictionFilter, sortKey]);
+
   // Inline create state
   const [creatingGenre, setCreatingGenre] = useState(false);
   const [newGenreName, setNewGenreName] = useState('');
@@ -43,7 +87,9 @@ export function MusicListClient({
   const [newBookTitle, setNewBookTitle] = useState('');
   const [newBookGenreId, setNewBookGenreId] = useState('');
 
-  const allChecked = clips.length > 0 && selected.size === clips.length;
+  const allChecked =
+    visibleClips.length > 0 &&
+    visibleClips.every((c) => selected.has(c.id));
   const someChecked = selected.size > 0 && !allChecked;
 
   const toggleOne = (id: string) => {
@@ -56,7 +102,7 @@ export function MusicListClient({
   };
 
   const toggleAll = () => {
-    setSelected(allChecked ? new Set() : new Set(clips.map((c) => c.id)));
+    setSelected(allChecked ? new Set() : new Set(visibleClips.map((c) => c.id)));
   };
 
   const togglePickedGenre = (id: string) => {
@@ -150,6 +196,52 @@ export function MusicListClient({
     }
   };
 
+  const bulkShare = async (shared: boolean) => {
+    if (selected.size === 0) return;
+    setError(null);
+    setWorking(true);
+    try {
+      const res = await fetch('/api/music/bulk-share', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ ids: Array.from(selected), shared }),
+      });
+      if (!res.ok) {
+        const body = (await res.json().catch(() => ({}))) as { error?: string };
+        throw new Error(body.error ?? `HTTP ${res.status}`);
+      }
+      cancel();
+      router.refresh();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setWorking(false);
+    }
+  };
+
+  const bulkTranscribe = async () => {
+    if (selected.size === 0) return;
+    setError(null);
+    setWorking(true);
+    try {
+      const res = await fetch('/api/music/bulk-transcribe', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ ids: Array.from(selected) }),
+      });
+      if (!res.ok) {
+        const body = (await res.json().catch(() => ({}))) as { error?: string };
+        throw new Error(body.error ?? `HTTP ${res.status}`);
+      }
+      cancel();
+      router.refresh();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setWorking(false);
+    }
+  };
+
   const apply = async () => {
     if (selected.size === 0) return;
     if (mode === 'genres' && pickedGenres.size === 0) {
@@ -214,7 +306,68 @@ export function MusicListClient({
           and the captions reused forever.
         </p>
       ) : (
-        <div className="mt-6 overflow-hidden rounded-lg border border-stone-200 bg-white">
+        <>
+          <div className="mt-6 flex flex-wrap items-center gap-3 rounded-md border border-stone-200 bg-white p-3 text-sm">
+            <input
+              type="search"
+              placeholder="Search by name..."
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              className="min-w-[160px] flex-1 rounded-md border border-stone-300 px-3 py-1.5 text-sm focus:border-stone-500 focus:outline-none"
+            />
+            <label className="inline-flex items-center gap-1.5 text-xs">
+              <span className="text-stone-500">Status</span>
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
+                className="rounded-md border border-stone-300 bg-white px-2 py-1"
+              >
+                <option value="all">All</option>
+                <option value="done">Done</option>
+                <option value="pending">Pending</option>
+                <option value="processing">Processing</option>
+                <option value="failed">Failed</option>
+              </select>
+            </label>
+            <label className="inline-flex items-center gap-1.5 text-xs">
+              <span className="text-stone-500">Share</span>
+              <select
+                value={shareFilter}
+                onChange={(e) => setShareFilter(e.target.value as ShareFilter)}
+                className="rounded-md border border-stone-300 bg-white px-2 py-1"
+              >
+                <option value="all">All</option>
+                <option value="shared">Shared only</option>
+                <option value="private">Private only</option>
+              </select>
+            </label>
+            <label className="inline-flex items-center gap-1.5 text-xs">
+              <span className="text-stone-500">Restriction</span>
+              <select
+                value={restrictionFilter}
+                onChange={(e) => setRestrictionFilter(e.target.value as RestrictionFilter)}
+                className="rounded-md border border-stone-300 bg-white px-2 py-1"
+              >
+                <option value="all">All</option>
+                <option value="free">Free for all</option>
+              </select>
+            </label>
+            <label className="ml-auto inline-flex items-center gap-1.5 text-xs">
+              <span className="text-stone-500">Sort</span>
+              <select
+                value={sortKey}
+                onChange={(e) => setSortKey(e.target.value as SortKey)}
+                className="rounded-md border border-stone-300 bg-white px-2 py-1"
+              >
+                <option value="updated">Recently updated</option>
+                <option value="name-asc">Name A-Z</option>
+                <option value="name-desc">Name Z-A</option>
+                <option value="status">Captions status</option>
+              </select>
+            </label>
+          </div>
+
+          <div className="mt-4 overflow-hidden rounded-lg border border-stone-200 bg-white">
           <div className="flex items-center gap-3 border-b border-stone-200 px-4 py-2 text-xs text-stone-600">
             <input
               type="checkbox"
@@ -228,11 +381,11 @@ export function MusicListClient({
             <span>
               {selected.size > 0
                 ? `${selected.size} selected`
-                : `${clips.length} clip${clips.length === 1 ? '' : 's'}`}
+                : `${visibleClips.length} of ${clips.length} clip${clips.length === 1 ? '' : 's'}`}
             </span>
           </div>
           <ul className="divide-y divide-stone-200">
-            {clips.map((m) => (
+            {visibleClips.map((m) => (
               <li
                 key={m.id}
                 className="flex items-center gap-3 px-4 py-3 hover:bg-stone-50"
@@ -266,6 +419,7 @@ export function MusicListClient({
             ))}
           </ul>
         </div>
+        </>
       )}
 
       {selected.size > 0 && (
@@ -322,6 +476,36 @@ export function MusicListClient({
                   {working ? 'Applying...' : `Apply to ${selected.size}`}
                 </button>
               </div>
+            </div>
+
+            <div className="flex items-center gap-2 flex-wrap border-t border-stone-100 pt-3">
+              <span className="text-xs uppercase tracking-wide text-stone-500">
+                Also
+              </span>
+              <button
+                type="button"
+                onClick={() => bulkShare(true)}
+                disabled={working}
+                className="rounded-md border border-emerald-300 px-3 py-1.5 text-sm text-emerald-800 hover:bg-emerald-50 disabled:opacity-40"
+              >
+                Share {selected.size}
+              </button>
+              <button
+                type="button"
+                onClick={() => bulkShare(false)}
+                disabled={working}
+                className="rounded-md border border-stone-300 px-3 py-1.5 text-sm text-stone-700 hover:bg-stone-50 disabled:opacity-40"
+              >
+                Unshare {selected.size}
+              </button>
+              <button
+                type="button"
+                onClick={bulkTranscribe}
+                disabled={working}
+                className="rounded-md border border-stone-300 px-3 py-1.5 text-sm text-stone-700 hover:bg-stone-50 disabled:opacity-40"
+              >
+                Re-transcribe {selected.size}
+              </button>
             </div>
 
             {mode === 'genres' && (
