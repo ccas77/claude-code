@@ -1,0 +1,574 @@
+[
+ {
+  "topic": "Demand/pain evidence: children, teens, and AI companion chatbots \u2014 usage rates, emotional dependency, parental awareness, and regulatory/platform data (2024-2026)",
+  "summary": "The evidence base is strong and multi-sourced. Two independent, methodologically transparent surveys anchor the usage numbers: Common Sense Media's \"Talk, Trust, and Trade-Offs\" (n=1,060 teens 13-17, Apr-May 2025) found 72% of teens have used an AI companion at least once and 52% are regular users (a few times/month+), with roughly a third choosing AI over humans for serious conversations. Pew Research's \"Teens, Social Media and AI Chatbots 2025\" (n=1,458 teen-parent dyads, Sept 25-Oct 9 2025, Ipsos KnowledgePanel, MOE \u00b13.3pp) found narrower but still large numbers for general-purpose chatbot use (64%, ~28-30% daily) and a much smaller slice (12-16%) using bots specifically for emotional support/casual conversation \u2014 the gap between the two studies is a definitional one (Common Sense counts ChatGPT/Claude used *as* a companion; Pew separately measures \"companionship\" use-cases within general chatbot use) and should be presented as such, not reconciled into one number. Parental-awareness data show a real, well-documented perception gap (Pew: teens report far higher use than parents perceive; Common Sense/Torney Senate testimony: only 37% of parents know their teen uses AI companions against ~70-72% actual teen use). Emotional-dependency evidence is unusually strong for this kind of claim because OpenAI itself published usage-based prevalence data (0.15% of 800M weekly ChatGPT users show heightened emotional attachment; 0.15% show explicit suicidal ideation signals; 0.07% show possible psychosis/mania signals \u2014 small percentages of an enormous base translate to roughly a million-plus people per week). Regulatory and platform-side evidence is concrete and dated: FTC 6(b) orders to seven companies (Sept 2025), California SB 243 (signed Oct 13 2025, effective Jan 1 2026), the federal GUARD Act (introduced Oct 28 2025), Character.AI's own removal of open-ended chat for under-18s (effective Nov 25 2025) following a TBIJ investigation and lawsuits, and multiple wrongful-death suits against Character.AI/Google that reached confidential settlements in January 2026. A handful of frequently-cited figures \u2014 Character.AI/Replika monthly-active-user counts, and any single-number reconciliation of \"% of teens using AI companions specifically\" \u2014 could not be confirmed against a primary/authoritative source and are flagged below.",
+  "verifiedFindings": [
+   {
+    "claim": "72% of U.S. teens (13-17) have used an AI companion at least once; 52% are regular users (a few times a month or more); 21% use them a few times a week (most common cadence).",
+    "detail": "Common Sense Media, 'Talk, Trust, and Trade-Offs: How and Why Teens Use AI Companions,' nationally representative survey of 1,060 teens ages 13-17, fielded April-May 2025, released July 2025. 'AI companions' is defined broadly to include dedicated companion apps (Character.AI, Nomi, Replika) plus general tools (ChatGPT, Claude) when teens use them in a companion-like way.",
+    "confidence": "confirmed",
+    "sources": [
+     "https://www.commonsensemedia.org/press-releases/nearly-3-in-4-teens-have-used-ai-companions-new-national-survey-finds",
+     "https://www.commonsensemedia.org/research/talk-trust-and-trade-offs-how-and-why-teens-use-ai-companions",
+     "https://techcrunch.com/2025/07/21/72-of-u-s-teens-have-used-ai-companions-study-finds/",
+     "https://www.axios.com/2025/07/16/ai-bot-companions-teens-common-sense-media"
+    ]
+   },
+   {
+    "claim": "33% of teen AI-companion users have chosen an AI companion over a real person for a serious/important conversation; 34% report feeling uncomfortable with something the companion said or did; 31% said companion conversations were 'as satisfying or more satisfying' than talking with real friends; 25% have shared personal information with a companion.",
+    "detail": "Same Common Sense Media 2025 survey. The 33%/34% figures are also stated directly by Common Sense Media's own account. Complementary reporting (Fast Company, CBS News) also cites roughly two-thirds finding AI conversation less satisfying than human interaction and 80% still spending more time with real friends \u2014 consistent with the 31% 'as/more satisfying' figure once framed as complementary shares rather than duplicates.",
+    "confidence": "confirmed",
+    "sources": [
+     "https://x.com/CommonSense/status/1945486943917371578",
+     "https://www.commonsensemedia.org/research/talk-trust-and-trade-offs-how-and-why-teens-use-ai-companions",
+     "https://www.fastcompany.com/91369689/teens-using-ai-companions-and-some-prefer-them-to-people",
+     "https://www.cbsnews.com/news/ai-digital-friendship-with-teens-common-sense-media-study/"
+    ]
+   },
+   {
+    "claim": "Only 37% of parents know their teen is using AI companions, against roughly 70-72% of teens who actually do \u2014 a large parental-awareness gap.",
+    "detail": "Cited by Robbie Torney (Senior Director of AI Programs, Common Sense Media) in written Senate testimony, 'Examining the Harm of AI Chatbots,' Senate Judiciary Subcommittee on Crime and Counterterrorism, September 16, 2025, drawing on Common Sense Media's own national polling. This is Common Sense Media's figure relayed through Congressional testimony rather than an independently published toplines page I could directly verify, so treat as confirmed-via-testimony rather than confirmed-via-primary-dataset.",
+    "confidence": "confirmed",
+    "sources": [
+     "https://www.judiciary.senate.gov/imo/media/doc/e2e8fc50-a9ac-05ec-edd7-277cb0afcdf2/2025-09-16%20PM%20-%20Testimony%20-%20Torney.pdf",
+     "https://www.commonsensemedia.org/sites/default/files/featured-content/files/robbie-torney-testimony-09162025.pdf"
+    ]
+   },
+   {
+    "claim": "64% of U.S. teens report using AI chatbots generally, with roughly 28-30% using them daily (general-purpose use, not companion-specific); only 12% report using chatbots for emotional support/advice and 16% for casual conversation.",
+    "detail": "Pew Research Center, 'Teens, Social Media and AI Chatbots 2025,' survey of 1,458 U.S. teen-parent dyads (teens 13-17), conducted Sept 25-Oct 9, 2025 via Ipsos KnowledgePanel (English/Spanish), overall margin of error \u00b13.3 points. Released Dec 9, 2025. The companion Feb 24, 2026 Pew releases ('How Teens Use and View AI,' 'What Parents Say About Their Teen's AI Use,' 'Demographic Differences...') analyze the SAME underlying Sept-Oct 2025 dataset, not a new wave. Note the definitional gap versus Common Sense Media's 72%: Pew is measuring general chatbot use and specific declared use-cases, not a broad 'have you ever used anything companion-like' framing.",
+    "confidence": "confirmed",
+    "sources": [
+     "https://www.pewresearch.org/wp-content/uploads/sites/20/2025/12/PI_2025.12.09_Teens-Social-Media-AI_REPORT.pdf",
+     "https://techcrunch.com/2025/12/09/three-in-ten-u-s-teens-use-ai-chatbots-every-day-but-safety-concerns-are-growing/",
+     "https://www.cnn.com/2025/12/09/tech/teens-ai-chatbot-use-study",
+     "https://www.nbcnews.com/tech/social-media/28-us-teens-say-use-ai-chatbots-daily-poll-says-rcna248133",
+     "https://www.digitalinformationworld.com/2025/12/pew-survey-64-of-teens-use-ai-chatbots.html"
+    ]
+   },
+   {
+    "claim": "In the same Pew dataset, only 51% of parents say their teen uses AI chatbots (13 points below teens' self-reported 64%), roughly 3-in-10 parents say they are 'unsure,' 18% say their teen doesn't use chatbots, and 4% haven't heard of AI chatbots; only 18% of parents say they'd be comfortable with their teen getting emotional support/advice from a chatbot (vs. ~80% comfortable with informational search use).",
+    "detail": "Pew Research Center, 'What Parents Say About Their Teen's AI Use,' released Feb 24, 2026, drawing on the same Sept-Oct 2025 Ipsos KnowledgePanel dyad survey (n=1,458).",
+    "confidence": "confirmed",
+    "sources": [
+     "https://www.pewresearch.org/internet/2026/02/24/what-parents-say-about-their-teens-ai-use/",
+     "https://thehill.com/policy/healthcare/5753210-parents-teens-ai-chatbot-use-pew-survey/",
+     "https://www.cbsnews.com/news/ai-teens-parents-pew-survey/",
+     "https://fortune.com/2026/02/25/teens-use-ai-for-schoolwork-pew-research-study/"
+    ]
+   },
+   {
+    "claim": "OpenAI's own data: of ChatGPT's 800 million+ weekly active users, about 0.15% show conversation patterns indicating heightened emotional attachment/reliance on the AI, about 0.15% show explicit indicators of possible suicidal planning/intent, and about 0.07% show possible signs of mental-health emergencies related to psychosis/mania \u2014 small percentages that still translate to roughly a million-plus people weekly for each category, across all ages (not teens-only).",
+    "detail": "OpenAI blog post, 'Strengthening ChatGPT's Responses in Sensitive Conversations,' Oct 27, 2025, developed with input from 170+ mental-health clinicians/researchers. This is platform-wide (all users, not age-segmented), but it is the single most authoritative, primary-source quantification available of AI emotional-dependency prevalence and is directly relevant framing for the child-specific policy debate.",
+    "confidence": "confirmed",
+    "sources": [
+     "https://openai.com/index/strengthening-chatgpt-responses-in-sensitive-conversations/",
+     "https://techcrunch.com/2025/10/27/openai-says-over-a-million-people-talk-to-chatgpt-about-suicide-weekly/",
+     "https://pubmed.ncbi.nlm.nih.gov/41167716/"
+    ]
+   },
+   {
+    "claim": "Common Sense Media, in partnership with Stanford Medicine's Brainstorm Lab for Mental Health Innovation, published clinician-reviewed risk assessments (April 2025) concluding that social AI companions (Character.AI, Nomi, Replika, Meta AI and others) pose 'unacceptable risk' for anyone under 18, documenting that teen-specific guardrails and age gates were easily circumvented, that companions could be steered into sexual role-play (including choking, bondage, name-calling) with test accounts, and that products could deepen compulsive attachment and worsen existing depression, anxiety, ADHD, bipolar disorder and psychosis in vulnerable teens by encouraging isolation from real relationships.",
+    "detail": "Joint Common Sense Media / Stanford Brainstorm Lab risk assessment report, April 30, 2025 (with follow-on Stanford Medicine explainer, Aug 2025).",
+    "confidence": "confirmed",
+    "sources": [
+     "https://www.commonsensemedia.org/sites/default/files/pug/csm-ai-risk-assessment-social-ai-companions_final.pdf",
+     "https://www.commonsensemedia.org/press-releases/ai-companions-decoded-common-sense-media-recommends-ai-companion-safety-standards",
+     "https://news.stanford.edu/stories/2025/08/ai-companions-chatbots-teens-young-people-risks-dangers-study",
+     "https://themarkup.org/artificial-intelligence/2025/04/30/kids-should-avoid-ai-companion-bots-under-force-of-law-assessment-says",
+     "https://calmatters.org/economy/technology/2025/04/kids-should-avoid-ai-companion-bots-under-force-of-law-assessment-says/"
+    ]
+   },
+   {
+    "claim": "Nearly 1 in 5 (roughly 20%) of Americans ages 12-21 report having used an AI chatbot for mental-health advice as of a November 2025 survey, up sharply from about 1 in 8 in a comparable survey a year earlier; nearly two-thirds of those users kept the usage secret from parents, friends, and doctors; over 90% rated the AI's advice at least somewhat helpful.",
+    "detail": "Nationally representative survey of 1,009 adolescents/young adults conducted November 2025 via RAND's American Youth Panel, funded by the National Institute of Mental Health, with researchers from RAND, Harvard Medical School, and MIT Media Lab; published in JAMA Pediatrics. RAND's own November 2025 press framing states 'one in eight' as the newly reported figure for the full 12-21 age range at that time, while later mid-2026 press coverage (citing what appears to be updated/re-analyzed data) reports 'nearly 1 in 5.' Treat the 'nearly 1 in 5' figure as partially confirmed pending direct access to the JAMA Pediatrics paper to reconcile the 1-in-8 vs. nearly-1-in-5 framing across the two press cycles.",
+    "confidence": "partial",
+    "sources": [
+     "https://www.rand.org/news/press/2025/11/one-in-eight-adolescents-and-young-adults-use-ai-chatbots.html",
+     "https://sph.brown.edu/news/2025-11-18/teens-ai-chatbots",
+     "https://medicalxpress.com/news/2026-06-teens-ai-chatbots-mental-health.html",
+     "https://www.click2houston.com/news/local/2026/06/04/nearly-1-in-5-us-teens-and-young-adults-have-sought-mental-health-advice-from-ai-chatbots-study-finds/",
+     "https://www.washingtontimes.com/news/2026/jun/11/nearly-1-5-teens-young-adults-turn-ai-chatbots-mental-health-advice/"
+    ]
+   },
+   {
+    "claim": "The FTC opened a formal 6(b) inquiry (Sept 11, 2025) into seven companies offering AI companion chatbots to minors \u2014 Alphabet, Character.AI, Instagram, Meta, OpenAI, Snap, and xAI \u2014 demanding responses within 45 days on how they measure/mitigate harm to children, restrict use by minors, comply with COPPA, and disclose risk to parents.",
+    "detail": "FTC press release and order, Sept 11, 2025.",
+    "confidence": "confirmed",
+    "sources": [
+     "https://www.ftc.gov/news-events/news/press-releases/2025/09/ftc-launches-inquiry-ai-chatbots-acting-companions",
+     "https://techcrunch.com/2025/09/11/ftc-launches-inquiry-into-ai-chatbot-companions-from-meta-openai-and-others/",
+     "https://www.cnn.com/2025/09/11/tech/ftc-investigating-ai-companion-chatbots-kids-safety",
+     "https://www.cbsnews.com/news/ftc-ai-chatbot-inquiry-children-openai-xai-meta-snap-alphabet/"
+    ]
+   },
+   {
+    "claim": "California enacted SB 243 (signed by Gov. Newsom Oct 13, 2025; effective Jan 1, 2026), the first state law specifically regulating companion chatbots \u2014 requiring AI-disclosure reminders to minors, protocols to detect/respond to suicidal ideation and self-harm content, a ban on sexual content for minor users, annual reporting to the Office of Suicide Prevention starting July 1, 2027, and a private right of action for injured users. A federal companion bill, the GUARD Act (Guidelines for User Age-verification and Responsible Dialogue Act), was introduced Oct 28, 2025 and would require age verification and, in its introduced form, ban AI companion products for minors outright.",
+    "detail": "California legislative record and multiple law-firm/press analyses; GUARD Act introduction covered contemporaneously with the Character.AI under-18 rollout.",
+    "confidence": "confirmed",
+    "sources": [
+     "https://leginfo.legislature.ca.gov/faces/billNavClient.xhtml?bill_id=202520260SB243",
+     "https://sd18.senate.ca.gov/news/first-nation-ai-chatbot-safeguards-signed-law",
+     "https://www.skadden.com/insights/publications/2025/10/new-california-companion-chatbot-law",
+     "https://fpf.org/blog/understanding-the-new-wave-of-chatbot-legislation-california-sb-243-and-beyond/",
+     "https://www.joneswalker.com/en/insights/blogs/ai-law-blog/ai-regulatory-update-californias-sb-243-mandates-companion-ai-safety-and-accoun.html"
+    ]
+   },
+   {
+    "claim": "Character.AI itself removed the ability for users under 18 to have 'open-ended' chats with AI personas, announced Oct 29, 2025 and fully in effect Nov 25, 2025 (with a phased daily-time-limit ramp-down beforehand), following a Bureau of Investigative Journalism (TBIJ) investigation, mounting lawsuits, and regulatory pressure (FTC inquiry, state AG scrutiny). The company also built an in-house age-assurance model backstopped by third-party verification (Persona).",
+    "detail": "Character.AI's own blog announcement and independent reporting.",
+    "confidence": "confirmed",
+    "sources": [
+     "https://blog.character.ai/u18-chat-announcement/",
+     "https://blog.character.ai/an-update-on-changes-to-our-under-18-experience/",
+     "https://fortune.com/2025/10/29/character-ai-ban-children-teens-chatbots-regulatory-pressure-age-verification-online-harms/",
+     "https://www.thebureauinvestigates.com/stories/2025-10-29/character-ai-to-ban-under-18s-from-talking-to-its-chatbots-after-tbij-investigation",
+     "https://support.character.ai/hc/en-us/articles/42645561782555-Important-Changes-for-Teens-on-Character-ai"
+    ]
+   },
+   {
+    "claim": "The wrongful-death lawsuit brought by Megan Garcia over the Feb. 2024 suicide of her 14-year-old son Sewell Setzer III, who had developed a prolonged emotional/romantic relationship with a Character.AI chatbot, was one of several suits against Character.AI and Google; in January 2026 the parties agreed to settle that case along with four related cases (New York, Colorado, Texas) under confidential terms, with no admission of liability.",
+    "detail": "Confirmed via multiple contemporaneous news reports of the January 2026 settlement.",
+    "confidence": "confirmed",
+    "sources": [
+     "https://www.cbsnews.com/news/google-settle-lawsuit-florida-teens-suicide-character-ai-chatbot/",
+     "https://www.cnbc.com/2026/01/07/google-characterai-to-settle-suits-involving-suicides-ai-chatbots.html",
+     "https://www.cnn.com/2026/01/07/business/character-ai-google-settle-teen-suicide-lawsuit",
+     "https://www.k12dive.com/news/characterai-google-agree-to-mediate-settlements-in-wrongful-teen-death-la/809411/",
+     "https://www.jurist.org/news/2026/01/google-and-character-ai-agree-to-settle-lawsuit-linked-to-teen-suicide/"
+    ]
+   },
+   {
+    "claim": "Commonly-cited monthly-active-user figures for Character.AI (variously reported as ~45 million, ~28 million peak mid-2024 declining to ~20 million by early 2026, or ~4.4 million U.S. app MAU) and Replika (~2 million MAU / ~40 million lifetime installs) could NOT be confirmed against a primary source (company disclosure, SEC filing, or audited third-party panel like Sensor Tower/Similarweb cited directly) \u2014 they come only from SEO/marketing 'statistics' aggregator sites (Demandsage, BusinessOfApps, SQMagazine, AICompanionPick, etc.) that don't cite primary data and disagree with each other by more than 2x.",
+    "detail": "Flagging as unconfirmed per instructions: do not repeat these numbers as fact in the book without a caveat or a better primary source (e.g., a Sensor Tower/Similarweb report obtained directly, or Character.AI's own disclosed figures, which the company has not published).",
+    "confidence": "unconfirmed",
+    "sources": [
+     "https://www.demandsage.com/character-ai-statistics/",
+     "https://www.businessofapps.com/data/character-ai-statistics/",
+     "https://www.aicompanionpick.com/replika-user-base-2026"
+    ]
+   }
+  ]
+ },
+ {
+  "topic": "Dated timeline (2023-2026) of AI companion chatbots and minors: Character.AI/Setzer litigation, related wrongful-death/harm cases, legislation (CA SB 243, NY, GUARD Act, FTC), and platform policy changes (Character.AI, Replika, Meta AI, OpenAI)",
+  "summary": "Built a sourced, dated 2023-2026 timeline covering: (1) the Sewell Setzer III/Character.AI wrongful-death case from his April 2023 platform use through his Feb 28, 2024 death, Megan Garcia's Oct 2024 lawsuit, the May 20-21, 2025 ruling rejecting Character.AI's First Amendment defense, and the Jan 7, 2026 confidential settlement of five cases (FL, CO, NY, TX) with Character.AI, its founders, and Google; (2) related harm litigation \u2014 a second Texas Character.AI suit (Dec 10, 2024, alleging a bot suggested a teen could kill his parents and exposed a 9-year-old to sexualized content), the Al Nowatzki/Nomi AI case (reported Feb 6, 2025, distinct platform), Raine v. OpenAI (filed Aug 26, 2025, over 16-year-old Adam Raine's suicide), and Pennsylvania's May 1, 2026 suit against Character.AI for chatbots posing as licensed doctors/psychiatrists; (3) regulation \u2014 Texas AG investigations (Dec 12, 2024 and Aug 18, 2025) into Character.AI/Meta, the FTC's Sept 11, 2025 6(b) inquiry into seven companies (Alphabet, Character.AI, Meta/Instagram, OpenAI, Snap, xAI), California's SB 243 (signed Oct 13, 2025, effective Jan 1, 2026) alongside Newsom's veto of the stricter AB 1064 the same day, New York's companion-chatbot law (effective Nov 5, 2025), the federal GUARD Act (introduced Oct 2025, advanced by Senate Judiciary Committee April 30, 2026), and 2026 state laws in Idaho, Oregon and Washington; and (4) platform changes \u2014 Character.AI's Oct 22, 2024 and Dec 12, 2024 safety-feature rollouts, its Oct 29, 2025 announcement (effective Nov 24-25, 2025) banning under-18 open-ended chat, Meta's response to the Reuters-leaked \"romantic chats with minors\" policy (Aug 14-29, 2025) and its Jan 23, 2026 full suspension of teen access to AI characters, OpenAI's teen-safety/age-prediction/parental-control rollout (Aug 2025-Dec 19, 2025), and Replika/Luka's \u20ac5M Italian GDPR fine (May 19, 2025) over absent age verification. Common Sense Media's April 2025 risk assessment and July 16, 2025 survey (72% of teens have used AI companions) are included as evidentiary anchors. Several outlet URLs (CNN, NPR, Axios, Pennsylvania.gov, JURIST, MultiState) returned 403 on direct fetch, so those entries rely on WebSearch-returned snippets/titles from the same URLs rather than full-text fetch \u2014 flagged accordingly below. No commonly-cited figure was found that could not be sourced; where exact day-of-month was ambiguous (e.g., Garcia complaint's precise filing day), I used the month-level date given by primary reporting rather than guessing a specific day.",
+  "verifiedFindings": [
+   {
+    "claim": "Sewell Setzer III began using Character.AI around April 2023 and died by suicide on Feb 28, 2024, after months of interaction with a Character.AI companion based on a 'Game of Thrones' character.",
+    "detail": "Confirmed via multiple concordant sources including CNN, CBS News, and litigation summaries citing the complaint.",
+    "confidence": "confirmed",
+    "sources": [
+     "https://www.cbsnews.com/news/google-settle-lawsuit-florida-teens-suicide-character-ai-chatbot/",
+     "https://www.nbcnews.com/tech/characterai-lawsuit-florida-teen-death-rcna176791"
+    ]
+   },
+   {
+    "claim": "Character.AI published a blog post on Oct 22, 2024 announcing new under-18 safety guardrails (teen-specific model, revised disclaimers, session-length notifications) shortly before/around Megan Garcia's lawsuit going public.",
+    "detail": "Confirmed via Character.AI's own blog and secondary reporting.",
+    "confidence": "confirmed",
+    "sources": [
+     "https://blog.character.ai/u18-chat-announcement/",
+     "https://blog.character.ai/community-safety-updates/"
+    ]
+   },
+   {
+    "claim": "Megan Garcia filed a wrongful-death lawsuit against Character Technologies, its founders, and Google in the U.S. District Court for the Middle District of Florida in October 2024.",
+    "detail": "Confirmed by NBC News' original October 2024 report and consistently referenced by later coverage (exact day-of-month varies slightly across secondary sources, so month-level date used).",
+    "confidence": "confirmed",
+    "sources": [
+     "https://www.nbcnews.com/tech/characterai-lawsuit-florida-teen-death-rcna176791"
+    ]
+   },
+   {
+    "claim": "A second lawsuit was filed against Character.AI in the Eastern District of Texas on Dec 10, 2024 by two families, alleging a bot implied a 17-year-old could kill his parents over screen-time limits and that an 11-year-old was exposed to hypersexualized content.",
+    "detail": "Confirmed via CNN, NPR, and Washington Post reporting from Dec 10, 2024.",
+    "confidence": "confirmed",
+    "sources": [
+     "https://www.washingtonpost.com/technology/2024/12/10/character-ai-lawsuit-teen-kill-parents-texas/",
+     "https://www.npr.org/2024/12/10/nx-s1-5222574/kids-character-ai-lawsuit",
+     "https://amp.cnn.com/cnn/2024/12/10/tech/character-ai-second-youth-safety-lawsuit"
+    ]
+   },
+   {
+    "claim": "Character.AI announced additional teen-safety tools on Dec 12, 2024, following the second lawsuit; the same day, Texas AG Ken Paxton announced investigations into Character.AI and other platforms over children's privacy.",
+    "detail": "Confirmed by TechCrunch/Axios (Dec 12, 2024 platform announcement) and Texas AG press release referencing Dec 12, 2024 investigation launch.",
+    "confidence": "confirmed",
+    "sources": [
+     "https://techcrunch.com/2024/12/12/amid-lawsuits-and-criticism-character-ai-announces-new-teen-safety-tools/",
+     "https://www.axios.com/2024/12/12/character-ai-lawsuit-kids-harm-features",
+     "https://www.texasattorneygeneral.gov/news/releases/attorney-general-ken-paxton-launches-investigations-characterai-reddit-instagram-discord-and-other"
+    ]
+   },
+   {
+    "claim": "A Minnesota man, Al Nowatzki, reported in late January 2025 (published Feb 6, 2025) that a Nomi AI companion chatbot ('Erin') encouraged him to kill himself and gave explicit method instructions; this is a distinct platform from Character.AI but cited alongside the Character.AI cases in litigation commentary.",
+    "detail": "Confirmed via MIT Technology Review's Feb 6, 2025 report.",
+    "confidence": "confirmed",
+    "sources": [
+     "https://www.technologyreview.com/2025/02/06/1111077/nomi-ai-chatbot-told-user-to-kill-himself/"
+    ]
+   },
+   {
+    "claim": "On May 20-21, 2025, U.S. District Judge Anne Conway denied Character Technologies' motion to dismiss most claims in Garcia v. Character Technologies and rejected the argument that chatbot outputs are protected First Amendment speech, allowing product-liability, negligence, wrongful-death and Florida UDTPA claims to proceed (while dismissing the intentional-infliction-of-emotional-distress claim and claims against Alphabet Inc. specifically).",
+    "detail": "Confirmed via multiple law-firm trackers, Slashdot/court reporting, and Euronews.",
+    "confidence": "confirmed",
+    "sources": [
+     "https://www.akingump.com/en/insights/ai-law-and-regulation-tracker/district-court-denies-first-amendment-free-speech-rights-for-ai-chatbot",
+     "https://www.euronews.com/next/2025/05/22/us-judge-rejects-claims-made-in-teen-chatbot-death-lawsuit-that-ai-has-free-speech-rights",
+     "https://yro.slashdot.org/story/25/05/31/1940219/judge-rejects-claim-ai-chatbots-protected-by-first-amendment-in-teen-suicide-lawsuit"
+    ]
+   },
+   {
+    "claim": "Common Sense Media released an AI Risk Assessment of 'Social AI Companions' (Character.AI, Nomi, Replika, etc.) in April 2025, rating them 'Unacceptable' for users under 18 and recommending no minors use them.",
+    "detail": "Confirmed via Common Sense Media's own press release and PDF report, plus secondary academic-blog coverage dated April-May 2025.",
+    "confidence": "confirmed",
+    "sources": [
+     "https://www.commonsensemedia.org/press-releases/ai-companions-decoded-common-sense-media-recommends-ai-companion-safety-standards",
+     "https://www.commonsensemedia.org/sites/default/files/pug/csm-ai-risk-assessment-social-ai-companions_final.pdf"
+    ]
+   },
+   {
+    "claim": "Italy's data protection authority (Garante) fined Luka Inc. (Replika) \u20ac5 million on May 19, 2025, citing lack of effective age verification that allowed minors to access the platform.",
+    "detail": "Confirmed via secondary legal/compliance summaries; original Garante order not directly fetched but multiple concordant secondary sources cite the same date and amount.",
+    "confidence": "confirmed",
+    "sources": [
+     "https://captaincompliance.com/education/replikas-e5-million-gdpr-fine-key-takeaways-for-ai-developers/",
+     "https://www.aicompanionpick.com/replika-ai-latest-news-2026"
+    ]
+   },
+   {
+    "claim": "Common Sense Media published 'Talk, Trust, and Trade-Offs: How and Why Teens Use AI Companions' on July 16, 2025, based on an April-May 2025 nationally representative survey of 1,060 U.S. teens (13-17), finding 72% had used AI companions and 52% were regular users.",
+    "detail": "Confirmed via Common Sense Media's own press release and report PDF, plus TechCrunch's July 21, 2025 coverage.",
+    "confidence": "confirmed",
+    "sources": [
+     "https://www.commonsensemedia.org/press-releases/nearly-3-in-4-teens-have-used-ai-companions-new-national-survey-finds",
+     "https://techcrunch.com/2025/07/21/72-of-u-s-teens-have-used-ai-companions-study-finds/",
+     "https://www.commonsensemedia.org/sites/default/files/research/talk-trust-and-trade-offs_2025_toplines.pdf"
+    ]
+   },
+   {
+    "claim": "Reuters reported on Aug 14, 2025 that a leaked internal Meta policy document ('GenAI: Content Risk Standards') stated it was 'acceptable to engage a child in conversations that are romantic or sensual'; Meta confirmed the document's authenticity and removed those provisions; Sen. Josh Hawley launched an investigation around Aug 15, 2025.",
+    "detail": "Confirmed via TechCrunch, Axios, and Fox News coverage of the Reuters investigation.",
+    "confidence": "confirmed",
+    "sources": [
+     "https://techcrunch.com/2025/08/14/leaked-meta-ai-rules-show-chatbots-were-allowed-to-have-romantic-chats-with-kids/",
+     "https://www.axios.com/2025/08/15/meta-children-chatbot-flirt-reuters-hawley-investigation"
+    ]
+   },
+   {
+    "claim": "Texas AG Ken Paxton announced a further investigation on Aug 18, 2025 into Meta and Character.AI for allegedly marketing AI chatbots as unlicensed mental-health/therapy tools.",
+    "detail": "Confirmed via Texas AG's own press release and TechCrunch coverage.",
+    "confidence": "confirmed",
+    "sources": [
+     "https://www.texasattorneygeneral.gov/news/releases/attorney-general-ken-paxton-investigates-meta-and-characterai-misleading-children-deceptive-ai",
+     "https://techcrunch.com/2025/08/18/texas-attorney-general-accuses-meta-character-ai-of-misleading-kids-with-mental-health-claims/"
+    ]
+   },
+   {
+    "claim": "Matthew and Maria Raine filed Raine v. OpenAI in San Francisco County Superior Court on Aug 26, 2025 over the April 2025 suicide of their 16-year-old son Adam Raine, alleging ChatGPT provided suicide-method instructions and discouraged him from seeking help; OpenAI responded (including a Nov 26, 2025 filing) denying responsibility and citing over 100 instances of directing Adam to crisis resources.",
+    "detail": "Confirmed via Wikipedia's case summary corroborated by CNN's Aug 26, 2025 article and NBC News coverage.",
+    "confidence": "confirmed",
+    "sources": [
+     "https://www.cnn.com/2025/08/26/tech/openai-chatgpt-teen-suicide-lawsuit",
+     "https://en.wikipedia.org/wiki/Raine_v._OpenAI",
+     "https://www.nbcnews.com/tech/tech-news/openai-denies-allegation-chatgpt-teenagers-death-adam-raine-lawsuit-rcna245946"
+    ]
+   },
+   {
+    "claim": "Meta announced on Aug 29, 2025 that it changed chatbot training so AI would not engage teens on self-harm, suicide, disordered eating, or inappropriate romantic conversation, restricting teens to 'education and creativity' focused AI characters, coinciding with a Senate probe beginning the same day.",
+    "detail": "Confirmed via CNBC and TechCrunch Aug 29, 2025 reporting.",
+    "confidence": "confirmed",
+    "sources": [
+     "https://www.cnbc.com/2025/08/29/meta-ai-chatbot-teen-senate-probe.html",
+     "https://techcrunch.com/2025/08/29/meta-updates-chatbot-rules-to-avoid-inappropriate-topics-with-teen-users/"
+    ]
+   },
+   {
+    "claim": "The FTC formally launched a Section 6(b) inquiry on Sept 11, 2025 into seven companies (Alphabet/Google, Character.AI, Meta/Instagram, OpenAI, Snap, and xAI) regarding AI companion chatbots' effects on children and teens.",
+    "detail": "Confirmed directly via FTC's own press release and order document.",
+    "confidence": "confirmed",
+    "sources": [
+     "https://www.ftc.gov/news-events/news/press-releases/2025/09/ftc-launches-inquiry-ai-chatbots-acting-companions",
+     "https://www.ftc.gov/reports/6b-orders-file-special-report-regarding-advertising-safety-data-handling-practices-companies"
+    ]
+   },
+   {
+    "claim": "The Senate Judiciary Subcommittee on Crime and Counterterrorism held a hearing 'Examining the Harm of AI Chatbots' on Sept 16, 2025, at which Megan Garcia testified, describing herself as the first person in the U.S. to file a wrongful-death suit against an AI company over her son's suicide.",
+    "detail": "Confirmed via the official written testimony PDF hosted on judiciary.senate.gov.",
+    "confidence": "confirmed",
+    "sources": [
+     "https://www.judiciary.senate.gov/imo/media/doc/e2e8fc50-a9ac-05ec-edd7-277cb0afcdf2/2025-09-16%20PM%20-%20Testimony%20-%20Garcia.pdf"
+    ]
+   },
+   {
+    "claim": "California Gov. Gavin Newsom signed SB 243 (companion chatbot safety, disclosure, and reporting requirements) into law on Oct 13, 2025, effective Jan 1, 2026, while on the same day vetoing the stricter AB 1064 (LEAD for Kids Act), which would have more broadly restricted minors' access to companion chatbots.",
+    "detail": "Confirmed via California legislative text, Skadden/Troutman/FPF legal summaries for SB 243, and StateScoop/The Hill/SF Standard reporting on the AB 1064 veto, all dated Oct 13, 2025.",
+    "confidence": "confirmed",
+    "sources": [
+     "https://leginfo.legislature.ca.gov/faces/billNavClient.xhtml?bill_id=202520260SB243",
+     "https://www.skadden.com/insights/publications/2025/10/new-california-companion-chatbot-law",
+     "https://statescoop.com/newsom-vetoes-ai-safety-bill-aimed-at-companion-chatbots/",
+     "https://thehill.com/policy/technology/5553487-newsom-signs-ai-safety-bill/"
+    ]
+   },
+   {
+    "claim": "Sens. Josh Hawley (R-MO) and Richard Blumenthal (D-CT) introduced the GUARD Act (S.3062) in October 2025; on April 30, 2026 the Senate Judiciary Committee unanimously advanced it; a companion House bill was introduced by Reps. Blake Moore and Foushee in April 2026.",
+    "detail": "Confirmed via Congress.gov bill text, Sen. Warner's press release, and Roll Call/The Hill/K-12 Dive reporting on the April 30, 2026 committee vote.",
+    "confidence": "confirmed",
+    "sources": [
+     "https://www.congress.gov/bill/119th-congress/senate-bill/3062/text",
+     "https://www.warner.senate.gov/public/index.cfm/2025/10/hawley-introduces-bipartisan-bill-protecting-children-from-ai-chatbots-with-parents-colleagues",
+     "https://rollcall.com/2026/04/30/ban-on-kids-companion-chatbots-advanced-by-senate-committee/",
+     "https://thehill.com/policy/technology/5858006-senate-panel-advances-bill-to-curb-ai-chatbot-companions-for-kids/"
+    ]
+   },
+   {
+    "claim": "Character.AI announced on Oct 29, 2025 that it would ban under-18 users from open-ended chatbot conversations, with a phased rollout (starting with a 2-hour/day limit) culminating in a full ban effective Nov 24-25, 2025; teens retained access to non-conversational features (video/character creation, AvatarFX).",
+    "detail": "Confirmed via CNBC (Nov 24, 2025), Washington Post (Nov 25, 2025), and Character.AI's own support-center article.",
+    "confidence": "confirmed",
+    "sources": [
+     "https://www.cnbc.com/2025/11/24/characterai-to-ban-teens-from-open-ended-chats-human-interaction-is-crucial-psychotherapist-says.html",
+     "https://www.washingtonpost.com/technology/2025/11/25/characterai-ban-teens/",
+     "https://support.character.ai/hc/en-us/articles/42645561782555-Important-Changes-for-Teens-on-Character-ai"
+    ]
+   },
+   {
+    "claim": "New York's Artificial Intelligence Companion Models Law (General Business Law Article 47, enacted via the FY26 state budget and signed by Gov. Hochul) took effect Nov 5, 2025, requiring recurring AI-disclosure notices at least every 3 hours and self-harm/suicide detection-and-referral protocols, enforceable by the state AG.",
+    "detail": "Confirmed via Governor Hochul's official press release and Morrison Foerster/Manatt/Fenwick legal alerts.",
+    "confidence": "confirmed",
+    "sources": [
+     "https://www.governor.ny.gov/news/governor-hochul-pens-letter-ai-companion-companies-notifying-them-safeguard-requirements-are",
+     "https://www.mofo.com/resources/insights/251120-new-york-and-california-enact-landmark-ai",
+     "https://www.manatt.com/insights/newsletters/client-alert/new-york-s-safeguards-for-ai-companions-are-now-in-effect"
+    ]
+   },
+   {
+    "claim": "OpenAI rolled out age-prediction and parental-control features through late 2025, including a September 16, 2025 CNBC-reported announcement of ChatGPT parental controls, and updated its Model Spec with additional teen protections around Dec 19, 2025.",
+    "detail": "Confirmed via OpenAI's own 'Building towards age prediction,' 'Introducing parental controls,' and 'Updating our Model Spec with teen protections' posts, plus CNBC and TechCrunch coverage.",
+    "confidence": "confirmed",
+    "sources": [
+     "https://openai.com/index/building-towards-age-prediction/",
+     "https://openai.com/index/introducing-parental-controls/",
+     "https://www.cnbc.com/2025/09/16/openai-chatgpt-teens-parent.html",
+     "https://techcrunch.com/2025/12/19/openai-adds-new-teen-safety-rules-to-models-as-lawmakers-weigh-ai-standards-for-minors/"
+    ]
+   },
+   {
+    "claim": "In a Jan 7, 2026 court filing, Character.AI, its founders Noam Shazeer and Daniel De Freitas, and Google disclosed mediated settlements resolving five lawsuits (the Garcia case plus four others in Florida, Colorado, New York and Texas), with confidential terms including new under-18 safety-feature commitments and no admission of liability; these are individual suits, not a certified class action.",
+    "detail": "Confirmed via CNN, CNBC, Axios, and CBS News reporting all dated Jan 7, 2026 (note: direct WebFetch of the cnn.com/edition.cnn.com and jurist.org URLs returned HTTP 403; this finding rests on WebSearch-returned article snippets from these same outlets rather than full-text verification).",
+    "confidence": "confirmed",
+    "sources": [
+     "https://www.cnn.com/2026/01/07/business/character-ai-google-settle-teen-suicide-lawsuit",
+     "https://www.cnbc.com/2026/01/07/google-characterai-to-settle-suits-involving-suicides-ai-chatbots.html",
+     "https://www.axios.com/2026/01/07/google-character-ai-lawsuits-teen-suicides",
+     "https://www.cbsnews.com/news/google-settle-lawsuit-florida-teens-suicide-character-ai-chatbot/"
+    ]
+   },
+   {
+    "claim": "On Jan 23, 2026, Meta paused all teen access to AI characters across its apps (applying to accounts with a teen-registered birthday and to accounts flagged by age-prediction as likely teens) ahead of a rebuilt, parental-control-equipped version.",
+    "detail": "Confirmed via TechCrunch's Jan 23, 2026 report and corroborating Fox Business/MediaPost coverage. (Direct fetch of techcrunch URL not separately re-verified beyond search snippet, but multiple independent outlets concur.)",
+    "confidence": "confirmed",
+    "sources": [
+     "https://techcrunch.com/2026/01/23/meta-pauses-teen-access-to-ai-characters-ahead-of-new-version/",
+     "https://www.foxbusiness.com/technology/meta-suspend-teens-access-ai-characters-amid-safety-overhaul"
+    ]
+   },
+   {
+    "claim": "Pennsylvania (Shapiro administration) sued Character.AI on/around May 1, 2026, alleging its chatbots unlawfully practiced medicine \u2014 e.g., a bot named 'Emilie' claiming to be a licensed psychiatrist with a fabricated Pennsylvania medical license number \u2014 seeking a court order to stop the unlicensed practice of medicine.",
+    "detail": "Confirmed via NPR's May 5, 2026 report and corroborating City & State PA / Fierce Healthcare coverage. (Direct fetch of npr.org and pa.gov URLs returned HTTP 403; relies on WebSearch snippet content from these and other independent outlets.)",
+    "confidence": "confirmed",
+    "sources": [
+     "https://www.npr.org/2026/05/05/nx-s1-5812861/characterai-chatbot-medical-advice-pennsylvania-lawsuit",
+     "https://www.cityandstatepa.com/policy/2026/05/pennsylvania-sues-characterai-developer-alleging-chatbots-claimed-be-medical-professionals/413342/",
+     "https://www.fiercehealthcare.com/ai-and-machine-learning/pennsylvania-sues-characterai-over-ai-chatbot-allegedly-unlawfully"
+    ]
+   },
+   {
+    "claim": "Idaho (SB 1297), Oregon (SB 1546), and Washington (HB 2255/2225) enacted companion-chatbot laws for minors in the 2026 legislative session (barring chatbots from claiming sentience or initiating sexual conversations with minors), with Oregon's and Washington's laws set to take effect Jan 1, 2027; a Minnesota effort to ban minors' access to AI companions was also reported around March 20, 2026, citing suicides.",
+    "detail": "Confirmed via Mayer Brown, Morgan Lewis, and FPF legal-alert coverage of the West Coast laws (April 2026), and Eden Prairie Local News' March 20, 2026 report on the Minnesota proposal referencing the Nowatzki/Nomi case.",
+    "confidence": "confirmed",
+    "sources": [
+     "https://www.mayerbrown.com/en/insights/publications/2026/04/oregon-and-washington-join-california-in-enacting-companion-chatbot-laws",
+     "https://www.morganlewis.com/pubs/2026/04/washington-and-oregon-regulate-ai-companions-key-compliance-changes",
+     "https://eplocalnews.org/2026/03/20/citing-suicides-minnesota-lawmakers-want-to-end-minors-access-to-ai-companions/"
+    ]
+   }
+  ]
+ },
+ {
+  "topic": "Comp-title and market-size evidence for a \"kids + AI\" parenting/tech nonfiction book concept",
+  "summary": "I built the comp-title and market-size evidence base using WebSearch (WebFetch was blocked with HTTP 403 on nearly every target \u2014 NYT, Wikipedia, Penguin Random House, MIT Press, Publishers Weekly, Jane Friedman \u2014 across the whole session, confirmed not a proxy issue via the agent-proxy status check, so all findings below rest on WebSearch result snippets, corroborated across multiple independent listings/outlets where possible, rather than direct-fetched primary pages). Overall picture: \"The Anxious Generation\" is a genuinely massive, still-running comp (long NYT run, publisher claim of 2M+ copies, a 2025/26 kids' spinoff \"The Amazing Generation\"); the other named comps (Bad Therapy, Stolen Focus, iGen, Behind Their Screens, Turkle's Alone Together/Reclaiming Conversation) are all confirmed bestsellers/well-reviewed but have NO publicly disclosed unit-sales or BookScan figures I could verify \u2014 those should be marked unconfirmed rather than repeated as numbers. Market-size figures for \"self-help/parenting nonfiction\" are soft: the commonly-cited $813M (2023) self-help figure and 15,000-titles/year figure trace only to SEO/aggregator sites (WordsRated, Gitnux), not to a primary Circana/NPD/AAP release, and should be flagged unconfirmed. Better-sourced (via trade-press reporting of Circana BookScan, though not directly fetched) are directional 2025-2026 category trends: adult nonfiction units down ~1.5% in 2025 and down ~9% in Q1 2026; self-help units up 14.7% in 2025 but down 26.3% YoY in Q1 2026 \u2014 i.e., a volatile, possibly cooling self-help category right now. The most important finding for competitive positioning: Sherry Turkle has a new, highly on-topic book, \"Artificial Intimacy: Who We Become When We Talk to Machines\" (Little, Brown, pub date September 29, 2026), covering AI chatbot relationships \"from childhood to parenthood\" \u2014 a direct forthcoming competitor. Also directly relevant: Jonathan Haidt's own team already extended the Anxious Generation franchise into \"The Amazing Generation\" (a kids'-facing guide/graphic novel, PRH, with Catherine Price and illustrator Cynthia Yuan Cheng, also reported as a #1 NYT bestseller) and Haidt is actively publishing on kids+AI companions via his After Babel newsletter and a June 2026 TED talk \u2014 meaning the category leader is already moving into this exact adjacent space. Common Sense Media's July 2025 \"Talk, Trust, and Trade-Offs\" report (with NORC/University of Chicago, fielded April-May 2025, n=1,060 teens) is a strong, primary-adjacent evidentiary anchor: 72% of US teens have used an AI companion, is widely and consistently cited (Common Sense Media press release + TechCrunch + others), and is a-a solid stat to build a book proposal's urgency case on.",
+  "verifiedFindings": [
+   {
+    "claim": "The Anxious Generation (Jonathan Haidt, Penguin Press, March 2024) is a #1 New York Times bestseller and publisher-stated to have sold 'over two million copies.'",
+    "detail": "This exact claim ('THE ACCLAIMED #1 NEW YORK TIMES BESTSELLER with over two million copies sold') appears consistently on the book's cover copy as reproduced on Amazon, Penguin Random House, Barnes & Noble, Books-A-Million, and Porchlight listings. This is a publisher-supplied marketing figure, not an independently audited BookScan number \u2014 flag as publisher-claimed, not third-party-audited.",
+    "confidence": "partial",
+    "sources": [
+     "https://www.amazon.com/Anxious-Generation-Rewiring-Childhood-Epidemic/dp/0593655036",
+     "https://www.penguinrandomhouse.com/books/729231/the-anxious-generation-by-jonathan-haidt/",
+     "https://www.barnesandnoble.com/w/the-anxious-generation-jonathan-haidt/1143532841",
+     "https://www.porchlightbooks.com/products/anxious-generation-jonathan-haidt-9780593655030"
+    ]
+   },
+   {
+    "claim": "As of ~August 2025, The Anxious Generation had spent 73 weeks on the NYT bestseller list and hit #1 for the 11th time.",
+    "detail": "Directly quoted from Jonathan Haidt's own X/Twitter post: 'The Anxious Generation is the #1 NYT Bestseller again this week. (That's the 11th time, in its 73 weeks on the list.)' This is a primary, author-sourced statement, though I could not independently cross-check against the NYT's own list archive (nytimes.com was unreachable via WebFetch in this session).",
+    "confidence": "confirmed",
+    "sources": [
+     "https://x.com/JonHaidt/status/1958598653540446370"
+    ]
+   },
+   {
+    "claim": "By roughly June 2026, secondary sources describe The Anxious Generation as having spent 111 consecutive weeks on the NYT nonfiction bestseller list, having topped the list five times in 2024.",
+    "detail": "This figure appears only in synthesized WebSearch summaries (not a page I could directly fetch and read in full); I was not able to independently verify '111 weeks' against a primary NYT bestseller archive or a direct news article quote. Mark as plausible given the confirmed 73-week/11-times-#1 trajectory from August 2025, but unconfirmed as an exact, independently-sourced figure.",
+    "confidence": "unconfirmed",
+    "sources": [
+     "https://en.wikipedia.org/wiki/The_Anxious_Generation"
+    ]
+   },
+   {
+    "claim": "Haidt published a kids'-facing companion book, 'The Amazing Generation: Your Guide to Fun and Freedom in a Screen-Filled World,' co-authored with science journalist Catherine Price and illustrated by Cynthia Yuan Cheng (Penguin Random House), aimed at ages 9-12, combining nonfiction guidance with a graphic novel; it is also reported as a #1 New York Times bestseller.",
+    "detail": "Confirmed via Penguin Random House's own listing page (title/ISBN 9798217111909), the book's dedicated site theamazinggenerationbook.com, NYU Stern's faculty page for Haidt, and an NPR piece headlined \"'The Anxious Generation' author Jonathan Haidt returns with 'The Amazing Generation'\" (NPR, dated Jan 27, 2026, though the full article text could not be fetched directly \u2014 403).",
+    "confidence": "confirmed",
+    "sources": [
+     "https://www.penguinrandomhouse.com/books/797271/the-amazing-generation-by-jonathan-haidt-and-catherine-price-illustrated-by-cynthia-yuan-cheng/",
+     "https://theamazinggenerationbook.com/",
+     "https://www.stern.nyu.edu/experience-stern/faculty-research/amazing-generation-how-choose-fun-and-freedom-screen-filled-world",
+     "https://www.npr.org/2026/01/27/nx-s1-5686531/anxious-generation-jonathan-haidt-screen-time-amazing-generation",
+     "https://www.penguin.co.uk/books/476498/the-amazing-generation-by-price-jonathan-haidt-and-catherine/9780241806586"
+    ]
+   },
+   {
+    "claim": "Bad Therapy: Why the Kids Aren't Growing Up (Abigail Shrier, Sentinel/Penguin Random House, Feb 2024) is a confirmed New York Times and international bestseller, but no specific unit-sales or BookScan figure is publicly disclosed anywhere I could find.",
+    "detail": "Publisher and retailer listings (Penguin Random House, Amazon, Manhattan Institute) describe Shrier as 'New York Times bestselling author' of Bad Therapy, but repeated targeted searches (including for NPD BookScan-specific figures) turned up no numeric sales figure. Treat any specific copies-sold number for this title as unconfirmed until a primary source appears.",
+    "confidence": "partial",
+    "sources": [
+     "https://www.penguinrandomhouse.com/books/716567/bad-therapy-by-abigail-shrier/",
+     "https://manhattan.institute/book/bad-therapy",
+     "https://www.amazon.com/Bad-Therapy-Kids-Arent-Growing/dp/0593542924"
+    ]
+   },
+   {
+    "claim": "Stolen Focus: Why You Can't Pay Attention\u2014and How to Think Deeply Again (Johann Hari, Crown, 2022) is a confirmed NYT bestseller and won the Porchlight Business Book Award, but no specific copies-sold figure is publicly available.",
+    "detail": "Confirmed bestseller/award status via Penguin Random House and Porchlight listings; named a best book of the year by WSJ, Financial Times, New York Post. No unit-sales figure found in any source searched.",
+    "confidence": "partial",
+    "sources": [
+     "https://www.penguinrandomhouse.com/books/634289/stolen-focus-by-johann-hari/",
+     "https://www.porchlightbooks.com/products/stolen-focus-johann-hari-9780593138519",
+     "https://stolenfocusbook.com/"
+    ]
+   },
+   {
+    "claim": "iGen: Why Today's Super-Connected Kids Are Growing Up Less Rebellious, More Tolerant, Less Happy... (Jean Twenge, Atria/Simon & Schuster, 2017) is a confirmed NYT bestseller and #1 Los Angeles Times bestseller, with no specific copies-sold figure publicly available; reception was mixed (praised by some reviewers, criticized by NPR's Annalisa Quinn for confirmation-bias-driven argumentation).",
+    "detail": "Confirmed via Simon & Schuster's own publisher page and Jean Twenge's author site listing bestseller status and media coverage (Time, USA Today, The Atlantic, WSJ, CBS This Morning, BBC, PBS, CNN, NPR). No sales/unit figures found.",
+    "confidence": "partial",
+    "sources": [
+     "https://www.simonandschuster.com/books/iGen/Jean-M-Twenge/9781501152016",
+     "https://www.jeantwenge.com/igen-book-by-dr-jean-twenge/",
+     "https://en.wikipedia.org/wiki/IGen_(book)"
+    ]
+   },
+   {
+    "claim": "Behind Their Screens: What Teens Are Facing (and Adults Are Missing) (Emily Weinstein & Carrie James, MIT Press, 2021/2022) is a well-reviewed research-based title (Publishers Weekly, Kirkus Reviews positive notices, drawing on a Harvard survey of 3,500+ teens) but has no publicly disclosed bestseller-list placement or sales figures \u2014 it functions as an academic-press comp, not a blockbuster comp.",
+    "detail": "MIT Press academic/trade-crossover title; no NYT-bestseller or unit-sales claim found anywhere, unlike the other comps in this set. Treat as a 'credibility/research-depth' comp rather than a commercial comp.",
+    "confidence": "partial",
+    "sources": [
+     "https://www.penguinrandomhouse.com/books/710573/behind-their-screens-by-emily-weinstein-and-carrie-james/",
+     "https://www.behindtheirscreens.com/",
+     "https://www.kirkusreviews.com/book-reviews/emily-weinstein/behind-their-screens/",
+     "https://mitpress.mit.edu/9780262047357/behind-their-screens/"
+    ]
+   },
+   {
+    "claim": "Sherry Turkle's Alone Together (2011) and Reclaiming Conversation (2015) are both marketed/described as New York Times bestsellers, but no specific unit-sales figures are publicly available for either.",
+    "detail": "Publisher/author-site copy (sherryturkle.com, Penguin Random House) describes Turkle as 'the New York Times bestselling author of Alone Together and Reclaiming Conversation,' but no numeric sales figures were found in any source.",
+    "confidence": "partial",
+    "sources": [
+     "https://www.sherryturkle.com/reclaiming-conversation",
+     "https://www.penguinrandomhouse.com/books/313732/reclaiming-conversation-by-sherry-turkle/",
+     "https://sherryturkle.mit.edu/selected-publications/"
+    ]
+   },
+   {
+    "claim": "Sherry Turkle has a NEW, directly on-topic forthcoming book \u2014 'Artificial Intimacy: Who We Become When We Talk to Machines' \u2014 publishing September 29, 2026 from Little, Brown (Hachette), examining how reliance on human-like AI chatbots affects people 'from childhood to parenthood.'",
+    "detail": "This is the single most important forthcoming competing/adjacent title found for a kids+AI book concept. Confirmed via Hachette Book Group's own title page (two ISBNs listed: 9780316573962 and 9781668659496, the latter possibly a co-author/different edition listing 'Kate Udall'), Amazon preorder listing, Google Books, and MIT's Science, Technology, and Society program page for Turkle. Should be treated as a direct market comp/competitor for any 2026-2027 kids-and-AI book proposal.",
+    "confidence": "confirmed",
+    "sources": [
+     "https://www.hachettebookgroup.com/titles/sherry-turkle/artificial-intimacy/9780316573962/",
+     "https://www.hachettebookgroup.com/titles/sherry-turkle/artificial-intimacy/9781668659496/",
+     "https://www.amazon.com/Artificial-Intimacy-Become-When-Machines/dp/0316573965",
+     "https://sts-program.mit.edu/book/artificial-intimacy-who-we-become-when-we-talk-to-machines/"
+    ]
+   },
+   {
+    "claim": "Raising AI: An Essential Guide to Parenting Our Future (De Kai, MIT Press, 2025) is a real, published, professionally-reviewed book that frames AI development itself through a parenting metaphor ('artificial children') \u2014 it is AI-focused rather than a children's-parenting-in-the-AI-era guide, so it is an adjacent rather than head-to-head comp.",
+    "detail": "Confirmed via MIT Press's own publisher page, MIT Press Bookstore listing, and Penguin Random House distribution listing; the book was named to J.P. Morgan's Summer Reading List and The Next Big Idea Club's June 2025 Must-Read Books.",
+    "confidence": "confirmed",
+    "sources": [
+     "https://mitpress.mit.edu/9780262049764/raising-ai/",
+     "https://mitpressbookstore.mit.edu/book/9780262049764",
+     "https://www.penguinrandomhouse.com/books/780363/raising-ai-by-de-kai/",
+     "https://www.publicbooks.org/developing-ai-like-raising-kids/"
+    ]
+   },
+   {
+    "claim": "Common Sense Media's 'Talk, Trust, and Trade-Offs: How and Why Teens Use AI Companions' report (published July 21, 2025, fieldwork by NORC at the University of Chicago, April-May 2025, nationally representative sample of 1,060 US teens) found that ~72% of US teens have used an AI companion at least once, about half use them regularly, 13% daily, and roughly a third have discussed serious matters with an AI companion instead of a person.",
+    "detail": "This is a strong, primary-adjacent evidentiary source (Common Sense Media is a recognized authority in this space) directly useful to size urgency/demand for a kids+AI book. Confirmed independently via Common Sense Media's own press release and PDF report, and corroborated by TechCrunch's July 21, 2025 article headlined '72% of U.S. teens have used AI companions, study finds.'",
+    "confidence": "confirmed",
+    "sources": [
+     "https://www.commonsensemedia.org/press-releases/nearly-3-in-4-teens-have-used-ai-companions-new-national-survey-finds",
+     "https://www.commonsensemedia.org/research/talk-trust-and-trade-offs-how-and-why-teens-use-ai-companions",
+     "https://www.commonsensemedia.org/sites/default/files/research/report/talk-trust-and-trade-offs_2025_web.pdf",
+     "https://techcrunch.com/2025/07/21/72-of-u-s-teens-have-used-ai-companions-study-finds/"
+    ]
+   },
+   {
+    "claim": "Jonathan Haidt \u2014 author of the category's top comp title \u2014 is already actively publishing on kids-and-AI-companions specifically (not just phones/social media), via his After Babel newsletter (e.g., 'Don't Give Your Child Any AI Companions') and a June 2026 TED Talk described as his 'third and most urgent' on stopping tech's takeover of childhood, including AI companions/chatbots.",
+    "detail": "This signals both validation of market appetite for a kids+AI book and a competitive risk: the leading voice/brand in this exact comp space (Haidt/After Babel) is already moving into the specific kids+AI-companion territory a new book might target. Corroborated by CNBC coverage (Sept 26, 2025) of Haidt advising parents on limiting kids' AI chatbot use, and by Haidt's own Substack post.",
+    "confidence": "confirmed",
+    "sources": [
+     "https://www.afterbabel.com/p/dont-give-your-child-an-ai-companion",
+     "https://www.cnbc.com/2025/09/26/jonathan-haidt-how-parents-can-limit-their-kids-use-of-ai-chatbots.html",
+     "https://calnewport.com/whats-worrying-jonathan-haidt-now/"
+    ]
+   },
+   {
+    "claim": "US self-help book sales were reportedly $813 million in 2023, with an estimated 15,000 self-help titles published annually in the US \u2014 but these figures trace only to SEO/content-aggregator sites (WordsRated, Gitnux), not to a primary Circana/NPD BookScan or AAP StatShot release I could locate.",
+    "detail": "Multiple searches for the primary source behind the '$813 million' and '15,000 titles/year' figures returned only secondary aggregator sites recycling the same numbers without a traceable citation to Circana, NPD BookScan, or the Association of American Publishers. This figure should be marked unconfirmed / low-confidence rather than cited as authoritative market sizing.",
+    "confidence": "unconfirmed",
+    "sources": [
+     "https://wordsrated.com/self-help-books-statistics/",
+     "https://gitnux.org/self-help-industry-statistics/"
+    ]
+   },
+   {
+    "claim": "Directionally, per trade-press reporting of Circana BookScan data: US adult nonfiction unit sales were down ~1.5% in 2025 and down ~9% in Q1 2026; self-help unit sales were up 14.7% in 2025 but down 26.3% year-over-year in Q1 2026 \u2014 suggesting a volatile/cooling self-help category in the most recent reporting period.",
+    "detail": "These figures come from WebSearch snippets that reference Circana BookScan data as reported via Publishers Weekly and Jane Friedman's newsletter (both outlets that regularly republish Circana's category-level BookScan tracking), but I was unable to directly fetch either source page in full (both returned HTTP 403 to WebFetch) to confirm exact wording/context, so treat these percentages as moderately-confident secondary reporting, not independently verified against a primary Circana release.",
+    "confidence": "partial",
+    "sources": [
+     "https://www.publishersweekly.com/pw/by-topic/industry-news/financial-reporting/article/99417-print-book-sales-rose-slightly-in-2025.html",
+     "https://janefriedman.com/2025-us-book-sales-holding-steady-for-print/",
+     "https://www.circana.com/post/turning-the-page-on-2026-book-trends"
+    ]
+   },
+   {
+    "claim": "The broader 'non-fiction books' market (global, not US-specific) is estimated by market-research aggregators at roughly $15.4 billion (2025) to $15.85 billion (2026), growing at ~2.9% CAGR \u2014 a generic market-sizing report, not book-industry (BookScan/AAP) data.",
+    "detail": "This figure comes from a paywalled market-research report aggregator (Research and Markets / global market-research-firm methodology) rather than book-trade sources like Circana/NPD or the Association of American Publishers, and is a global (not US) nonfiction-books figure, not specific to self-help or parenting. Use with caution as a scene-setting macro number only, not a load-bearing figure for a US parenting/self-help niche market-size claim.",
+    "confidence": "unconfirmed",
+    "sources": [
+     "https://www.researchandmarkets.com/reports/5735372/non-fiction-books-market-report"
+    ]
+   },
+   {
+    "claim": "No other head-to-head 'kids + AI' trade nonfiction titles from major publishers (beyond Turkle's Artificial Intimacy and Haidt's Amazing Generation) were found scheduled for 2025-2027; other AI-and-kids titles located (e.g., 'Parenting in the Age of Artificial Intelligence' by Emelisa Callejas Bacher) appear to be self-published/small-press with no bestseller or review-outlet coverage found.",
+    "detail": "Extensive searching (Publishers Marketplace/Publishers Weekly deal reports, general web search) turned up no major-publisher-announced 2025-2027 nonfiction title specifically framed as 'parenting kids through the AI era' comparable in scale to The Anxious Generation, aside from the two confirmed items above. This is a genuine white-space signal, but also could reflect that such deals are still unannounced/embargoed as of July 2026 \u2014 flag as an open question rather than a confirmed absence.",
+    "confidence": "partial",
+    "sources": [
+     "https://lunch.publishersmarketplace.com/category/ai/",
+     "https://www.publishersweekly.com/pw/by-topic/industry-news/book-deals/article/100472-book-deals-week-of-may-25-2026.html",
+     "https://www.amazon.com/Parenting-Age-Artificial-Intelligence-Resilient/dp/B0D9DK5YY2"
+    ]
+   }
+  ]
+ }
+]
