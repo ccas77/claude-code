@@ -1,0 +1,22 @@
+# Risk Register
+
+Material risks to the *FEED* concept and its commercial plan, with likelihood, impact, and mitigation. Rated L/M/H.
+
+| # | Risk | Likelihood | Impact | Mitigation (built into the concept/plan) |
+|---|---|---|---|---|
+| R1 | **Saturation** — psych/domestic thriller is the single most crowded lane (700k+ MT&S titles); a debut can't rank in the main category cold. | H | H | Narrow niche category for a #1 badge; keyword coherence; **BookTok-native hook** as the free organic channel; series read-through over single-title ranking. |
+| R2 | **Unearned-twist backlash** — the #1 reader complaint; would sink reviews. | M | H | Twist is **assembled from 14 planted clues**, not retracted; skeptic pass already caught and fixed the twin-twist cannibalization. Market "twist that rereads the whole book," which the design delivers. |
+| R3 | **Mis-shelving / crossover confusion** — dark-romance voltage could pull Romance readers who then leave "not what I expected" 1-stars. | M | M | **Thriller-only shelving**, single primary category, honest "no safe endings" marketing; voltage delivered by thriller tools, no HEA promise. |
+| R4 | **Read-through under 50%** — kills the whole revenue model. | M | H | Connected standalones + short-chapter cliffhangers + rapid release; **stockpile Books 1–3** so the next book always exists at peak interest; monitor and fix cover/blurb/ending if <50%. |
+| R5 | **Amazon algorithm volatility** — 2024–26 "visibility volatility" makes launches less predictable. | H | M | Don't depend on one spike; rapid release re-triggers visibility; build the **newsletter** as an owned, algorithm-independent channel; diversify to direct/audio in year 2. |
+| R6 | **First-year net-negative** — cover/editing/ads outrun income. | H | M | Budget it as an **investment phase**; lean on low-cash acquisition (magnet, swaps, group promos); defer expensive audio/ads until LTV proven. |
+| R7 | **Sensitive subject matter** — parasocial obsession, a wellness influencer's trauma, self-harm content (Wren's job), and suicide-adjacent themes. | M | M | Handle with care and craft, not exploitation; content note where appropriate; the annotation/self-harm material is atmosphere, not spectacle. Avoids real-person defamation (all figures fictional). |
+| R8 | **AI-assisted drafting quality/authenticity** — voice-driven psych thriller lives on prose; thin AI prose would fail the "magnetic narrator" promise. | M | H | Author must own **voice, twist logic, and line-level craft**; use AI for drafting scaffolding/ideation, not final voice. The sample chapter sets the bar. Disclose per platform/policy as required. |
+| R9 | **KU exclusivity lock-in** — forecloses wide revenue during enrollment. | M | L | Accepted deliberately for cold-start discovery; revisit wide once direct + audience reduce dependence (year 2+). |
+| R10 | **Concept legibility vs. tech-thriller drift** — "algorithm" framing risks reading as technothriller and mis-shelving. | L | M | Skeptic fix already demoted the algorithm to **amoral amplifier**; crime is human/domestic; climax is two women in a house. Cover/keywords avoid tech-thriller cues. |
+| R11 | **Series fatigue / formula staleness** across books. | M | M | Each book swaps narrator/victim/platform (fresh voice every time); the *machine* recurs, not the characters — variety within a reliable promise. |
+| R12 | **Solo production bandwidth** — rapid release is demanding for one person. | M | M | Single-craft, one-POV, one-location, low-research design chosen specifically to be fast; series bible builds the hard part (engine) once; stockpile before launch. |
+| R13 | **Market-data reliance on estimates** — KENP rates, read-through %, income figures are industry aggregates, not audited. | H | L | All flagged **[estimate]** in-text; decisions are directionally robust to the ranges; validate live (Publisher Rocket, KENP trackers) at execution. |
+| R14 | **BookTok dependence** — if the organic channel underperforms, discovery suffers. | M | M | BookTok is the *upside* channel, not the only one; newsletter + KU also-boughts + rapid release + ARC reviews provide non-BookTok discovery floors. |
+
+**Top three to watch:** R2 (unearned twist — largely *pre*-mitigated by design), R4 (read-through — the revenue keystone), R1/R5 (saturation + algorithm volatility — mitigated by BookTok hook + owned newsletter). None are disqualifying; each has a concrete, already-designed mitigation.
