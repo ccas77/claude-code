@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>pinfactory — Pinterest engine for a book catalog</title>
+<meta name="description" content="A local tool that turns a book catalog into a self-running Pinterest organic-traffic engine: pin images, reader-search copy, and an anti-spam scheduler.">
+<style>
+  :root{
+    --bg:#0b0407; --panel:#160a10; --line:#2b141c; --ink:#f3e4de; --sub:#c9a79c;
+    --accent:#c98a5e; --rose:#b54a4a;
+    --serif:Georgia,"Times New Roman",serif;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.55}
+  a{color:var(--accent)}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 20px}
+  header{border-bottom:1px solid var(--line);background:rgba(11,4,7,.85);position:sticky;top:0;backdrop-filter:blur(6px);z-index:5}
+  header .wrap{display:flex;align-items:center;justify-content:space-between;height:60px}
+  .mark{font-family:var(--serif);font-size:22px;letter-spacing:.5px}
+  .mark b{color:var(--accent)}
+  nav a{margin-left:18px;font-size:14px;text-decoration:none;color:var(--sub)}
+  nav a:hover{color:var(--ink)}
+  .hero{padding:64px 0 32px;text-align:center}
+  .hero h1{font-family:var(--serif);font-size:clamp(30px,5vw,52px);line-height:1.1;margin:0 0 14px}
+  .hero p.lead{font-size:18px;color:var(--sub);max-width:640px;margin:0 auto 10px}
+  .note{display:inline-block;margin-top:14px;padding:8px 14px;border:1px solid var(--line);border-radius:999px;font-size:13px;color:var(--sub);background:var(--panel)}
+  .cta{margin-top:26px;display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+  .btn{display:inline-block;padding:11px 20px;border-radius:10px;text-decoration:none;font-weight:600;font-size:15px}
+  .btn.primary{background:var(--accent);color:#241009}
+  .btn.ghost{border:1px solid var(--line);color:var(--ink)}
+  h2.section{font-family:var(--serif);font-size:26px;margin:56px 0 6px;text-align:center}
+  p.section-sub{color:var(--sub);text-align:center;margin:0 auto 28px;max-width:620px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:22px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+  /* --- CSS mini-pins (2:3), mimicking the real templates --- */
+  .pin{aspect-ratio:2/3;position:relative;padding:22px;display:flex;flex-direction:column;
+       background:radial-gradient(120% 80% at 60% 15%,#3a0e1e 0%,#1a0710 55%,#0b0407 100%);
+       color:var(--ink);font-family:var(--serif);overflow:hidden}
+  .pin .kick{font-family:var(--sans);font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--rose)}
+  .pin .cover{margin:auto;width:52%;aspect-ratio:2/3;border-radius:8px;
+       background:linear-gradient(160deg,#4a1024,#160309);box-shadow:0 18px 40px rgba(0,0,0,.5);
+       display:flex;align-items:center;justify-content:center;text-align:center;padding:10px}
+  .pin .cover span{font-size:15px;line-height:1.15}
+  .pin h3{font-size:30px;line-height:1.05;margin:0}
+  .pin .tags{font-family:var(--sans);font-size:11px;letter-spacing:1.5px;color:var(--sub);text-transform:uppercase;margin-top:8px}
+  .pin.center{justify-content:center;text-align:center}
+  .pin .rule{height:1px;background:var(--rose);margin:14px 0}
+  .pin .hook{font-style:italic;font-size:23px;line-height:1.2}
+  .pin .quote{font-size:60px;line-height:.4;color:var(--accent);font-family:var(--serif)}
+  .pin ul{list-style:none;margin:auto 0;padding:0;font-size:20px}
+  .pin ul li{margin:12px 0}
+  .pin ul li::before{content:"✓";color:var(--rose);margin-right:12px}
+  .pin .row{font-family:var(--sans)}
+  .pin .row .lab{font-size:10px;letter-spacing:2px;color:var(--rose);text-transform:uppercase}
+  .pin .row .val{font-family:var(--serif);font-size:17px;margin-bottom:8px}
+  .meta{padding:14px 16px}
+  .meta .vlabel{font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--accent)}
+  .meta .ptitle{font-weight:600;margin:6px 0 4px;font-size:15px}
+  .meta .pdesc{font-size:13.5px;color:var(--sub)}
+  .features{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px;margin-top:8px}
+  .feature{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px}
+  .feature h4{margin:0 0 8px;font-family:var(--serif);font-size:19px}
+  .feature p{margin:0;color:var(--sub);font-size:14px}
+  .rules{max-width:760px;margin:26px auto 0;color:var(--sub);font-size:14px}
+  .rules li{margin:7px 0}
+  footer{border-top:1px solid var(--line);margin-top:64px;padding:28px 0;color:var(--sub);font-size:14px;text-align:center}
+  code{background:#20101a;border:1px solid var(--line);border-radius:6px;padding:1px 6px;font-size:13px}
+</style>
+</head>
+<body>
+<header><div class="wrap">
+  <div class="mark"><b>pin</b>factory</div>
+  <nav><a href="#gallery">Pins</a><a href="#how">How it works</a><a href="https://github.com/ccas77/claude-code/pull/5" target="_blank" rel="noopener">Code</a></nav>
+</div></header>
+
+<section class="hero"><div class="wrap">
+  <h1>Your book catalog,<br>a self-running Pinterest engine</h1>
+  <p class="lead">pinfactory turns ~90 books across many pen names into on-brand pin images, reader-search copy, and a hands-off publishing schedule — set up once, runs for months.</p>
+  <div class="note">Live preview · the app itself is a local command-line tool; this page showcases what it generates</div>
+  <div class="cta">
+    <a class="btn primary" href="#gallery">See the pins</a>
+    <a class="btn ghost" href="https://github.com/ccas77/claude-code/pull/5" target="_blank" rel="noopener">View the code ↗</a>
+  </div>
+</div></section>
+
+<section id="gallery"><div class="wrap">
+  <h2 class="section">Five pin templates from one book</h2>
+  <p class="section-sub">Every book becomes several distinct pins — different image <em>and</em> copy, so Pinterest never sees duplicates. Shown here for a sample dark-romance title, with the actual generated titles &amp; descriptions.</p>
+  <div class="grid">
+
+    <div class="card">
+      <div class="pin">
+        <div class="cover"><span>The Thornwood Vow</span></div>
+        <div class="kick" style="text-align:center;margin-top:14px">Dark Romance</div>
+        <h3 style="text-align:center;margin-top:6px">The Thornwood Vow</h3>
+        <div class="tags" style="text-align:center">Enemies to lovers · Morally gray hero</div>
+      </div>
+      <div class="meta"><div class="vlabel">Headline</div>
+        <div class="ptitle">Dark Romance Books | Enemies To Lovers with a Morally Gray Hero</div>
+        <div class="pdesc">A dark romance read for fans of enemies to lovers, morally gray hero, forced proximity. Add it to your TBR.</div></div>
+    </div>
+
+    <div class="card">
+      <div class="pin">
+        <div class="cover" style="width:46%"><span>The Thornwood Vow</span></div>
+        <div class="rule"></div>
+        <div class="hook" style="text-align:center">He was her enemy. Now he is her vow.</div>
+      </div>
+      <div class="meta"><div class="vlabel">Trope hook</div>
+        <div class="ptitle">Enemies To Lovers Romance | Dark Romance Book Recs</div>
+        <div class="pdesc">If enemies to lovers and morally gray hero are your thing, this dark romance is for you.</div></div>
+    </div>
+
+    <div class="card">
+      <div class="pin center">
+        <div class="quote">“</div>
+        <div class="hook" style="margin-top:18px">Some vows are written in blood.</div>
+        <div class="tags" style="margin-top:18px">The Thornwood Vow</div>
+      </div>
+      <div class="meta"><div class="vlabel">Quote card</div>
+        <div class="ptitle">Dark Romance Quotes | Books Like This</div>
+        <div class="pdesc">He was her enemy. Now he is her vow. A dark romance for your list. Add it to your TBR.</div></div>
+    </div>
+
+    <div class="card">
+      <div class="pin center">
+        <div class="kick">If you love</div>
+        <h3 style="color:var(--accent);margin:8px 0">Enemies to Lovers</h3>
+        <div class="cover" style="width:42%;margin:14px auto"><span>The Thornwood Vow</span></div>
+        <div class="kick">You'll love</div>
+        <h3 style="margin-top:6px">The Thornwood Vow</h3>
+      </div>
+      <div class="meta"><div class="vlabel">Comp card</div>
+        <div class="ptitle">If You Love Enemies To Lovers | Dark Romance Books</div>
+        <div class="pdesc">Loved enemies to lovers, morally gray hero, forced proximity? This dark romance scratches the same itch.</div></div>
+    </div>
+
+    <div class="card">
+      <div class="pin center">
+        <div class="kick">This book has</div>
+        <ul><li>Enemies to Lovers</li><li>Morally Gray Hero</li><li>Forced Proximity</li></ul>
+        <div class="tags">The Thornwood Vow</div>
+      </div>
+      <div class="meta"><div class="vlabel">Tropes checklist</div>
+        <div class="ptitle">Dark Romance Tropes | Enemies To Lovers + Morally Gray Hero</div>
+        <div class="pdesc">The trope stack: enemies to lovers, morally gray hero, forced proximity. Made for trope hunters.</div></div>
+    </div>
+
+    <div class="card">
+      <div class="pin center">
+        <div class="kick">At a glance</div>
+        <h3 style="margin:10px 0">The Thornwood Vow</h3>
+        <div class="rule" style="width:60px;margin:6px auto 16px"></div>
+        <div class="row"><div class="lab">Subgenre</div><div class="val">Dark Romance</div>
+          <div class="lab">Series</div><div class="val">Standalone</div>
+          <div class="lab">Tropes</div><div class="val">Enemies to Lovers, Morally Gray Hero</div></div>
+      </div>
+      <div class="meta"><div class="vlabel">Stats card</div>
+        <div class="ptitle">Dark Romance Book | At a Glance</div>
+        <div class="pdesc">Dark Romance. Tropes: enemies to lovers, morally gray hero, forced proximity.</div></div>
+    </div>
+
+  </div>
+</div></section>
+
+<section id="how"><div class="wrap">
+  <h2 class="section">Three components, one pipeline</h2>
+  <p class="section-sub">All state lives in a local database, so a run can crash — or you can walk away for a month — and the next run resumes cleanly.</p>
+  <div class="features">
+    <div class="feature"><h4>1 · Image generator</h4><p>1000×1500 pins in five templates, per-pen-name color palettes, bundled open fonts, and deterministic seeds so re-runs don't spam near-duplicates. Backgrounds are generated locally — nothing pulled from the web.</p></div>
+    <div class="feature"><h4>2 · Copy generator + review</h4><p>Keyword-first titles and reader-search descriptions written for how readers actually browse, drafted per variant and approved by you in a local gallery. Nothing publishes unapproved.</p></div>
+    <div class="feature"><h4>3 · Boards + scheduler</h4><p>Themed boards per pen name and a publishing scheduler that runs for months on a cron, spacing pins so the account never looks spammy.</p></div>
+  </div>
+  <ul class="rules">
+    <li><b>Anti-spam by design:</b> a weekly cap, the same image never published twice, ≥48 hours between publishes of the same link, round-robin across brands, one re-save after five days, and automatic back-off &amp; quarantine on errors.</li>
+    <li><b>No fabricated data:</b> it asks you or leaves fields blank — it never invents titles, links, tropes, or stats.</li>
+  </ul>
+</div></section>
+
+<footer><div class="wrap">
+  pinfactory is a local CLI (Python) — this is a hosted preview of what it generates.
+  &nbsp;·&nbsp; <a href="https://github.com/ccas77/claude-code/pull/5" target="_blank" rel="noopener">Source &amp; setup on GitHub ↗</a>
+  <br><br>🤖 Built with Claude Code
+</div></footer>
+</body>
+</html>
