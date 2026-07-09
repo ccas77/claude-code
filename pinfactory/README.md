@@ -12,7 +12,7 @@ Three components:
 2. **Pin copy generator** — reader-search titles + descriptions via the
    Anthropic API, a keyword bank, and a local approval gallery. *(Built.)*
 3. **Boards + scheduler** — Pinterest API v5 publishing with cadence/spacing
-   rules and analytics. *(Built last.)*
+   rules and analytics. *(Built.)*
 
 All state lives in a local SQLite database, so a run can crash — or you can walk
 away for a month — and the next run resumes cleanly.
@@ -47,8 +47,30 @@ Output lands in `output/<pen name>/<slug>/`.
 | `copy` | **Component 2** — write pin titles + descriptions (Anthropic API, or `--mock` offline). |
 | `review` | **Component 2** — local approve/reject/edit gallery (`--static` for a snapshot). |
 | `keywords` | **Component 2** — per-subgenre keyword bank + `--suggest`. |
-| `publish` | **Component 3** — the Pinterest scheduler (`--dry-run` supported). *(last)* |
-| `stats` | **Component 3** — analytics table + weekly digest. *(last)* |
+| `auth` | **Component 3** — Pinterest OAuth (prints the URL; `--code`/`--refresh`). |
+| `boards` | **Component 3** — propose/approve/create themed boards. |
+| `publish` | **Component 3** — the Pinterest scheduler (`--dry-run`, `--limit`). |
+| `stats` | **Component 3** — analytics table + weekly digest (`--digest`). |
+
+## Publish (Component 3)
+
+```bash
+python -m pinfactory auth                     # authorize your Pinterest business account (see SETUP.md)
+python -m pinfactory boards --propose         # draft 5–8 themed boards per pen name from your tropes
+python -m pinfactory boards --approve         # approve them (interactive)
+python -m pinfactory boards --create          # create on Pinterest (or --dry-run to simulate)
+python -m pinfactory publish --dry-run        # everything except the actual publish call
+python -m pinfactory publish                  # publish the next eligible approved pins
+python -m pinfactory stats --digest           # analytics table + weekly digest markdown
+```
+
+The scheduler enforces every anti-spam rule automatically: the weekly cap
+(default 10), the same image never twice, ≥48h between publishes of the same
+destination URL, round-robin across pen names/boards with `priority` books
+first, one extra-board re-save after 5 days then never again, exponential
+backoff on rate limits, and quarantine after repeated failures — it never
+crashes the queue. Set it on a schedule (cron/launchd) per SETUP.md and it runs
+hands-off for months.
 
 ## Copy + review (Component 2)
 

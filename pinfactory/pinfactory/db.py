@@ -348,6 +348,113 @@ class DB:
                  ORDER BY b.pen_name, i.book_slug, i.variant"""
         ).fetchall()
 
+    # --- boards (Component 3) ---------------------------------------------
+    def upsert_board(self, name: str, pen_name: str, description: str = "",
+                     niche: str = "", status: str = "proposed") -> int:
+        self.conn.execute(
+            """INSERT INTO boards(name, pen_name, description, niche, status, created_at)
+                 VALUES (?,?,?,?,?,?)
+               ON CONFLICT(name, pen_name) DO UPDATE SET
+                 description=excluded.description, niche=excluded.niche""",
+            (name, pen_name, description, niche, status, now()),
+        )
+        self.commit()
+        r = self.conn.execute("SELECT id FROM boards WHERE name=? AND pen_name=?",
+                              (name, pen_name)).fetchone()
+        return int(r["id"])
+
+    def list_boards(self, pen_name: str | None = None, status: str | None = None) -> list[sqlite3.Row]:
+        q, params = "SELECT * FROM boards", []
+        conds = []
+        if pen_name is not None:
+            conds.append("pen_name=?"); params.append(pen_name)
+        if status is not None:
+            conds.append("status=?"); params.append(status)
+        if conds:
+            q += " WHERE " + " AND ".join(conds)
+        return self.conn.execute(q + " ORDER BY pen_name, name", params).fetchall()
+
+    def set_board_status(self, board_id: int, status: str, pinterest_board_id: str | None = None) -> None:
+        if pinterest_board_id is not None:
+            self.conn.execute("UPDATE boards SET status=?, pinterest_board_id=? WHERE id=?",
+                              (status, pinterest_board_id, board_id))
+        else:
+            self.conn.execute("UPDATE boards SET status=? WHERE id=?", (status, board_id))
+        self.commit()
+
+    # --- pins / publish ledger --------------------------------------------
+    def create_pin_row(self, image_id: int, copy_id: int | None, board_id: int | None,
+                       is_resave: bool = False, resave_of: int | None = None) -> int:
+        cur = self.conn.execute(
+            """INSERT INTO pins(image_id, copy_id, board_id, is_resave, resave_of, created_at)
+                 VALUES (?,?,?,?,?,?)""",
+            (image_id, copy_id, board_id, 1 if is_resave else 0, resave_of, now()),
+        )
+        self.commit()
+        return int(cur.lastrowid)
+
+    def record_pin_result(self, pin_id: int, *, pinterest_pin_id: str = "", status: str,
+                          error: str = "", published_at: float | None = None,
+                          attempts_inc: bool = False) -> None:
+        sets = ["status=?"]
+        params: list[Any] = [status]
+        if pinterest_pin_id:
+            sets.append("pinterest_pin_id=?"); params.append(pinterest_pin_id)
+        if error:
+            sets.append("error=?"); params.append(error)
+        if published_at is not None:
+            sets.append("published_at=?"); params.append(published_at)
+        if attempts_inc:
+            sets.append("attempts=attempts+1")
+        params.append(pin_id)
+        self.conn.execute(f"UPDATE pins SET {', '.join(sets)} WHERE id=?", params)
+        self.commit()
+
+    def count_published_since(self, since_ts: float) -> int:
+        r = self.conn.execute(
+            "SELECT COUNT(*) c FROM pins WHERE status='published' AND published_at>=?",
+            (since_ts,)).fetchone()
+        return int(r["c"])
+
+    def url_published_since(self, url: str, since_ts: float) -> bool:
+        r = self.conn.execute(
+            """SELECT 1 FROM pins p JOIN images i ON i.id=p.image_id
+                 JOIN books b ON b.slug=i.book_slug
+                WHERE p.status='published' AND p.published_at>=? AND b.destination_url=? LIMIT 1""",
+            (since_ts, url)).fetchone()
+        return r is not None
+
+    def image_already_published(self, image_id: int) -> bool:
+        """Never publish the same image (by content hash) twice."""
+        row = self.conn.execute("SELECT content_hash FROM images WHERE id=?", (image_id,)).fetchone()
+        if not row:
+            return False
+        r = self.conn.execute(
+            """SELECT 1 FROM pins p JOIN images i ON i.id=p.image_id
+                WHERE p.status='published' AND p.is_resave=0 AND i.content_hash=? LIMIT 1""",
+            (row["content_hash"],)).fetchone()
+        return r is not None
+
+    def list_pins(self, status: str | None = None) -> list[sqlite3.Row]:
+        if status:
+            return self.conn.execute("SELECT * FROM pins WHERE status=? ORDER BY id", (status,)).fetchall()
+        return self.conn.execute("SELECT * FROM pins ORDER BY id").fetchall()
+
+    # --- analytics ---------------------------------------------------------
+    def upsert_analytics(self, pin_row_id: int, metric_date: str, *, impressions=0,
+                         saves=0, pin_clicks=0, outbound_clicks=0) -> None:
+        self.conn.execute(
+            """INSERT INTO analytics(pin_row_id, metric_date, impressions, saves,
+                                     pin_clicks, outbound_clicks, fetched_at)
+                 VALUES (?,?,?,?,?,?,?)
+               ON CONFLICT(pin_row_id, metric_date) DO UPDATE SET
+                 impressions=excluded.impressions, saves=excluded.saves,
+                 pin_clicks=excluded.pin_clicks, outbound_clicks=excluded.outbound_clicks,
+                 fetched_at=excluded.fetched_at""",
+            (pin_row_id, metric_date, impressions, saves, pin_clicks, outbound_clicks, now()),
+        )
+        self.commit()
+
     # --- meta --------------------------------------------------------------
     def set_meta(self, key: str, value: str) -> None:
         self.conn.execute(

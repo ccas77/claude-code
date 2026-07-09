@@ -181,7 +181,7 @@ ANTHROPIC_MODEL=claude-opus-4-8
 # Create an app at https://developers.pinterest.com/ (see SETUP.md).
 PINTEREST_APP_ID=
 PINTEREST_APP_SECRET=
-PINTEREST_REDIRECT_URI=https://localhost:8085/callback
+PINTEREST_REDIRECT_URI=http://localhost:8085/callback
 # Filled in automatically after you run the OAuth flow (see SETUP.md):
 PINTEREST_ACCESS_TOKEN=
 PINTEREST_REFRESH_TOKEN=

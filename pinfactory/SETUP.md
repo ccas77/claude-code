@@ -208,14 +208,70 @@ will say so plainly rather than show fabricated numbers.
 
 ---
 
-## 6. Scheduling (Component 3)
+## 6. Boards, publishing & scheduling (Component 3)
 
-`publish` is designed to run on a schedule so the engine is hands-off. Component
-3 will set this up for you (cron on Linux, launchd on macOS). A typical entry
-runs pinfactory a few times a day; the cadence rules in `config.yaml`
-(max pins/week, 48-hour spacing per URL, etc.) mean it only publishes when a pin
-is actually eligible, so over-scheduling is harmless. A `--dry-run` flag does
-everything except call the Pinterest publish endpoint.
+Once authorized, the publish workflow is:
+
+```bash
+python -m pinfactory boards --propose      # drafts 5–8 themed boards per pen name from your tropes
+python -m pinfactory boards --list         # review the drafts
+python -m pinfactory boards --approve       # approve them (interactive y/N)
+python -m pinfactory boards --create        # create on Pinterest, or map to boards you already have
+python -m pinfactory publish --dry-run      # dry run: does everything except the publish API call
+python -m pinfactory publish                # publish the next eligible approved pins
+python -m pinfactory stats --digest         # analytics (if your tier allows) + weekly digest
+```
+
+Only **approved** copy is eligible, each pin is routed to its most
+semantically-aligned board, and all the anti-spam rules from `config.yaml` are
+enforced automatically (weekly cap, 48h URL spacing, one 5-day re-save,
+round-robin, backoff, quarantine).
+
+### Run it on a schedule (hands-off)
+
+The cadence rules mean over-scheduling is harmless — `publish` only acts when a
+pin is genuinely eligible, so running it a few times a day is fine.
+
+**Linux / WSL (cron)** — `crontab -e`, then (adjust the path and `--home`):
+
+```cron
+# publish a few times a day; write the weekly digest on Sunday nights
+0 9,15,20 * * *  cd /path/to/my-books && /path/to/.venv/bin/python -m pinfactory --home . publish >> pinfactory.log 2>&1
+0 21     * * 0  cd /path/to/my-books && /path/to/.venv/bin/python -m pinfactory --home . stats --digest >> pinfactory.log 2>&1
+```
+
+**macOS (launchd)** — create `~/Library/LaunchAgents/com.pinfactory.publish.plist`:
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+  <key>Label</key><string>com.pinfactory.publish</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/path/to/.venv/bin/python</string>
+    <string>-m</string><string>pinfactory</string>
+    <string>--home</string><string>/path/to/my-books</string>
+    <string>publish</string>
+  </array>
+  <key>WorkingDirectory</key><string>/path/to/my-books</string>
+  <key>StartCalendarInterval</key>
+  <array>
+    <dict><key>Hour</key><integer>9</integer><key>Minute</key><integer>0</integer></dict>
+    <dict><key>Hour</key><integer>15</integer><key>Minute</key><integer>0</integer></dict>
+    <dict><key>Hour</key><integer>20</integer><key>Minute</key><integer>0</integer></dict>
+  </array>
+  <key>StandardOutPath</key><string>/path/to/my-books/pinfactory.log</string>
+  <key>StandardErrorPath</key><string>/path/to/my-books/pinfactory.log</string>
+</dict></plist>
+```
+
+Then load it: `launchctl load ~/Library/LaunchAgents/com.pinfactory.publish.plist`.
+
+**Token upkeep:** the Pinterest access token lasts 30 days and the refresh token
+60 (indefinitely renewable). `publish` auto-refreshes the access token on a 401
+mid-run; to refresh proactively, add a periodic `python -m pinfactory auth
+--refresh`.
 
 ---
 

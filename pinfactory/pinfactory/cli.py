@@ -18,20 +18,18 @@ import sys
 from pathlib import Path
 
 from . import __version__
+from . import boards as boardsmod
 from . import catalog as catalogmod
 from . import copy_gen as copymod
 from . import db as dbmod
 from . import keywords as kwmod
 from . import review as reviewmod
-from .config import load_config
+from . import scheduler as schedmod
+from . import stats as statsmod
+from .config import Config, load_config, load_env
 from .images import ALL_VARIANTS, ImageGenerator, OPTIONAL_VARIANTS, VARIANTS, find_covers
+from .pinterest import PinterestClient, PinterestError
 from .themes import ThemeSet
-
-_PENDING = (
-    "This command belongs to Component 3 (Pinterest boards + scheduler) and isn't built yet.\n"
-    "Build order: Component 1 = images (done), Component 2 = copy + review + keywords (done),\n"
-    "Component 3 = boards + publish scheduler + stats (last). It's built after Component 2 sign-off."
-)
 
 
 def _mk_parser() -> argparse.ArgumentParser:
@@ -79,10 +77,27 @@ def _mk_parser() -> argparse.ArgumentParser:
     kw.add_argument("--mock", action="store_true", help="Offline suggestions (no API key).")
     kw.add_argument("--model", help="Override the Anthropic model.")
 
-    # Component 3 (not yet built)
-    pub = sub.add_parser("publish", help="[Component 3] Pinterest scheduler.")
-    pub.add_argument("--dry-run", action="store_true")
-    sub.add_parser("stats", help="[Component 3] Analytics + weekly digest.")
+    # Component 3
+    au = sub.add_parser("auth", help="Pinterest OAuth (Component 3).")
+    au.add_argument("--code", help="Exchange this authorization code for tokens.")
+    au.add_argument("--refresh", action="store_true", help="Refresh the access token now.")
+
+    bd = sub.add_parser("boards", help="Board strategy (Component 3).")
+    bd.add_argument("--propose", action="store_true", help="Draft boards from your tropes.")
+    bd.add_argument("--approve", action="store_true", help="Approve proposed boards interactively.")
+    bd.add_argument("--create", action="store_true", help="Create approved boards on Pinterest (or map existing).")
+    bd.add_argument("--list", action="store_true", help="List boards and their status.")
+    bd.add_argument("--pen-name", help="Limit to one pen name.")
+    bd.add_argument("--dry-run", action="store_true", help="Simulate creation (no API calls).")
+
+    pub = sub.add_parser("publish", help="Publish scheduler (Component 3).")
+    pub.add_argument("--dry-run", action="store_true", help="Do everything except call the publish endpoint.")
+    pub.add_argument("--limit", type=int, help="Publish at most N pins this run.")
+
+    st = sub.add_parser("stats", help="Analytics + weekly digest (Component 3).")
+    st.add_argument("--digest", action="store_true", help="Write the weekly digest markdown file.")
+    st.add_argument("--days", type=int, default=30, help="Analytics window in days (default 30).")
+    st.add_argument("--no-fetch", action="store_true", help="Skip the API analytics fetch; just show stored data.")
     return p
 
 
@@ -243,6 +258,160 @@ def cmd_keywords(cfg, database, args) -> int:
     return 0
 
 
+def _make_client(cfg: Config, dry_run: bool) -> PinterestClient:
+    env = load_env(cfg)
+    return PinterestClient(
+        app_id=env.get("PINTEREST_APP_ID", ""),
+        app_secret=env.get("PINTEREST_APP_SECRET", ""),
+        access_token=env.get("PINTEREST_ACCESS_TOKEN", ""),
+        refresh_token=env.get("PINTEREST_REFRESH_TOKEN", ""),
+        api_base=env.get("PINTEREST_API_BASE", "https://api-sandbox.pinterest.com/v5"),
+        redirect_uri=env.get("PINTEREST_REDIRECT_URI", "http://localhost:8085/callback"),
+        dry_run=dry_run,
+    )
+
+
+def _write_env(cfg: Config, updates: dict[str, str]) -> None:
+    """Update or append KEY=VALUE lines in .env without disturbing the rest."""
+    path = cfg.env_path
+    lines = path.read_text(encoding="utf-8").splitlines() if path.is_file() else []
+    keys = set(updates)
+    out, seen = [], set()
+    for line in lines:
+        k = line.split("=", 1)[0].strip() if "=" in line else ""
+        if k in keys:
+            out.append(f"{k}={updates[k]}"); seen.add(k)
+        else:
+            out.append(line)
+    for k in keys - seen:
+        out.append(f"{k}={updates[k]}")
+    path.write_text("\n".join(out) + "\n", encoding="utf-8")
+
+
+def cmd_auth(cfg, database, args) -> int:
+    client = _make_client(cfg, dry_run=False)
+    if not client.app_id or not client.app_secret:
+        print("Set PINTEREST_APP_ID and PINTEREST_APP_SECRET in .env first (see SETUP.md).")
+        return 1
+    if args.refresh:
+        try:
+            b = client.refresh()
+        except PinterestError as e:
+            print(f"Refresh failed: {e}")
+            return 1
+        _write_env(cfg, {"PINTEREST_ACCESS_TOKEN": b.access_token,
+                         "PINTEREST_REFRESH_TOKEN": client.refresh_token})
+        print("Access token refreshed and saved to .env.")
+        return 0
+    if args.code:
+        try:
+            b = client.exchange_code(args.code)
+        except PinterestError as e:
+            print(f"Code exchange failed: {e}")
+            return 1
+        _write_env(cfg, {"PINTEREST_ACCESS_TOKEN": b.access_token,
+                         "PINTEREST_REFRESH_TOKEN": client.refresh_token})
+        print("Tokens saved to .env. You're authorized.")
+        return 0
+    # print the authorization URL for the manual flow
+    import secrets
+    state = secrets.token_urlsafe(12)
+    print("1. Open this URL, approve with your Pinterest business account:\n")
+    print("   " + client.authorization_url(state))
+    print(f"\n2. Pinterest redirects to {client.redirect_uri}?code=...&state={state}")
+    print("3. Copy the `code` value and run:  pinfactory auth --code <CODE>")
+    return 0
+
+
+def cmd_boards(cfg, database, args) -> int:
+    if args.propose:
+        counts = boardsmod.propose_all(database, cfg)
+        total = sum(counts.values())
+        print(f"Proposed {total} board(s):")
+        for pen, n in counts.items():
+            print(f"  {pen}: {n}")
+        print("Review with `pinfactory boards --list`, then `boards --approve`.")
+        return 0
+    if args.approve:
+        proposed = database.list_boards(pen_name=args.pen_name, status="proposed")
+        if not proposed:
+            print("No proposed boards. Run `pinfactory boards --propose` first.")
+            return 0
+        for b in proposed:
+            print(f"\n  {b['name']}  ({b['pen_name']})")
+            print(f"    {b['description']}")
+            try:
+                ans = input("    approve? (y/N/q) ").strip().lower()
+            except EOFError:
+                ans = ""
+            if ans == "q":
+                break
+            if ans in ("y", "yes"):
+                database.set_board_status(b["id"], "approved")
+        print("\nApproved boards are ready. Run `pinfactory boards --create`.")
+        return 0
+    if args.create:
+        client = _make_client(cfg, dry_run=args.dry_run)
+        if not args.dry_run and not client.access_token:
+            print("No Pinterest access token — run `pinfactory auth` first, or use --dry-run.")
+            return 1
+        stats = boardsmod.create_on_pinterest(database, client, only_pen=args.pen_name)
+        print(f"Boards: created {stats['created']}, mapped {stats['mapped']}, errors {stats['errors']}"
+              + (" (dry-run)" if args.dry_run else ""))
+        return 0
+    # default / --list
+    boards = database.list_boards(pen_name=args.pen_name)
+    if not boards:
+        print("No boards yet. `pinfactory boards --propose`.")
+        return 0
+    for b in boards:
+        mark = {"proposed": "·", "approved": "✓", "created": "●"}.get(b["status"], " ")
+        pid = f"  [{b['pinterest_board_id']}]" if b["pinterest_board_id"] else ""
+        print(f"  {mark} [{b['status']:<9}] {b['pen_name']:<22} {b['name']}{pid}")
+    return 0
+
+
+def cmd_publish(cfg, database, args) -> int:
+    client = _make_client(cfg, dry_run=args.dry_run)
+    if not args.dry_run and not client.access_token:
+        print("No Pinterest access token — run `pinfactory auth`, or test with --dry-run.")
+        return 1
+    if not database.list_boards(status="created"):
+        print("No created boards yet. Run `boards --propose/--approve/--create` "
+              + ("(use boards --create --dry-run to simulate)." if args.dry_run else "first."))
+        return 1
+    rep = schedmod.publish(cfg, database, client, limit=args.limit)
+    tag = " (DRY RUN — nothing actually posted)" if rep.dry_run else ""
+    print(f"\nPublish run{tag}")
+    print(f"  weekly: {rep.weekly_before}/{rep.weekly_cap} before this run")
+    for line in rep.lines:
+        print("  " + line)
+    print(f"\n  published {rep.published}, re-saved {rep.resaved}, failed {rep.failed}, "
+          f"quarantined {rep.quarantined}")
+    print(f"  skipped — weekly cap {rep.skipped_cap}, 48h spacing {rep.skipped_spacing}, "
+          f"already-published image {rep.skipped_dup}")
+    return 0
+
+
+def cmd_stats(cfg, database, args) -> int:
+    if not args.no_fetch:
+        client = _make_client(cfg, dry_run=False)
+        if client.access_token:
+            result = statsmod.pull_analytics(cfg, database, client, days=args.days)
+            if result["ok"]:
+                print(f"Fetched analytics for {result['fetched']} pin(s).")
+            else:
+                print(f"Analytics: {result['reason']}")
+        else:
+            print("Analytics: no Pinterest token set — showing stored data only "
+                  "(run `pinfactory auth` and publish real pins to get analytics).")
+    statsmod.print_stats(database)
+    if args.digest:
+        out = statsmod.write_digest(cfg, database)
+        print(f"\nWrote weekly digest: {out}")
+    return 0
+
+
 def cmd_scaffold(cfg, database, args) -> int:
     from .scaffold import write_starter_files
     written = write_starter_files(cfg)
@@ -283,9 +452,14 @@ def main(argv: list[str] | None = None) -> int:
             return cmd_review(cfg, database, args)
         if args.command == "keywords":
             return cmd_keywords(cfg, database, args)
-        if args.command in ("publish", "stats"):
-            print(f"[{args.command}] {_PENDING}")
-            return 0
+        if args.command == "auth":
+            return cmd_auth(cfg, database, args)
+        if args.command == "boards":
+            return cmd_boards(cfg, database, args)
+        if args.command == "publish":
+            return cmd_publish(cfg, database, args)
+        if args.command == "stats":
+            return cmd_stats(cfg, database, args)
     finally:
         database.close()
     return 0
