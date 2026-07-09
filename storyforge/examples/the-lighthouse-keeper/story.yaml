@@ -1,0 +1,30 @@
+title: The Lighthouse Keeper's Daughter
+premise: >
+  A young woman inherits her late father's remote lighthouse and discovers his
+  logbook records storms days before they arrive. As she learns to read his
+  system, a storm appears in the log that the instruments say cannot happen —
+  and it is coming for the village below.
+
+# The STYLE LOCK. This exact string is appended to every image prompt so the
+# whole video shares one illustrated look.
+style: "storybook watercolor illustration, muted teal and warm amber palette, soft painterly edges, cinematic lighting, textured paper"
+
+target_minutes: 3          # keep the demo short; raise for real videos
+aspect: "16:9"
+seconds_per_scene: 18
+
+characters:
+  # The 'description' is the LOCKED string injected into every prompt this
+  # character appears in — the text half of character consistency. The cast
+  # stage also generates reference images (the visual half) from it.
+  - id: elara
+    description: >
+      Elara, a 19-year-old woman with a long copper-red braid, green eyes and
+      freckles, wearing a dark oilskin coat over a cream fisherman's sweater
+
+voice:
+  provider: stub           # swap to elevenlabs (+ ELEVENLABS_API_KEY) for real narration
+  voice_id: ""
+  pace: 0.95
+
+# music: assets/ambient-coastal.mp3   # optional; ducked under narration

@@ -1,0 +1,17 @@
+# Generated project artifacts — keep story.yaml, ignore everything the pipeline builds.
+examples/**/script.json
+examples/**/timeline.json
+examples/**/review.html
+examples/**/regenerate.txt
+examples/**/cast/
+examples/**/images/
+examples/**/audio/
+examples/**/out/
+
+# default web-app projects directory (user-created stories)
+/projects/
+
+__pycache__/
+*.pyc
+.venv/
+venv/

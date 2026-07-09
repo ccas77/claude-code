@@ -1,0 +1,10 @@
+# Core (offline pipeline works with just these)
+PyYAML>=6.0
+Pillow>=10.0
+imageio-ffmpeg>=0.4.9   # provides a static ffmpeg binary if none on PATH
+
+# Optional real backends — only needed if you switch a backend away from "stub".
+# anthropic>=0.40        # LLM backend: script generation
+# google-genai>=0.3      # image backend: Gemini / "Nano Banana"
+# elevenlabs>=1.0        # tts backend: narration
+# insightface, onnxruntime, numpy   # qc backend: face-embedding drift check
