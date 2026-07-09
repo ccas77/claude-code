@@ -72,6 +72,10 @@ backoff on rate limits, and quarantine after repeated failures — it never
 crashes the queue. Set it on a schedule (cron/launchd) per SETUP.md and it runs
 hands-off for months.
 
+**Prefer the cloud?** A ready-made GitHub Actions workflow runs the scheduler
+on a cron without your machine on — see
+[`docs/GITHUB_ACTIONS.md`](docs/GITHUB_ACTIONS.md).
+
 ## Copy + review (Component 2)
 
 ```bash

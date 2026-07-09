@@ -268,6 +268,10 @@ pin is genuinely eligible, so running it a few times a day is fine.
 
 Then load it: `launchctl load ~/Library/LaunchAgents/com.pinfactory.publish.plist`.
 
+**Cloud (no machine required):** to run the scheduler on GitHub's servers via a
+cron instead of your own machine, use the included GitHub Actions workflow —
+full setup in [`docs/GITHUB_ACTIONS.md`](docs/GITHUB_ACTIONS.md).
+
 **Token upkeep:** the Pinterest access token lasts 30 days and the refresh token
 60 (indefinitely renewable). `publish` auto-refreshes the access token on a 401
 mid-run; to refresh proactively, add a periodic `python -m pinfactory auth

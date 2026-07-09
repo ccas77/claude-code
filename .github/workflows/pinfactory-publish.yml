@@ -1,0 +1,142 @@
+name: pinfactory publish
+
+# Runs the pinfactory scheduler in the cloud on a cron, so pins publish without
+# your own machine being on. State (the SQLite DB) is committed back to the repo
+# after each run so the next run resumes — the cadence/anti-spam rules and the
+# never-publish-twice guarantee all survive across runs.
+#
+# Prerequisites (one-time — see pinfactory/docs/GITHUB_ACTIONS.md):
+#   1. Commit your catalogue directory (default: pinfactory/my-books/) with its
+#      covers/, config.yaml, themes.yaml, keywords.yaml, and pinfactory.db.
+#   2. Add repo Secrets: ANTHROPIC_API_KEY (optional), PINTEREST_APP_ID,
+#      PINTEREST_APP_SECRET, PINTEREST_ACCESS_TOKEN, PINTEREST_REFRESH_TOKEN.
+#   3. Optionally set repo Variables: PINFACTORY_HOME, PINTEREST_API_BASE,
+#      PINTEREST_REDIRECT_URI, ANTHROPIC_MODEL.
+#
+# Scheduled runs only fire from the repository's DEFAULT branch — merge this to
+# main to activate the cron. Use "Run workflow" (workflow_dispatch) to test.
+
+on:
+  schedule:
+    # Times are UTC. Over-scheduling is harmless — the cadence rules mean a run
+    # only publishes when a pin is genuinely eligible.
+    - cron: "0 9,15,20 * * *"    # publish 3x/day
+    - cron: "0 21 * * 0"          # Sunday: write the weekly digest
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Dry run (do everything except the actual publish call)"
+        type: boolean
+        default: false
+      home:
+        description: "Catalogue directory, relative to pinfactory/ (blank = repo variable or 'my-books')"
+        type: string
+        default: ""
+
+permissions:
+  contents: write        # to commit the updated state DB back
+
+concurrency:
+  group: pinfactory-publish
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: pinfactory
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: pinfactory/requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Resolve catalogue directory
+        id: cfg
+        run: |
+          HOME_DIR="${{ github.event.inputs.home }}"
+          [ -z "$HOME_DIR" ] && HOME_DIR="${{ vars.PINFACTORY_HOME }}"
+          [ -z "$HOME_DIR" ] && HOME_DIR="my-books"
+          echo "home=$HOME_DIR" >> "$GITHUB_OUTPUT"
+          echo "Using catalogue directory: pinfactory/$HOME_DIR"
+
+      - name: Skip if no catalogue committed
+        id: guard
+        run: |
+          HOME_DIR="${{ steps.cfg.outputs.home }}"
+          if [ ! -f "$HOME_DIR/pinfactory.db" ] && [ ! -f "$HOME_DIR/catalog.csv" ]; then
+            echo "No catalogue at pinfactory/$HOME_DIR (need pinfactory.db or catalog.csv)."
+            echo "Commit your covers + catalogue there to activate the scheduler. Skipping."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Write .env from secrets
+        if: steps.guard.outputs.skip == 'false'
+        run: |
+          HOME_DIR="${{ steps.cfg.outputs.home }}"
+          cat > "$HOME_DIR/.env" <<EOF
+          ANTHROPIC_API_KEY=${{ secrets.ANTHROPIC_API_KEY }}
+          ANTHROPIC_MODEL=${{ vars.ANTHROPIC_MODEL || 'claude-opus-4-8' }}
+          PINTEREST_APP_ID=${{ secrets.PINTEREST_APP_ID }}
+          PINTEREST_APP_SECRET=${{ secrets.PINTEREST_APP_SECRET }}
+          PINTEREST_ACCESS_TOKEN=${{ secrets.PINTEREST_ACCESS_TOKEN }}
+          PINTEREST_REFRESH_TOKEN=${{ secrets.PINTEREST_REFRESH_TOKEN }}
+          PINTEREST_API_BASE=${{ vars.PINTEREST_API_BASE || 'https://api.pinterest.com/v5' }}
+          PINTEREST_REDIRECT_URI=${{ vars.PINTEREST_REDIRECT_URI || 'http://localhost:8085/callback' }}
+          EOF
+
+      - name: Bootstrap catalogue from CSV (first run only)
+        if: steps.guard.outputs.skip == 'false'
+        run: |
+          HOME_DIR="${{ steps.cfg.outputs.home }}"
+          # Import only when there's no DB yet — after that the committed DB is the
+          # source of truth (it holds your copy approvals, boards, and pin ledger).
+          if [ -f "$HOME_DIR/catalog.csv" ] && [ ! -f "$HOME_DIR/pinfactory.db" ]; then
+            python -m pinfactory --home "$HOME_DIR" import "$HOME_DIR/catalog.csv"
+          fi
+
+      - name: Regenerate images (deterministic; not committed)
+        if: steps.guard.outputs.skip == 'false'
+        run: |
+          # Images aren't stored in git — regenerate them on the runner. Seeds are
+          # deterministic, so this reproduces the exact same images (and content
+          # hashes), and rewrites the manifest's file paths to the runner's paths.
+          python -m pinfactory --home "${{ steps.cfg.outputs.home }}" generate
+
+      - name: Publish (scheduled) / digest (Sunday)
+        if: steps.guard.outputs.skip == 'false'
+        run: |
+          HOME_DIR="${{ steps.cfg.outputs.home }}"
+          if [ "${{ github.event.schedule }}" = "0 21 * * 0" ]; then
+            python -m pinfactory --home "$HOME_DIR" stats --digest
+          else
+            FLAG=""
+            [ "${{ github.event.inputs.dry_run }}" = "true" ] && FLAG="--dry-run"
+            python -m pinfactory --home "$HOME_DIR" publish $FLAG
+          fi
+
+      - name: Persist state (commit DB + reports back)
+        if: steps.guard.outputs.skip == 'false' && github.event.inputs.dry_run != 'true'
+        run: |
+          HOME_DIR="${{ steps.cfg.outputs.home }}"
+          git config user.name "pinfactory[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          # pinfactory.db is gitignored globally, so force-add just this project's DB.
+          git add -f "$HOME_DIR/pinfactory.db" 2>/dev/null || true
+          git add -f "$HOME_DIR/reports" 2>/dev/null || true
+          # Never commit the generated .env (it holds secrets) or images.
+          if git diff --cached --quiet; then
+            echo "No state changes to persist."
+          else
+            git commit -m "chore(pinfactory): scheduler state $(date -u +%FT%TZ) [skip ci]"
+            git push
+          fi
