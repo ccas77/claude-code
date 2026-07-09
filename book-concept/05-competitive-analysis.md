@@ -2,7 +2,7 @@
 
 ## *Your Kid's AI Best Friend* — The Crowded Adjacent Shelf and the Empty Niche
 
-**Package document 5 of 7 | July 2026**
+**Package document 5 of 8 | July 2026**
 
 ---
 

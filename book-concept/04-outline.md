@@ -4,7 +4,7 @@
 
 **Category:** Family & Relationships / Parenting — Teenagers (FAM039000)
 **Format:** Prescriptive nonfiction with a reported case-study spine; crisis-triage front section; four reader-facing artifacts in back matter
-**Target length:** 82,000–90,000 words total (approx. 72,000 words of chapter text plus front and back matter; full specification at the end of this document)
+**Target length:** approx. 90,000 words total (approx. 74,000 words of chapter text plus front and back matter, with ±10% per-chapter variance; full specification at the end of this document)
 
 ---
 

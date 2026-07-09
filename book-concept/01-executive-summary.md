@@ -1,7 +1,7 @@
 # Executive Summary
 
 ## Your Kid's AI Best Friend
-### What to Do When the Phone Loves Them Back — Scripts, House Rules, and the Exit Ramp From a Teen's AI Companion
+### What to Do When the Phone Loves Them Back — Scripts, House Rules, and the Way Out
 
 **One-line pitch:** *The Anxious Generation* told parents the phone stole their kid's childhood; this is the first clinician's protocol book for the parents who just discovered the phone now loves their kid back — word-for-word scripts, a one-page Family AI Agreement, and a step-by-step Breakup protocol for detecting, defusing, and out-relating a teen's attachment to an AI companion, at the exact moment the first wave of under-18 bans is proving that a law can shut off an app but cannot un-attach a kid.
 
@@ -39,4 +39,4 @@ The concept was put through a formal adversarial adjudication — independent sk
 
 ## The rest of the package
 
-This summary is the front door. The companion documents deliver the depth an acquisition decision needs: **02 — Full Concept & Chapter Plan** (the fourteen-chapter architecture, named protocols, and the revised thesis in full); **03 — Market & Audience Evidence** (the complete, triangulated evidence base with definitional methodology); **04 — Competitive Landscape** (title-by-title positioning against the 2025–2027 shelf); **05 — Adversarial Review & Risk Register** (all eleven revisions, seventeen corrected facts, ten risks, and the kill scenarios survived); **06 — Author, Positioning & Launch Plan** (the two-track search, institutional co-brand strategy, catalyst calendar, and marketing engine); and **07 — Methodology** (how this package was researched, stress-tested, and adjudicated).
+This summary is the front door. The companion documents deliver the depth an acquisition decision needs: **02 — Market Evidence** (the full evidence dossier — every load-bearing stat with its correct base, definition, and caveats); **03 — The Book Concept** (full positioning: title, one-line pitch, category/format/price, reader, promise, thesis, and author strategy); **04 — Chapter Outline** (triage front section plus fourteen chapters and back-matter artifacts); **05 — Competitive Analysis** (title-by-title positioning against the 2025–2027 shelf); **06 — Pitch Materials** (market-ready copy: elevator pitch, agent query letter, back-cover copy, launch hooks); **07 — Validation and Risks** (the adversarial record: all eleven revisions, seventeen corrected facts, the ten-item risk register, and the kill scenarios survived); and **08 — Methodology** (how this package was researched, stress-tested, and adjudicated).
