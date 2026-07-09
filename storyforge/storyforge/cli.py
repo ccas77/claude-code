@@ -3,6 +3,7 @@
     storyforge new <project> --premise "..." [--title ...] [--style ...]
     storyforge run <project> [--from STAGE] [--to STAGE] [--force] [--regen-marked]
     storyforge review <project>
+    storyforge serve [--projects-dir DIR] [--port N]
     storyforge stages
 
 Backends default to offline stubs; select real providers via env vars
@@ -94,6 +95,11 @@ def cmd_review(args):
     print(f"  storyforge run {project.root} --from images --regen-marked")
 
 
+def cmd_serve(args):
+    from .web.server import serve
+    serve(args.projects_dir, host=args.host, port=args.port)
+
+
 def cmd_stages(_args):
     print("pipeline stages (in order):")
     for i, name in enumerate(stages_mod.ORDER, 1):
@@ -153,6 +159,13 @@ def build_parser() -> argparse.ArgumentParser:
     v = sub.add_parser("review", help="build the HTML review page")
     v.add_argument("project")
     v.set_defaults(func=cmd_review)
+
+    srv = sub.add_parser("serve", help="run the web app")
+    srv.add_argument("--projects-dir", default="projects",
+                     help="directory holding project folders (default: ./projects)")
+    srv.add_argument("--host", default="127.0.0.1")
+    srv.add_argument("--port", type=int, default=8000)
+    srv.set_defaults(func=cmd_serve)
 
     s = sub.add_parser("stages", help="list pipeline stages")
     s.set_defaults(func=cmd_stages)

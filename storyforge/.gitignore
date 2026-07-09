@@ -8,6 +8,9 @@ examples/**/images/
 examples/**/audio/
 examples/**/out/
 
+# default web-app projects directory (user-created stories)
+/projects/
+
 __pycache__/
 *.pyc
 .venv/

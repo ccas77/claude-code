@@ -18,6 +18,27 @@ story.yaml ──► [1 script] ──► [2 cast] ──► [3 images] ──�
                              (audio durations drive scene timing)
 ```
 
+## Two ways to use it
+
+- **Web app** (`storyforge serve`) — a browser UI: fill in a premise/style/
+  characters, click *Generate video*, watch each stage run with live progress,
+  review the storyboard, click *regenerate* on any weak scene, and preview /
+  download the finished MP4. This is the front end most people want.
+- **CLI** (`storyforge run`) — the same pipeline headless, for scripting,
+  batch runs, and automation.
+
+Both drive the identical six-stage engine; the web app is just a thin server
+over it (stdlib `http.server`, no extra dependencies).
+
+### Web app quick start
+
+```bash
+pip install -r requirements.txt
+python -m storyforge serve --projects-dir projects       # http://127.0.0.1:8000
+# point it at the bundled example instead:
+python -m storyforge serve --projects-dir examples
+```
+
 ## Why it's built this way
 
 - **The filesystem is the pipeline state.** Each stage writes its outputs to the
@@ -67,6 +88,7 @@ python -m storyforge run projects/my-story
 | `storyforge run <dir> --force` | ignore cache for the run's stages |
 | `storyforge run <dir> --regen-marked` | clear scenes listed in `regenerate.txt`, then run |
 | `storyforge review <dir>` | build `review.html` (image grid + prompts + regenerate ticks) |
+| `storyforge serve [--projects-dir DIR] [--port N]` | run the web app |
 | `storyforge stages` | list the stages |
 
 ## Human-in-the-loop review

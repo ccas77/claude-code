@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>StoryForge</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header>
+  <div class="brand">🎬 StoryForge</div>
+  <div class="sub">illustrated Ken Burns story videos — character-consistent</div>
+</header>
+
+<main>
+  <aside id="sidebar">
+    <button id="new-btn" class="primary">+ New story</button>
+    <div id="project-list"></div>
+    <div class="backends" id="backends"></div>
+  </aside>
+
+  <section id="content">
+    <!-- create form -->
+    <div id="create-view" class="view">
+      <h2>New story</h2>
+      <label>Project name <small>(folder-safe: letters, digits, - _)</small>
+        <input id="f-name" placeholder="the-lighthouse-keeper">
+      </label>
+      <label>Title
+        <input id="f-title" placeholder="The Lighthouse Keeper's Daughter">
+      </label>
+      <label>Premise
+        <textarea id="f-premise" rows="3" placeholder="A young woman inherits her father's lighthouse and discovers his logbook predicts storms before they happen…"></textarea>
+      </label>
+      <label>Style lock <small>(applied to every image)</small>
+        <input id="f-style" value="storybook watercolor illustration, muted teal and warm amber palette, soft painterly edges, cinematic lighting, textured paper">
+      </label>
+      <div class="row">
+        <label>Length (min)<input id="f-minutes" type="number" value="3" min="1" max="20" step="1"></label>
+        <label>Aspect
+          <select id="f-aspect"><option>16:9</option><option>9:16</option><option>1:1</option><option>4:5</option></select>
+        </label>
+      </div>
+      <h3>Characters <small>(the description is the locked identity injected into every scene)</small></h3>
+      <div id="char-rows"></div>
+      <button id="add-char" class="ghost">+ add character</button>
+      <div class="actions">
+        <button id="create-submit" class="primary">Create story</button>
+        <span id="create-msg" class="msg"></span>
+      </div>
+    </div>
+
+    <!-- project detail -->
+    <div id="project-view" class="view hidden">
+      <div class="phead">
+        <h2 id="p-title"></h2>
+        <div class="pmeta" id="p-meta"></div>
+      </div>
+
+      <div class="pipeline" id="pipeline"></div>
+
+      <div class="controls">
+        <button id="run-all" class="primary">▶ Generate video</button>
+        <button id="run-images" class="ghost">Run to images (review first)</button>
+        <label class="chk"><input type="checkbox" id="force"> force (ignore cache)</label>
+        <span id="run-state" class="msg"></span>
+      </div>
+
+      <div id="log-wrap" class="hidden">
+        <div class="log-head">Live progress <span id="log-stage"></span></div>
+        <pre id="log"></pre>
+      </div>
+
+      <div id="video-wrap" class="hidden">
+        <h3>Final video</h3>
+        <video id="video" controls></video>
+        <a id="video-dl" class="ghost" download>Download MP4</a>
+      </div>
+
+      <h3 id="board-title" class="hidden">Storyboard</h3>
+      <div id="board" class="board"></div>
+    </div>
+  </section>
+</main>
+
+<script src="/static/app.js"></script>
+</body>
+</html>
