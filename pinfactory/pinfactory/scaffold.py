@@ -1,0 +1,209 @@
+"""Starter-file generator (`pinfactory scaffold`).
+
+Writes editable, clearly-commented starter configs into a project root:
+themes.yaml, keywords.yaml, config.yaml, and .env.example. Existing files are
+never overwritten. The romance-genre defaults are examples — rename the example
+pen names and edit palettes/keywords to taste.
+"""
+
+from __future__ import annotations
+
+from pathlib import Path
+
+from .config import Config
+
+THEMES_YAML = """\
+# themes.yaml — per-pen-name colour palettes and fonts. EDIT ME.
+#
+# `defaults` is used for any pen name not listed under `pen_names`, so the app
+# always has a sensible look and never invents one you didn't specify.
+# The example pen names below are PLACEHOLDERS — rename them to YOUR pen names
+# (they must match the `pen_name` field in your catalogue) and tune the colours.
+#
+# Colours are hex. Fonts are filenames in your fonts/ folder (bundled set:
+# Gloock, CrimsonPro, Lora, WorkSans, Outfit, Italiana, NothingYouCouldDo).
+
+defaults:
+  fonts:
+    headline: Gloock-Regular.ttf        # dramatic display serif
+    headline_alt: CrimsonPro-Bold.ttf
+    body: WorkSans-Regular.ttf
+    body_bold: WorkSans-Bold.ttf
+    serif: Lora-Regular.ttf
+    serif_italic: Lora-Italic.ttf
+    accent: NothingYouCouldDo-Regular.ttf   # handwritten accent
+  palette:
+    bg_top: "#2A1B2E"      # gradient start
+    bg_bottom: "#100A16"   # gradient end
+    scrim: "#05030A"       # legibility overlay / tint
+    headline: "#F5E9DA"    # main text
+    subtext: "#D8C9BC"     # secondary text
+    accent: "#C98A5E"      # kickers, rules, pen-name flourish
+    band: "#1B1220"
+
+pen_names:
+  # ── EXAMPLE (dark romance) — rename to your pen name ──────────────────────
+  "Example Dark Romance Pen":
+    palette:
+      bg_top: "#3A0E1E"
+      bg_bottom: "#0B0407"
+      scrim: "#050202"
+      headline: "#F3E4DE"
+      subtext: "#D8B8AE"
+      accent: "#B54A4A"
+    fonts:
+      headline: Gloock-Regular.ttf
+
+  # ── EXAMPLE (small-town / contemporary) — rename to your pen name ─────────
+  "Example Small-Town Pen":
+    palette:
+      bg_top: "#274A45"
+      bg_bottom: "#0F1E1B"
+      scrim: "#05100E"
+      headline: "#F6F1E7"
+      subtext: "#CFE0D6"
+      accent: "#E0A45C"
+    fonts:
+      headline: CrimsonPro-Bold.ttf
+      serif: Lora-Regular.ttf
+
+  # ── EXAMPLE (fantasy / mafia — moody + gold) — rename to your pen name ────
+  "Example Fantasy Pen":
+    palette:
+      bg_top: "#1C1B33"
+      bg_bottom: "#08070F"
+      scrim: "#040309"
+      headline: "#F1ECFF"
+      subtext: "#BFB8DA"
+      accent: "#C7A24A"
+    fonts:
+      headline: Italiana-Regular.ttf
+"""
+
+KEYWORDS_YAML = """\
+# keywords.yaml — reader-search phrases per subgenre. EDIT ME.
+#
+# These seed Component 2 (the copy generator). Phrases here are treated as
+# APPROVED and may be used in pin titles/descriptions. `pinfactory keywords
+# --suggest <subgenre>` proposes NEW phrases via the Anthropic API, but they are
+# only used after you approve them — unapproved suggestions are never used.
+#
+# Written in reader search language (how a reader browses), not marketer copy.
+# The subgenre keys should match the `subgenre` values in your catalogue.
+
+"dark romance":
+  - dark romance books
+  - enemies to lovers dark romance
+  - morally gray hero
+  - possessive book boyfriend
+  - forbidden love story
+  - mafia romance books
+  - spicy dark romance
+  - obsessive love romance
+  - antihero romance
+  - touch her and die trope
+  - dark romance book recommendations
+  - villain love interest
+  - captive romance books
+  - twisted love story
+  - dark romance to read
+
+"contemporary romance":
+  - contemporary romance books
+  - grumpy sunshine romance
+  - small town romance
+  - second chance romance
+  - friends to lovers books
+  - slow burn romance
+  - forced proximity romance
+  - romance book recommendations
+  - feel good romance reads
+  - fake dating romance
+  - single dad romance
+  - workplace romance books
+  - cozy romance to read
+  - swoony romance books
+  - romance with a happy ending
+
+"fantasy romance":
+  - fantasy romance books
+  - romantasy book recommendations
+  - fae romance books
+  - enemies to lovers fantasy
+  - fated mates romance
+  - morally gray fantasy hero
+  - court intrigue romance
+  - slow burn fantasy romance
+  - magic and romance books
+  - dragon rider romance
+  - dark fantasy romance
+  - forbidden magic love story
+  - epic fantasy romance
+  - fantasy books like acotar
+  - spicy romantasy
+"""
+
+CONFIG_YAML = """\
+# config.yaml — cadence + anti-spam knobs. EDIT ME.
+# These enforce the rules from the project brief. Delete a key to use its default.
+
+cadence:
+  max_pins_per_week: 10            # brief: max 15; default 10
+  min_hours_between_same_url: 48   # same destination URL, different boards
+  resave_after_days: 5             # one extra-board resave allowed after N days, then never
+  quarantine_after_failures: 2
+
+images:
+  width: 1000
+  height: 1500
+  variants: [headline, trope_hook, quote_card, comp_card]
+
+copy:
+  default_model: claude-opus-4-8   # overridden by ANTHROPIC_MODEL in .env
+  title_max_chars: 100
+  description_max_chars: 500
+
+boards:
+  min_per_account: 5
+  max_per_account: 8
+"""
+
+ENV_EXAMPLE = """\
+# .env — secrets. Copy to `.env` and fill in. NEVER commit your real .env.
+
+# ── Anthropic (Component 2: pin copy) ─────────────────────────────────────
+ANTHROPIC_API_KEY=
+ANTHROPIC_MODEL=claude-opus-4-8
+
+# ── Pinterest API v5 (Component 3: publishing) ────────────────────────────
+# Create an app at https://developers.pinterest.com/ (see SETUP.md).
+PINTEREST_APP_ID=
+PINTEREST_APP_SECRET=
+PINTEREST_REDIRECT_URI=https://localhost:8085/callback
+# Filled in automatically after you run the OAuth flow (see SETUP.md):
+PINTEREST_ACCESS_TOKEN=
+PINTEREST_REFRESH_TOKEN=
+# Trial apps must use the sandbox base URL; switch to production once you have
+# Standard access. See SETUP.md.
+PINTEREST_API_BASE=https://api-sandbox.pinterest.com/v5
+"""
+
+_FILES = {
+    "themes.yaml": THEMES_YAML,
+    "keywords.yaml": KEYWORDS_YAML,
+    "config.yaml": CONFIG_YAML,
+    ".env.example": ENV_EXAMPLE,
+}
+
+
+def write_starter_files(cfg: Config, overwrite: bool = False) -> list[Path]:
+    cfg.home.mkdir(parents=True, exist_ok=True)
+    (cfg.home / "covers").mkdir(exist_ok=True)
+    written: list[Path] = []
+    for name, content in _FILES.items():
+        target = cfg.home / name
+        if target.exists() and not overwrite:
+            continue
+        target.write_text(content, encoding="utf-8")
+        written.append(target)
+    return written

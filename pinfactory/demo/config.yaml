@@ -1,0 +1,22 @@
+# config.yaml — cadence + anti-spam knobs. EDIT ME.
+# These enforce the rules from the project brief. Delete a key to use its default.
+
+cadence:
+  max_pins_per_week: 10            # brief: max 15; default 10
+  min_hours_between_same_url: 48   # same destination URL, different boards
+  resave_after_days: 5             # one extra-board resave allowed after N days, then never
+  quarantine_after_failures: 2
+
+images:
+  width: 1000
+  height: 1500
+  variants: [headline, trope_hook, quote_card, comp_card]
+
+copy:
+  default_model: claude-opus-4-8   # overridden by ANTHROPIC_MODEL in .env
+  title_max_chars: 100
+  description_max_chars: 500
+
+boards:
+  min_per_account: 5
+  max_per_account: 8

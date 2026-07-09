@@ -1,0 +1,40 @@
+{
+  "books": [
+    {
+      "slug": "the-thornwood-vow",
+      "title": "The Thornwood Vow",
+      "pen_name": "Example Dark Romance Pen",
+      "series": "",
+      "subgenre": "dark romance",
+      "tropes": "enemies to lovers; morally gray hero; forced proximity",
+      "tagline": "He was her enemy. Now he is her vow.",
+      "destination_url": "",
+      "priority": 0,
+      "cover_path": "/home/user/claude-code/pinfactory/demo/covers/the-thornwood-vow.png"
+    },
+    {
+      "slug": "a-crown-of-embers",
+      "title": "A Crown of Embers",
+      "pen_name": "Example Fantasy Pen",
+      "series": "",
+      "subgenre": "fantasy romance",
+      "tropes": "fated mates; court intrigue; enemies to lovers",
+      "tagline": "Two thrones. One forbidden bond.",
+      "destination_url": "",
+      "priority": 0,
+      "cover_path": "/home/user/claude-code/pinfactory/demo/covers/a-crown-of-embers.png"
+    },
+    {
+      "slug": "lighthouse-lane",
+      "title": "Lighthouse Lane",
+      "pen_name": "Example Small-Town Pen",
+      "series": "",
+      "subgenre": "contemporary romance",
+      "tropes": "grumpy sunshine; small town; second chance",
+      "tagline": "Some tides always bring you home.",
+      "destination_url": "",
+      "priority": 0,
+      "cover_path": "/home/user/claude-code/pinfactory/demo/covers/lighthouse-lane.png"
+    }
+  ]
+}

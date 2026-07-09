@@ -1,0 +1,24 @@
+# Secrets
+.env
+
+# Local state (SQLite DB, generated images, reports) — resumable, not committed
+pinfactory.db
+pinfactory.db-journal
+pinfactory.db-wal
+/output/
+/review/
+/reports/
+demo/output/
+demo/pinfactory.db
+demo/pinfactory.db-*
+
+# Your own inputs (keep out of version control by default)
+/covers/
+/textures/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+*.egg-info/

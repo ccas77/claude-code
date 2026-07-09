@@ -1,0 +1,585 @@
+"""Component 1 — the pin image generator.
+
+Produces 1000x1500 (2:3) vertical PNGs, four template variants per book, using
+Pillow. Backgrounds are generated programmatically (gradients, grain, vignette,
+blurred/tinted treatments of the cover) unless you supply your own licensed
+textures/ folder. Nothing is ever fetched from the internet.
+
+Determinism: the RNG seed for a (book, variant) pair is fixed, so re-running
+`generate` reproduces the same creative instead of spamming near-duplicates.
+`generate --refresh` bumps a per-book counter, changing the seed to make fresh
+creatives on demand.
+
+On-image text is derived entirely from your catalogue metadata (title,
+subgenre, tropes, tagline) — the generator never invents book copy. The written
+pin title/description are a separate concern handled by Component 2.
+"""
+
+from __future__ import annotations
+
+import hashlib
+import random
+import textwrap
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any, Callable
+
+from PIL import Image, ImageDraw, ImageFilter, ImageFont, ImageOps
+
+from . import db as dbmod
+from .config import Config
+from .themes import Theme, ThemeSet, hex_to_rgb
+
+VARIANTS = ["headline", "trope_hook", "quote_card", "comp_card"]
+
+# Image formats we accept as covers / textures.
+_IMG_EXTS = {".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tif", ".tiff"}
+
+
+@dataclass
+class RenderResult:
+    variant: str
+    template: str
+    path: Path | None
+    content_hash: str | None
+    seed: int
+    skipped: bool = False
+    reason: str = ""
+    duplicate_of: str = ""
+
+
+# --------------------------------------------------------------------------- #
+# Low-level drawing helpers
+# --------------------------------------------------------------------------- #
+def _lerp(a: int, b: int, t: float) -> int:
+    return int(round(a + (b - a) * t))
+
+
+def _lerp_rgb(c1, c2, t: float):
+    return (_lerp(c1[0], c2[0], t), _lerp(c1[1], c2[1], t), _lerp(c1[2], c2[2], t))
+
+
+def vertical_gradient(size, top: str, bottom: str, skew: float = 0.0) -> Image.Image:
+    """Top→bottom gradient. `skew` (0..1) biases the midpoint for variety."""
+    w, h = size
+    top_rgb, bot_rgb = hex_to_rgb(top), hex_to_rgb(bottom)
+    img = Image.new("RGB", size)
+    draw = ImageDraw.Draw(img)
+    for y in range(h):
+        t = y / max(1, h - 1)
+        # Ease with an adjustable midpoint so gradients don't all look identical.
+        t = min(1.0, max(0.0, t ** (1.0 + skew)))
+        draw.line([(0, y), (w, y)], fill=_lerp_rgb(top_rgb, bot_rgb, t))
+    return img
+
+
+def radial_glow(size, color: str, center, radius: float, strength: float) -> Image.Image:
+    """A soft coloured glow (RGBA) to drop over a background for depth."""
+    w, h = size
+    base = Image.new("L", size, 0)
+    grad = Image.radial_gradient("L").resize((int(radius * 2), int(radius * 2)))
+    grad = ImageOps.invert(grad)
+    cx, cy = center
+    box = (int(cx - radius), int(cy - radius))
+    base.paste(grad, box)
+    base = base.point(lambda p: int(p * strength))
+    glow = Image.new("RGBA", size, (*hex_to_rgb(color), 0))
+    glow.putalpha(base)
+    return glow
+
+
+def vignette(size, strength: float = 0.55) -> Image.Image:
+    """Darken the edges. Returns an RGBA layer to composite over the image."""
+    w, h = size
+    mask = Image.radial_gradient("L").resize(size)
+    mask = mask.point(lambda p: int(p * strength))
+    layer = Image.new("RGBA", size, (0, 0, 0, 0))
+    layer.putalpha(mask)
+    return layer
+
+
+def grain(size, rng: random.Random, opacity: int = 16) -> Image.Image:
+    """Subtle film grain so flat gradients feel textured, not digital."""
+    w, h = size
+    small = (max(1, w // 3), max(1, h // 3))
+    noise = Image.effect_noise(small, 48).resize(size)
+    layer = Image.new("RGBA", size, (255, 255, 255, 0))
+    layer.putalpha(noise.point(lambda p: int(abs(p - 128) / 128 * opacity)))
+    return layer
+
+
+def scrim(size, color: str, top_alpha: int, bottom_alpha: int, start: float = 0.0) -> Image.Image:
+    """Vertical translucent gradient to guarantee text legibility on photos."""
+    w, h = size
+    rgb = hex_to_rgb(color)
+    layer = Image.new("RGBA", size, (0, 0, 0, 0))
+    draw = ImageDraw.Draw(layer)
+    for y in range(h):
+        t = y / max(1, h - 1)
+        if t < start:
+            a = top_alpha
+        else:
+            tt = (t - start) / max(1e-6, 1 - start)
+            a = _lerp(top_alpha, bottom_alpha, tt)
+        draw.line([(0, y), (w, y)], fill=(*rgb, a))
+    return layer
+
+
+def rounded_shadow(img: Image.Image, radius: int = 22, blur: int = 28,
+                   offset=(0, 20), alpha: int = 150) -> Image.Image:
+    """Return a shadow layer (RGBA, same size as a padded canvas) for a cover."""
+    w, h = img.size
+    pad = blur * 3
+    canvas = Image.new("RGBA", (w + pad * 2, h + pad * 2), (0, 0, 0, 0))
+    shadow = Image.new("RGBA", canvas.size, (0, 0, 0, 0))
+    rect = Image.new("L", (w, h), 0)
+    ImageDraw.Draw(rect).rounded_rectangle([0, 0, w - 1, h - 1], radius=radius, fill=alpha)
+    shadow.paste((0, 0, 0, alpha), (pad + offset[0], pad + offset[1]), rect)
+    shadow = shadow.filter(ImageFilter.GaussianBlur(blur))
+    return shadow, pad
+
+
+def round_corners(img: Image.Image, radius: int) -> Image.Image:
+    img = img.convert("RGBA")
+    mask = Image.new("L", img.size, 0)
+    ImageDraw.Draw(mask).rounded_rectangle([0, 0, img.size[0] - 1, img.size[1] - 1],
+                                           radius=radius, fill=255)
+    img.putalpha(mask)
+    return img
+
+
+def fit_cover(cover: Image.Image, target_h: int) -> Image.Image:
+    """Scale a cover to a target height preserving aspect ratio."""
+    w, h = cover.size
+    scale = target_h / h
+    return cover.resize((max(1, int(w * scale)), target_h), Image.LANCZOS)
+
+
+def cover_fill(cover: Image.Image, size) -> Image.Image:
+    """Scale+crop a cover to completely fill `size` (for blurred backgrounds)."""
+    return ImageOps.fit(cover, size, Image.LANCZOS)
+
+
+# --- text layout ----------------------------------------------------------- #
+def _text_w(draw, text, font, tracking: int = 0) -> int:
+    if not text:
+        return 0
+    if tracking == 0:
+        return int(draw.textlength(text, font=font))
+    return int(sum(draw.textlength(ch, font=font) for ch in text) + tracking * (len(text) - 1))
+
+
+def wrap_to_width(draw, text, font, max_w: int, tracking: int = 0) -> list[str]:
+    words = text.split()
+    if not words:
+        return [""]
+    lines, cur = [], words[0]
+    for word in words[1:]:
+        trial = f"{cur} {word}"
+        if _text_w(draw, trial, font, tracking) <= max_w:
+            cur = trial
+        else:
+            lines.append(cur)
+            cur = word
+    lines.append(cur)
+    return lines
+
+
+def fit_text(draw, text, themeset: ThemeSet, font_name: str, max_w: int, max_h: int,
+             max_size: int, min_size: int = 20, tracking: int = 0, line_spacing: float = 1.12):
+    """Shrink font until wrapped text fits both max_w and max_h. Returns (font, lines, size)."""
+    size = max_size
+    while size >= min_size:
+        font = themeset.load_font(font_name, size)
+        lines = wrap_to_width(draw, text, font, max_w, tracking)
+        line_h = int(size * line_spacing)
+        total_h = line_h * len(lines)
+        widest = max(_text_w(draw, ln, font, tracking) for ln in lines)
+        if total_h <= max_h and widest <= max_w:
+            return font, lines, size
+        size -= 2
+    font = themeset.load_font(font_name, min_size)
+    return font, wrap_to_width(draw, text, font, max_w, tracking), min_size
+
+
+def draw_lines(draw, lines, font, xy, fill, align: str = "center", tracking: int = 0,
+               line_spacing: float = 1.12, max_w: int | None = None,
+               shadow: tuple | None = None):
+    x, y = xy
+    size = font.size
+    line_h = int(size * line_spacing)
+    for ln in lines:
+        lw = _text_w(draw, ln, font, tracking)
+        if align == "center" and max_w is not None:
+            lx = x + (max_w - lw) // 2
+        elif align == "right" and max_w is not None:
+            lx = x + (max_w - lw)
+        else:
+            lx = x
+        _draw_tracked(draw, (lx, y), ln, font, fill, tracking, shadow)
+        y += line_h
+    return y
+
+
+def _draw_tracked(draw, xy, text, font, fill, tracking: int, shadow: tuple | None):
+    x, y = xy
+    if tracking == 0:
+        if shadow:
+            sc, so = shadow
+            draw.text((x + so[0], y + so[1]), text, font=font, fill=sc)
+        draw.text((x, y), text, font=font, fill=fill)
+        return
+    for ch in text:
+        if shadow:
+            sc, so = shadow
+            draw.text((x + so[0], y + so[1]), ch, font=font, fill=sc)
+        draw.text((x, y), ch, font=font, fill=fill)
+        x += int(draw.textlength(ch, font=font)) + tracking
+
+
+def kicker(subgenre: str, series: str) -> str:
+    bits = [b for b in [subgenre.upper(), series.upper()] if b]
+    return "  ·  ".join(bits)
+
+
+def tropes_line(tropes: list[str], sep: str = "  ·  ", limit: int = 3) -> str:
+    return sep.join(t.upper() for t in tropes[:limit])
+
+
+# --------------------------------------------------------------------------- #
+# Background builders
+# --------------------------------------------------------------------------- #
+class Backgrounds:
+    def __init__(self, cfg: Config):
+        self.textures = _list_images(cfg.textures_dir)
+
+    def gradient_grain(self, size, theme: Theme, rng: random.Random) -> Image.Image:
+        skew = rng.uniform(-0.25, 0.35)
+        bg = vertical_gradient(size, theme.palette["bg_top"], theme.palette["bg_bottom"], skew)
+        # accent glow, placed by RNG in the upper third
+        gx = int(size[0] * rng.uniform(0.2, 0.8))
+        gy = int(size[1] * rng.uniform(0.12, 0.4))
+        glow = radial_glow(size, theme.palette["accent"], (gx, gy),
+                           radius=size[0] * rng.uniform(0.45, 0.7),
+                           strength=rng.uniform(0.10, 0.22))
+        bg = Image.alpha_composite(bg.convert("RGBA"), glow)
+        bg = Image.alpha_composite(bg, grain(size, rng, opacity=14))
+        bg = Image.alpha_composite(bg, vignette(size, strength=rng.uniform(0.35, 0.6)))
+        return bg.convert("RGB")
+
+    def blurred_cover(self, size, cover: Image.Image, theme: Theme, rng: random.Random) -> Image.Image:
+        base = cover_fill(cover, size).filter(ImageFilter.GaussianBlur(rng.uniform(28, 42)))
+        # tint toward the palette to keep it moody + on-brand
+        tint = Image.new("RGB", size, hex_to_rgb(theme.palette["scrim"]))
+        base = Image.blend(base, tint, alpha=rng.uniform(0.45, 0.62))
+        base = Image.alpha_composite(base.convert("RGBA"), grain(size, rng, 10))
+        base = Image.alpha_composite(base, vignette(size, strength=0.55))
+        return base.convert("RGB")
+
+    def texture_or_gradient(self, size, theme: Theme, rng: random.Random) -> Image.Image:
+        if self.textures:
+            path = self.textures[rng.randrange(len(self.textures))]
+            try:
+                tex = Image.open(path).convert("RGB")
+                base = cover_fill(tex, size)
+                tint = Image.new("RGB", size, hex_to_rgb(theme.palette["bg_bottom"]))
+                base = Image.blend(base, tint, alpha=rng.uniform(0.35, 0.55))
+                base = Image.alpha_composite(base.convert("RGBA"),
+                                             vignette(size, strength=0.5))
+                return base.convert("RGB")
+            except Exception:
+                pass
+        return self.gradient_grain(size, theme, rng)
+
+
+# --------------------------------------------------------------------------- #
+# The generator
+# --------------------------------------------------------------------------- #
+class ImageGenerator:
+    def __init__(self, cfg: Config, themeset: ThemeSet, database: dbmod.DB):
+        self.cfg = cfg
+        self.themes = themeset
+        self.db = database
+        self.backgrounds = Backgrounds(cfg)
+        self.width = int(cfg.get("images", "width", default=1000))
+        self.height = int(cfg.get("images", "height", default=1500))
+
+    # -- seeding ------------------------------------------------------------
+    @staticmethod
+    def seed_for(slug: str, variant: str, refresh_index: int) -> int:
+        h = hashlib.sha256(f"{slug}|{variant}|{refresh_index}".encode()).hexdigest()
+        return int(h[:12], 16)
+
+    # -- public API ---------------------------------------------------------
+    def generate_book(self, book, variants=None, refresh: bool = False,
+                      force: bool = False) -> list[RenderResult]:
+        variants = variants or VARIANTS
+        refresh_index = int(book["refresh_index"])
+        if refresh:
+            refresh_index = self.db.bump_refresh_index(book["slug"])
+        theme = self.themes.for_pen_name(book["pen_name"], book["palette_key"] if "palette_key" in book.keys() else None)
+
+        cover = self._load_cover(book)
+        out_dir = self.cfg.output_dir / _safe(book["pen_name"] or "unassigned") / book["slug"]
+        out_dir.mkdir(parents=True, exist_ok=True)
+
+        results: list[RenderResult] = []
+        for variant in variants:
+            seed = self.seed_for(book["slug"], variant, refresh_index)
+            res = self._render_variant(book, theme, cover, variant, seed, out_dir, force)
+            results.append(res)
+        return results
+
+    # -- rendering ----------------------------------------------------------
+    def _render_variant(self, book, theme, cover, variant, seed, out_dir, force) -> RenderResult:
+        template = variant
+        # Pre-flight: some variants require data we may not have.
+        if variant in ("headline", "trope_hook", "comp_card") and cover is None:
+            return RenderResult(variant, template, None, None, seed, skipped=True,
+                                reason="no cover image found for this book")
+        if variant == "quote_card" and not (book["tagline"] or "").strip():
+            return RenderResult(variant, template, None, None, seed, skipped=True,
+                                reason="no tagline supplied (quote-card skipped)")
+
+        rng = random.Random(seed)
+        builder: Callable = {
+            "headline": self._tpl_headline,
+            "trope_hook": self._tpl_trope_hook,
+            "quote_card": self._tpl_quote_card,
+            "comp_card": self._tpl_comp_card,
+        }[variant]
+        img = builder(book, theme, cover, rng)
+
+        # Content hash for the never-publish-twice rule.
+        content_hash = hashlib.sha256(img.tobytes()).hexdigest()
+        duplicate_of = ""
+        if self.db.hash_exists(content_hash, exclude_book=book["slug"], exclude_variant=variant):
+            duplicate_of = content_hash[:12]
+            if not force:
+                return RenderResult(variant, template, None, None, seed, skipped=True,
+                                    reason="identical image already exists (use --refresh)",
+                                    duplicate_of=duplicate_of)
+
+        path = out_dir / f"{book['slug']}__{variant}.png"
+        img.save(path, "PNG")
+        self.db.upsert_image({
+            "book_slug": book["slug"],
+            "variant": variant,
+            "template": template,
+            "file_path": str(path),
+            "content_hash": content_hash,
+            "seed": seed,
+            "width": self.width,
+            "height": self.height,
+        })
+        return RenderResult(variant, template, path, content_hash, seed,
+                            duplicate_of=duplicate_of)
+
+    # -- templates ----------------------------------------------------------
+    def _canvas(self) -> tuple[Image.Image, ImageDraw.ImageDraw]:
+        img = Image.new("RGB", (self.width, self.height))
+        return img, ImageDraw.Draw(img)
+
+    def _place_cover(self, base: Image.Image, cover: Image.Image, target_h: int, cy: int):
+        """Composite a cover with rounded corners + soft shadow, centred at cy."""
+        c = round_corners(fit_cover(cover, target_h), radius=18)
+        shadow, pad = rounded_shadow(c, radius=18)
+        cw, ch = c.size
+        x = (self.width - cw) // 2
+        y = cy - ch // 2
+        base.paste(shadow, (x - pad, y - pad), shadow)
+        base.paste(c, (x, y), c)
+        return x, y, cw, ch
+
+    def _tpl_headline(self, book, theme, cover, rng) -> Image.Image:
+        """(a) Cover on a moody background with a headline overlay."""
+        size = (self.width, self.height)
+        base = self.backgrounds.blurred_cover(size, cover, theme, rng).convert("RGBA")
+        # legibility scrim, darker at the bottom where text lives
+        base = Image.alpha_composite(base, scrim(size, theme.palette["scrim"], 40, 205, start=0.35))
+        base = base.convert("RGB")
+
+        self._place_cover(base, cover, target_h=int(self.height * 0.52), cy=int(self.height * 0.40))
+
+        draw = ImageDraw.Draw(base)
+        m = int(self.width * 0.09)
+        col = hex_to_rgb(theme.palette["headline"])
+        acc = hex_to_rgb(theme.palette["accent"])
+        sub = hex_to_rgb(theme.palette["subtext"])
+
+        # kicker
+        kick = kicker(book["subgenre"], book["series"])
+        if kick:
+            kf = self.themes.load_font(theme.fonts["body_bold"], 30)
+            draw_lines(draw, [kick], kf, (m, int(self.height * 0.68)), acc,
+                       align="center", tracking=6, max_w=self.width - 2 * m)
+        # headline = title
+        hf, lines, _ = fit_text(draw, book["title"] or book["slug"], self.themes,
+                                theme.fonts["headline"], self.width - 2 * m,
+                                int(self.height * 0.20), max_size=104, min_size=44,
+                                line_spacing=1.06)
+        y = draw_lines(draw, lines, hf, (m, int(self.height * 0.72)), col,
+                       align="center", max_w=self.width - 2 * m, line_spacing=1.06,
+                       shadow=((0, 0, 0), (0, 3)))
+        # trope tags — fit to width so long tag lines never bleed off the edge
+        tags = tropes_line(dbmod.book_tropes(book), limit=3)
+        if tags:
+            tf, tlines, _ = fit_text(draw, tags, self.themes, theme.fonts["body"],
+                                     self.width - 2 * m, 34, max_size=26, min_size=14,
+                                     tracking=2)
+            draw_lines(draw, tlines, tf, (m, y + 16), sub, align="center", tracking=2,
+                       max_w=self.width - 2 * m)
+        return base
+
+    def _tpl_trope_hook(self, book, theme, cover, rng) -> Image.Image:
+        """(b) Cover mockup with a trope-hook overlay (from the book's tropes)."""
+        size = (self.width, self.height)
+        base = self.backgrounds.gradient_grain(size, theme, rng).convert("RGB")
+
+        # cover higher up, hook text below
+        self._place_cover(base, cover, target_h=int(self.height * 0.46), cy=int(self.height * 0.34))
+
+        draw = ImageDraw.Draw(base)
+        m = int(self.width * 0.10)
+        acc = hex_to_rgb(theme.palette["accent"])
+        col = hex_to_rgb(theme.palette["headline"])
+        sub = hex_to_rgb(theme.palette["subtext"])
+
+        # thin accent rule
+        ry = int(self.height * 0.60)
+        draw.line([(m, ry), (self.width - m, ry)], fill=acc, width=2)
+
+        # hook derived from the book's own trope tags (real metadata, not invented)
+        tropes = dbmod.book_tropes(book)
+        hook = _trope_hook_text(tropes, book["subgenre"])
+        hf, lines, _ = fit_text(draw, hook, self.themes, theme.fonts["serif_italic"],
+                                self.width - 2 * m, int(self.height * 0.22),
+                                max_size=68, min_size=32, line_spacing=1.16)
+        y = draw_lines(draw, lines, hf, (m, ry + 34), col, align="center",
+                       max_w=self.width - 2 * m, line_spacing=1.16)
+        # title + pen name footer
+        tf = self.themes.load_font(theme.fonts["body_bold"], 30)
+        draw_lines(draw, [(book["title"] or book["slug"]).upper()], tf, (m, y + 30), sub,
+                   align="center", tracking=4, max_w=self.width - 2 * m)
+        return base
+
+    def _tpl_quote_card(self, book, theme, cover, rng) -> Image.Image:
+        """(c) Quote-card using the tagline you supplied for the book."""
+        size = (self.width, self.height)
+        base = self.backgrounds.texture_or_gradient(size, theme, rng).convert("RGB")
+        draw = ImageDraw.Draw(base)
+        m = int(self.width * 0.12)
+        col = hex_to_rgb(theme.palette["headline"])
+        acc = hex_to_rgb(theme.palette["accent"])
+        sub = hex_to_rgb(theme.palette["subtext"])
+        maxw = self.width - 2 * m
+
+        tagline = (book["tagline"] or "").strip().strip('"')
+        line_spacing = 1.22
+        hf, lines, _ = fit_text(draw, tagline, self.themes, theme.fonts["serif"], maxw,
+                                int(self.height * 0.40), max_size=78, min_size=34,
+                                line_spacing=line_spacing)
+
+        # Measure the whole block (quote mark + tagline + attribution) and centre it.
+        quote_gap = 150            # space the big quotation mark occupies above the text
+        line_h = int(hf.size * line_spacing)
+        quote_h = line_h * len(lines)
+        attrib_h = 66 + (52 if book["pen_name"] else 0)
+        block_h = quote_gap + quote_h + 46 + attrib_h
+        top = max(int(self.height * 0.08), (self.height - block_h) // 2)
+
+        qf = self.themes.load_font(theme.fonts["headline"], 200)
+        draw.text((m - 10, top - 30), "“", font=qf, fill=acc)
+
+        y = draw_lines(draw, lines, hf, (m, top + quote_gap), col, align="center",
+                       max_w=maxw, line_spacing=line_spacing)
+
+        # attribution: title + pen name (real metadata)
+        draw.line([(self.width // 2 - 60, y + 30), (self.width // 2 + 60, y + 30)],
+                  fill=acc, width=2)
+        af = self.themes.load_font(theme.fonts["body_bold"], 30)
+        draw_lines(draw, [(book["title"] or book["slug"]).upper()], af, (m, y + 52), sub,
+                   align="center", tracking=4, max_w=maxw)
+        if book["pen_name"]:
+            pf = self.themes.load_font(theme.fonts["accent"], 44)
+            draw_lines(draw, [book["pen_name"]], pf, (m, y + 94), acc, align="center",
+                       max_w=maxw)
+        return base
+
+    def _tpl_comp_card(self, book, theme, cover, rng) -> Image.Image:
+        """(d) 'If you love X, read this' comp card — text only from own metadata."""
+        size = (self.width, self.height)
+        base = self.backgrounds.gradient_grain(size, theme, rng).convert("RGB")
+        draw = ImageDraw.Draw(base)
+        m = int(self.width * 0.10)
+        col = hex_to_rgb(theme.palette["headline"])
+        acc = hex_to_rgb(theme.palette["accent"])
+        sub = hex_to_rgb(theme.palette["subtext"])
+
+        # top: "IF YOU LOVE" + trope
+        kf = self.themes.load_font(theme.fonts["body_bold"], 34)
+        draw_lines(draw, ["IF YOU LOVE"], kf, (m, int(self.height * 0.09)), sub,
+                   align="center", tracking=8, max_w=self.width - 2 * m)
+        tropes = dbmod.book_tropes(book)
+        love = tropes_line(tropes, sep="  &  ", limit=2) or (book["subgenre"].upper() or "THIS TROPE")
+        lf, llines, _ = fit_text(draw, love, self.themes, theme.fonts["headline"],
+                                 self.width - 2 * m, int(self.height * 0.14),
+                                 max_size=76, min_size=34, line_spacing=1.05)
+        draw_lines(draw, llines, lf, (m, int(self.height * 0.14)), acc, align="center",
+                   max_w=self.width - 2 * m, line_spacing=1.05)
+
+        # middle: small cover
+        self._place_cover(base, cover, target_h=int(self.height * 0.40), cy=int(self.height * 0.55))
+
+        # bottom: "READ" + title
+        draw = ImageDraw.Draw(base)
+        draw_lines(draw, ["YOU'LL LOVE"], kf, (m, int(self.height * 0.80)), sub,
+                   align="center", tracking=8, max_w=self.width - 2 * m)
+        tf, tlines, _ = fit_text(draw, book["title"] or book["slug"], self.themes,
+                                 theme.fonts["headline"], self.width - 2 * m,
+                                 int(self.height * 0.12), max_size=66, min_size=30,
+                                 line_spacing=1.06)
+        draw_lines(draw, tlines, tf, (m, int(self.height * 0.85)), col, align="center",
+                   max_w=self.width - 2 * m, line_spacing=1.06)
+        return base
+
+    # -- helpers ------------------------------------------------------------
+    def _load_cover(self, book) -> Image.Image | None:
+        path = book["cover_path"]
+        if path and Path(path).is_file():
+            try:
+                return Image.open(path).convert("RGB")
+            except Exception:
+                return None
+        return None
+
+
+def _trope_hook_text(tropes: list[str], subgenre: str) -> str:
+    """Build a short hook from the book's own trope tags (no invented copy).
+
+    Component 2 (the Anthropic copy generator) can later supply a written hook
+    to overlay instead; until then we render the real metadata.
+    """
+    if tropes:
+        pretty = [t.strip().title() for t in tropes[:2]]
+        return " · ".join(pretty)
+    if subgenre:
+        return subgenre.title()
+    return ""
+
+
+def _safe(name: str) -> str:
+    keep = "-_. "
+    return "".join(c if c.isalnum() or c in keep else "_" for c in name).strip() or "untitled"
+
+
+def _list_images(folder: Path) -> list[Path]:
+    if not folder or not Path(folder).is_dir():
+        return []
+    return sorted(p for p in Path(folder).iterdir()
+                  if p.is_file() and p.suffix.lower() in _IMG_EXTS)
+
+
+def find_covers(covers_dir: Path) -> dict[str, Path]:
+    """Map slug (filename stem) -> cover path for every image in covers_dir."""
+    return {p.stem: p for p in _list_images(covers_dir)}

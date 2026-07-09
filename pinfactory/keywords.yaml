@@ -1,0 +1,60 @@
+# keywords.yaml — reader-search phrases per subgenre. EDIT ME.
+#
+# These seed Component 2 (the copy generator). Phrases here are treated as
+# APPROVED and may be used in pin titles/descriptions. `pinfactory keywords
+# --suggest <subgenre>` proposes NEW phrases via the Anthropic API, but they are
+# only used after you approve them — unapproved suggestions are never used.
+#
+# Written in reader search language (how a reader browses), not marketer copy.
+# The subgenre keys should match the `subgenre` values in your catalogue.
+
+"dark romance":
+  - dark romance books
+  - enemies to lovers dark romance
+  - morally gray hero
+  - possessive book boyfriend
+  - forbidden love story
+  - mafia romance books
+  - spicy dark romance
+  - obsessive love romance
+  - antihero romance
+  - touch her and die trope
+  - dark romance book recommendations
+  - villain love interest
+  - captive romance books
+  - twisted love story
+  - dark romance to read
+
+"contemporary romance":
+  - contemporary romance books
+  - grumpy sunshine romance
+  - small town romance
+  - second chance romance
+  - friends to lovers books
+  - slow burn romance
+  - forced proximity romance
+  - romance book recommendations
+  - feel good romance reads
+  - fake dating romance
+  - single dad romance
+  - workplace romance books
+  - cozy romance to read
+  - swoony romance books
+  - romance with a happy ending
+
+"fantasy romance":
+  - fantasy romance books
+  - romantasy book recommendations
+  - fae romance books
+  - enemies to lovers fantasy
+  - fated mates romance
+  - morally gray fantasy hero
+  - court intrigue romance
+  - slow burn fantasy romance
+  - magic and romance books
+  - dragon rider romance
+  - dark fantasy romance
+  - forbidden magic love story
+  - epic fantasy romance
+  - fantasy books like acotar
+  - spicy romantasy
