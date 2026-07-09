@@ -1,0 +1,24 @@
+{
+  "name": "tropesite",
+  "version": "0.1.0",
+  "description": "Static, SEO- and AI-search-optimized book-recommendation site generator driven by a SQLite trope catalog. Zero runtime dependencies.",
+  "type": "module",
+  "bin": {
+    "tropesite": "bin/tropesite.mjs"
+  },
+  "scripts": {
+    "tropesite": "node bin/tropesite.mjs",
+    "seed": "node bin/tropesite.mjs seed",
+    "plan": "node bin/tropesite.mjs plan",
+    "generate": "node bin/tropesite.mjs generate",
+    "build": "node bin/tropesite.mjs build",
+    "audit": "node bin/tropesite.mjs audit",
+    "review": "node bin/tropesite.mjs review",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=22.5.0"
+  },
+  "dependencies": {},
+  "private": true
+}
