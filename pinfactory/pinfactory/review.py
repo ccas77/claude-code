@@ -97,7 +97,7 @@ def _page(rows, hooks, *, static: bool) -> str:
 <main>{body}</main>
 <script>
   document.querySelectorAll('textarea,input[name=title]').forEach(el => {{
-    const c = el.parentElement.querySelector('.count');
+    const c = el.previousElementSibling && el.previousElementSibling.querySelector('.count');
     if (!c) return;
     const max = +el.dataset.max;
     const upd = () => {{ c.textContent = el.value.length + '/' + max; c.classList.toggle('over', el.value.length>max); }};
