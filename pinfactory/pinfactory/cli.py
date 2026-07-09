@@ -19,16 +19,18 @@ from pathlib import Path
 
 from . import __version__
 from . import catalog as catalogmod
+from . import copy_gen as copymod
 from . import db as dbmod
+from . import keywords as kwmod
+from . import review as reviewmod
 from .config import load_config
 from .images import ALL_VARIANTS, ImageGenerator, OPTIONAL_VARIANTS, VARIANTS, find_covers
 from .themes import ThemeSet
 
 _PENDING = (
-    "This command belongs to a later component and isn't built yet.\n"
-    "Build order (from the project brief): Component 1 = image generator (ready),\n"
-    "Component 2 = copy generator + review + keywords, Component 3 = boards + scheduler + stats.\n"
-    "Approve the Component 1 sample images and I'll build the next component."
+    "This command belongs to Component 3 (Pinterest boards + scheduler) and isn't built yet.\n"
+    "Build order: Component 1 = images (done), Component 2 = copy + review + keywords (done),\n"
+    "Component 3 = boards + publish scheduler + stats (last). It's built after Component 2 sign-off."
 )
 
 
@@ -58,10 +60,26 @@ def _mk_parser() -> argparse.ArgumentParser:
     sub.add_parser("list", help="Show the catalogue and image manifest.")
     sub.add_parser("scaffold", help="Create starter themes.yaml / keywords.yaml / config.yaml / .env.example here.")
 
-    # Later-component commands (registered so `--help` documents the roadmap).
-    sub.add_parser("review", help="[Component 2] Local HTML approval gallery.")
-    kw = sub.add_parser("keywords", help="[Component 2] Keyword bank + --suggest.")
-    kw.add_argument("--suggest", metavar="SUBGENRE")
+    # Component 2
+    cp = sub.add_parser("copy", help="Generate pin copy (Component 2).")
+    cp.add_argument("--slug", action="append", help="Only this book slug (repeatable).")
+    cp.add_argument("--pen-name", help="Only books for this pen name.")
+    cp.add_argument("--mock", action="store_true", help="Offline template backend (no API key / tokens).")
+    cp.add_argument("--model", help="Override the Anthropic model (default: ANTHROPIC_MODEL or config).")
+    cp.add_argument("--overwrite-approved", action="store_true", help="Also regenerate already-approved copy.")
+
+    rv = sub.add_parser("review", help="Local approval gallery (Component 2).")
+    rv.add_argument("--port", type=int, default=8000, help="Server port (default 8000).")
+    rv.add_argument("--static", action="store_true", help="Write a self-contained HTML snapshot instead of serving.")
+
+    kw = sub.add_parser("keywords", help="Keyword bank + suggestions (Component 2).")
+    kw.add_argument("--subgenre", help="Show phrases for this subgenre.")
+    kw.add_argument("--suggest", metavar="SUBGENRE", help="Propose new phrases (needs approval).")
+    kw.add_argument("--seed", action="store_true", help="(Re)load approved phrases from keywords.yaml.")
+    kw.add_argument("--mock", action="store_true", help="Offline suggestions (no API key).")
+    kw.add_argument("--model", help="Override the Anthropic model.")
+
+    # Component 3 (not yet built)
     pub = sub.add_parser("publish", help="[Component 3] Pinterest scheduler.")
     pub.add_argument("--dry-run", action="store_true")
     sub.add_parser("stats", help="[Component 3] Analytics + weekly digest.")
@@ -121,6 +139,110 @@ def cmd_list(cfg, database, args) -> int:
     return 0
 
 
+def cmd_copy(cfg, database, args) -> int:
+    books = _select_books(database, args)
+    if not books:
+        print("No matching books. Run `pinfactory init`/`import`, then `generate`.")
+        return 1
+    if not database.list_images():
+        print("No images yet — run `pinfactory generate` first (copy is written per image).")
+        return 1
+    # ensure the keyword bank is seeded from keywords.yaml
+    if not kwmod.counts_by_subgenre(database):
+        seeded = kwmod.seed_from_yaml(cfg, database)
+        if seeded:
+            print(f"Seeded {seeded} approved keyword(s) from keywords.yaml.")
+    backend = copymod.make_backend(cfg, args.mock, args.model)
+    if args.mock:
+        print("⚠ --mock: copy is assembled offline from your metadata/keywords — "
+              "NOT model-generated. Use without --mock (with your ANTHROPIC_API_KEY) for real copy.")
+    else:
+        print(f"Generating copy with the Anthropic API (model: {backend.model}).")
+    try:
+        gen = copymod.CopyGenerator(cfg, database, backend)
+        stats = gen.generate_for_books(books, overwrite_approved=args.overwrite_approved)
+    except RuntimeError as e:
+        print(f"\nError: {e}")
+        return 1
+    except Exception as e:  # surface API/auth errors cleanly
+        print(f"\nCopy generation failed: {type(e).__name__}: {e}")
+        print("If this is an auth error, set ANTHROPIC_API_KEY in .env, or use --mock to test offline.")
+        return 1
+    print(f"\nWrote copy for {stats['copy']} image(s); "
+          f"{stats['hooks']} hook suggestion(s); kept {stats['kept_approved']} approved as-is.")
+    print("Next: `pinfactory review` to approve/reject/edit before anything can publish.")
+    return 0
+
+
+def cmd_review(cfg, database, args) -> int:
+    if args.static:
+        out = reviewmod.write_static(cfg)
+        print(f"Wrote static snapshot: {out}")
+        print("Open it in a browser (read-only). Use `pinfactory review` to approve/edit.")
+        return 0
+    reviewmod.serve(cfg, port=args.port)
+    return 0
+
+
+def cmd_keywords(cfg, database, args) -> int:
+    if args.seed:
+        n = kwmod.seed_from_yaml(cfg, database)
+        print(f"Seeded {n} new approved keyword(s) from keywords.yaml.")
+        return 0
+    if args.suggest:
+        subgenre = args.suggest
+        existing = [r["phrase"] for r in kwmod.list_for(database, subgenre)]
+        backend = copymod.make_backend(cfg, args.mock, args.model)
+        try:
+            proposed = backend.suggest_keywords(subgenre, existing)
+        except Exception as e:
+            print(f"Suggestion failed: {type(e).__name__}: {e}")
+            print("Set ANTHROPIC_API_KEY in .env, or use --mock for offline suggestions.")
+            return 1
+        added = kwmod.add_suggestions(database, subgenre, proposed)
+        print(f"\nProposed {added} new phrase(s) for '{subgenre}' (status: suggested — "
+              f"NOT used until you approve them):\n")
+        # interactive approval if we have a terminal
+        for r in kwmod.list_for(database, subgenre):
+            if r["status"] != "suggested":
+                continue
+            try:
+                ans = input(f"  approve  \"{r['phrase']}\"?  (y/N/q) ").strip().lower()
+            except EOFError:
+                ans = ""
+            if ans == "q":
+                break
+            if ans in ("y", "yes"):
+                kwmod.set_status(database, subgenre, r["phrase"], "approved")
+        appr = len(kwmod.approved_for(database, subgenre))
+        print(f"\n'{subgenre}' now has {appr} approved phrase(s).")
+        return 0
+    if args.subgenre:
+        rows = kwmod.list_for(database, args.subgenre)
+        if not rows:
+            print(f"No keywords for '{args.subgenre}'. Add some to keywords.yaml then "
+                  f"`pinfactory keywords --seed`, or `--suggest {args.subgenre}`.")
+            return 0
+        print(f"Keywords for '{args.subgenre}':")
+        for r in rows:
+            mark = {"approved": "✓", "suggested": "…", "rejected": "✗"}.get(r["status"], " ")
+            print(f"  {mark} [{r['status']:<9}] {r['phrase']}")
+        return 0
+    # default: seed if empty, then show counts
+    if not kwmod.counts_by_subgenre(database):
+        kwmod.seed_from_yaml(cfg, database)
+    counts = kwmod.counts_by_subgenre(database)
+    if not counts:
+        print("No keyword bank yet. Add phrases to keywords.yaml and run "
+              "`pinfactory keywords --seed`.")
+        return 0
+    print("Keyword bank (approved / suggested):")
+    for sub, appr, sug in counts:
+        print(f"  {sub:<24} {appr} approved · {sug} suggested")
+    print("\n`keywords --subgenre <s>` to list · `keywords --suggest <s>` to propose more.")
+    return 0
+
+
 def cmd_scaffold(cfg, database, args) -> int:
     from .scaffold import write_starter_files
     written = write_starter_files(cfg)
@@ -155,7 +277,13 @@ def main(argv: list[str] | None = None) -> int:
             return 0
         if args.command == "list":
             return cmd_list(cfg, database, args)
-        if args.command in ("review", "keywords", "publish", "stats"):
+        if args.command == "copy":
+            return cmd_copy(cfg, database, args)
+        if args.command == "review":
+            return cmd_review(cfg, database, args)
+        if args.command == "keywords":
+            return cmd_keywords(cfg, database, args)
+        if args.command in ("publish", "stats"):
             print(f"[{args.command}] {_PENDING}")
             return 0
     finally:

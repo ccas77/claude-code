@@ -32,6 +32,7 @@ CREATE TABLE IF NOT EXISTS books (
     tropes          TEXT DEFAULT '[]',    -- JSON array of strings
     tagline         TEXT DEFAULT '',      -- for the quote-card variant (optional)
     hook            TEXT DEFAULT '',      -- trope-hook overlay: you-write, or Component 2 drafts for approval
+    hook_suggestion TEXT DEFAULT '',      -- Component 2's drafted hook, pending your approval
     destination_url TEXT DEFAULT '',
     priority        INTEGER DEFAULT 0,    -- 1 = prioritise in the publish queue
     cover_path      TEXT DEFAULT '',
@@ -150,7 +151,7 @@ class DB:
 
     def _migrate(self) -> None:
         """Add columns introduced after a DB was first created (keeps old DBs resumable)."""
-        wanted = {"books": {"hook": "TEXT DEFAULT ''"}}
+        wanted = {"books": {"hook": "TEXT DEFAULT ''", "hook_suggestion": "TEXT DEFAULT ''"}}
         for table, cols in wanted.items():
             existing = {r["name"] for r in self.conn.execute(f"PRAGMA table_info({table})")}
             for col, decl in cols.items():
@@ -285,6 +286,66 @@ class DB:
             ).fetchall()
         return self.conn.execute(
             "SELECT * FROM images ORDER BY book_slug, variant"
+        ).fetchall()
+
+    # --- copy (Component 2) ------------------------------------------------
+    def upsert_copy(self, image_id: int, title: str, description: str, model: str) -> int:
+        ts = now()
+        self.conn.execute(
+            """INSERT INTO copy(image_id,title,description,model,status,created_at,updated_at)
+                 VALUES (?,?,?,?, 'draft', ?, ?)
+               ON CONFLICT(image_id) DO UPDATE SET
+                 title=excluded.title, description=excluded.description,
+                 model=excluded.model, status='draft', edited=0, updated_at=excluded.updated_at""",
+            (image_id, title, description, model, ts, ts),
+        )
+        self.commit()
+        row = self.conn.execute("SELECT id FROM copy WHERE image_id=?", (image_id,)).fetchone()
+        return int(row["id"])
+
+    def get_copy_for_image(self, image_id: int) -> sqlite3.Row | None:
+        return self.conn.execute("SELECT * FROM copy WHERE image_id=?", (image_id,)).fetchone()
+
+    def set_copy_fields(self, copy_id: int, *, title: str | None = None,
+                        description: str | None = None, status: str | None = None,
+                        edited: bool | None = None) -> None:
+        sets, params = [], []
+        for col, val in (("title", title), ("description", description), ("status", status)):
+            if val is not None:
+                sets.append(f"{col}=?"); params.append(val)
+        if edited is not None:
+            sets.append("edited=?"); params.append(1 if edited else 0)
+        if not sets:
+            return
+        sets.append("updated_at=?"); params.append(now())
+        params.append(copy_id)
+        self.conn.execute(f"UPDATE copy SET {', '.join(sets)} WHERE id=?", params)
+        self.commit()
+
+    def set_hook_suggestion(self, slug: str, hook: str) -> None:
+        self.conn.execute("UPDATE books SET hook_suggestion=?, updated_at=? WHERE slug=?",
+                          (hook, now(), slug))
+        self.commit()
+
+    def approve_hook(self, slug: str) -> None:
+        row = self.get_book(slug)
+        if row and (row["hook_suggestion"] or "").strip():
+            self.conn.execute(
+                "UPDATE books SET hook=?, hook_suggestion='', updated_at=? WHERE slug=?",
+                (row["hook_suggestion"], now(), slug))
+            self.commit()
+
+    def gallery_rows(self) -> list[sqlite3.Row]:
+        """Images joined with their book + copy for the review gallery."""
+        return self.conn.execute(
+            """SELECT i.id AS image_id, i.book_slug, i.variant, i.file_path,
+                      b.title, b.pen_name, b.subgenre, b.destination_url,
+                      c.id AS copy_id, c.title AS copy_title, c.description AS copy_desc,
+                      c.status AS copy_status, c.edited
+                 FROM images i
+                 JOIN books b ON b.slug = i.book_slug
+                 LEFT JOIN copy c ON c.image_id = i.id
+                 ORDER BY b.pen_name, i.book_slug, i.variant"""
         ).fetchall()
 
     # --- meta --------------------------------------------------------------

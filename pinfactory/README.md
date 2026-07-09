@@ -10,8 +10,7 @@ Three components:
 1. **Pin image generator** — 1000×1500 (2:3) PNGs, four template variants per
    book, per-pen-name palettes, deterministic seeds. *(Built — see below.)*
 2. **Pin copy generator** — reader-search titles + descriptions via the
-   Anthropic API, with a local approval gallery. *(Built after you approve the
-   Component 1 samples.)*
+   Anthropic API, a keyword bank, and a local approval gallery. *(Built.)*
 3. **Boards + scheduler** — Pinterest API v5 publishing with cadence/spacing
    rules and analytics. *(Built last.)*
 
@@ -42,13 +41,32 @@ Output lands in `output/<pen name>/<slug>/`.
 | --- | --- |
 | `init` | Interactive catalogue builder — walks each cover file, asks for metadata. |
 | `import` / `export` | Bulk-edit the catalogue as CSV or JSON. |
-| `generate` | **Component 1** — render the four pin variants per book. |
+| `generate` | **Component 1** — render the five pin variants per book. |
 | `list` | Show the catalogue and how many images each book has. |
 | `scaffold` | Write starter `themes.yaml` / `keywords.yaml` / `config.yaml` / `.env.example`. |
-| `review` | **Component 2** — local HTML approve/reject/edit gallery. *(next)* |
-| `keywords` | **Component 2** — per-subgenre keyword bank + `--suggest`. *(next)* |
+| `copy` | **Component 2** — write pin titles + descriptions (Anthropic API, or `--mock` offline). |
+| `review` | **Component 2** — local approve/reject/edit gallery (`--static` for a snapshot). |
+| `keywords` | **Component 2** — per-subgenre keyword bank + `--suggest`. |
 | `publish` | **Component 3** — the Pinterest scheduler (`--dry-run` supported). *(last)* |
 | `stats` | **Component 3** — analytics table + weekly digest. *(last)* |
+
+## Copy + review (Component 2)
+
+```bash
+python -m pinfactory keywords --seed              # load approved phrases from keywords.yaml
+python -m pinfactory keywords --suggest "dark romance"   # propose more (you approve each)
+python -m pinfactory copy                          # write copy via the Anthropic API (ANTHROPIC_API_KEY in .env)
+python -m pinfactory copy --mock                   # or assemble offline from metadata (no key / no tokens)
+python -m pinfactory review                        # approve/reject/edit at http://127.0.0.1:8000
+```
+
+- Copy is keyword-first titles (≤100 chars) + reader-search descriptions (≤500,
+  soft CTA, no hashtags), varied across a book's variants.
+- The model only uses your tropes/subgenre/voice notes + **approved** keywords —
+  it never invents plot, quotes, or facts.
+- Everything lands as `draft` and **nothing is eligible to publish until you
+  approve it** in the review gallery. Blank trope-hooks get a drafted suggestion
+  you approve there too.
 
 ## The image variants
 
