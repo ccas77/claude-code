@@ -31,6 +31,7 @@ CREATE TABLE IF NOT EXISTS books (
     subgenre        TEXT DEFAULT '',
     tropes          TEXT DEFAULT '[]',    -- JSON array of strings
     tagline         TEXT DEFAULT '',      -- for the quote-card variant (optional)
+    hook            TEXT DEFAULT '',      -- trope-hook overlay: you-write, or Component 2 drafts for approval
     destination_url TEXT DEFAULT '',
     priority        INTEGER DEFAULT 0,    -- 1 = prioritise in the publish queue
     cover_path      TEXT DEFAULT '',
@@ -144,7 +145,17 @@ class DB:
         self.conn.row_factory = sqlite3.Row
         self.conn.execute("PRAGMA foreign_keys = ON")
         self.conn.executescript(SCHEMA)
+        self._migrate()
         self.conn.commit()
+
+    def _migrate(self) -> None:
+        """Add columns introduced after a DB was first created (keeps old DBs resumable)."""
+        wanted = {"books": {"hook": "TEXT DEFAULT ''"}}
+        for table, cols in wanted.items():
+            existing = {r["name"] for r in self.conn.execute(f"PRAGMA table_info({table})")}
+            for col, decl in cols.items():
+                if col not in existing:
+                    self.conn.execute(f"ALTER TABLE {table} ADD COLUMN {col} {decl}")
 
     # --- generic -----------------------------------------------------------
     def close(self) -> None:
@@ -188,14 +199,15 @@ class DB:
         existing = self.get_book(book["slug"])
         created = existing["created_at"] if existing else ts
         self.conn.execute(
-            """INSERT INTO books(slug,title,pen_name,series,subgenre,tropes,tagline,
+            """INSERT INTO books(slug,title,pen_name,series,subgenre,tropes,tagline,hook,
                                  destination_url,priority,cover_path,refresh_index,
                                  created_at,updated_at)
-                 VALUES (:slug,:title,:pen_name,:series,:subgenre,:tropes,:tagline,
+                 VALUES (:slug,:title,:pen_name,:series,:subgenre,:tropes,:tagline,:hook,
                          :destination_url,:priority,:cover_path,:refresh_index,:created_at,:updated_at)
                ON CONFLICT(slug) DO UPDATE SET
                  title=excluded.title, pen_name=excluded.pen_name, series=excluded.series,
                  subgenre=excluded.subgenre, tropes=excluded.tropes, tagline=excluded.tagline,
+                 hook=excluded.hook,
                  destination_url=excluded.destination_url, priority=excluded.priority,
                  cover_path=excluded.cover_path, updated_at=excluded.updated_at""",
             {
@@ -206,6 +218,7 @@ class DB:
                 "subgenre": book.get("subgenre", ""),
                 "tropes": tropes,
                 "tagline": book.get("tagline", ""),
+                "hook": book.get("hook", ""),
                 "destination_url": book.get("destination_url", ""),
                 "priority": int(book.get("priority", 0) or 0),
                 "cover_path": book.get("cover_path", ""),

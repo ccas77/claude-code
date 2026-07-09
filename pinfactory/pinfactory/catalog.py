@@ -19,7 +19,7 @@ from .images import find_covers
 
 # Columns used for CSV/JSON round-tripping.
 FIELDS = [
-    "slug", "title", "pen_name", "series", "subgenre", "tropes", "tagline",
+    "slug", "title", "pen_name", "series", "subgenre", "tropes", "tagline", "hook",
     "destination_url", "priority", "cover_path",
 ]
 
@@ -79,6 +79,9 @@ def init_wizard(cfg: Config, database: dbmod.DB) -> int:
             tropes = dbmod.book_tropes(existing)
         tagline = _ask("  Tagline for the quote-card variant (optional)",
                        existing["tagline"] if existing else "")
+        hook = _ask("  Trope-hook line for the mockup pin "
+                    "(optional — blank = auto-draft/approve later)",
+                    existing["hook"] if existing else "")
         url = _ask("  Destination URL (Amazon page for now)",
                    existing["destination_url"] if existing else "")
         priority = _ask_bool("  Flag as priority in the publish queue?",
@@ -99,6 +102,7 @@ def init_wizard(cfg: Config, database: dbmod.DB) -> int:
             "subgenre": subgenre,
             "tropes": tropes,
             "tagline": tagline,
+            "hook": hook,
             "destination_url": url,
             "priority": 1 if priority else 0,
             "cover_path": str(cover_path),
@@ -129,6 +133,7 @@ def _row_to_book(row: dict[str, Any], covers: dict[str, Path]) -> dict[str, Any]
         "subgenre": (row.get("subgenre") or "").strip(),
         "tropes": tropes,
         "tagline": (row.get("tagline") or "").strip(),
+        "hook": (row.get("hook") or "").strip(),
         "destination_url": (row.get("destination_url") or "").strip(),
         "priority": int(str(row.get("priority", "0")).strip() or 0) if str(row.get("priority", "0")).strip().isdigit() else (1 if str(row.get("priority", "")).lower() in ("y", "yes", "true") else 0),
         "cover_path": cover_path,
@@ -174,6 +179,7 @@ def export_file(cfg: Config, database: dbmod.DB, path: str | Path) -> int:
             "subgenre": b["subgenre"],
             "tropes": "; ".join(dbmod.book_tropes(b)),
             "tagline": b["tagline"],
+            "hook": b["hook"],
             "destination_url": b["destination_url"],
             "priority": b["priority"],
             "cover_path": b["cover_path"],

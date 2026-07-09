@@ -50,15 +50,33 @@ Output lands in `output/<pen name>/<slug>/`.
 | `publish` | **Component 3** — the Pinterest scheduler (`--dry-run` supported). *(last)* |
 | `stats` | **Component 3** — analytics table + weekly digest. *(last)* |
 
-## The four image variants
+## The image variants
+
+Five templates are generated per book by default:
 
 - **headline** — cover on a moody, genre-appropriate background with a headline overlay.
-- **trope_hook** — cover mockup with a trope-hook line drawn from the book's own trope tags.
+- **trope_hook** — cover mockup with a **hook line** (see below).
 - **quote_card** — a quote card built from the tagline you supply per book (skipped if none).
 - **comp_card** — an "if you love X, you'll love this" comp card, text only from your own metadata (never another author's cover).
+- **tropes_checklist** — a "this book has ✓ …" checklist of the book's trope tags (the high-save Pinterest/BookTok "tropes" pin).
+
+One more is available on demand: **stats_card** — an "at a glance" spec sheet
+(subgenre / series / tropes). Render it with `generate --variant stats_card`.
 
 Each variant is a distinct image *and* (with Component 2) distinct copy, which
 keeps Pinterest from treating variants as duplicate spam.
+
+### The trope-hook line (hybrid)
+
+The `trope_hook` pin's overlay text comes from, in order of preference:
+
+1. a **hook** you write per book (in `init` or the CSV `hook` column), else
+2. a hook **drafted by Component 2** from your tropes that **you approve/edit**
+   in the review gallery (never shown until approved), else
+3. your **real trope tags** as a safe fallback.
+
+Nothing is ever fabricated — on-image copy is either written by you, approved by
+you, or drawn straight from your metadata.
 
 ## Design principles baked in
 

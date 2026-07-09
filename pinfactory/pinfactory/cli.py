@@ -21,7 +21,7 @@ from . import __version__
 from . import catalog as catalogmod
 from . import db as dbmod
 from .config import load_config
-from .images import ImageGenerator, VARIANTS, find_covers
+from .images import ALL_VARIANTS, ImageGenerator, OPTIONAL_VARIANTS, VARIANTS, find_covers
 from .themes import ThemeSet
 
 _PENDING = (
@@ -43,7 +43,9 @@ def _mk_parser() -> argparse.ArgumentParser:
     g = sub.add_parser("generate", help="Render pin images (Component 1).")
     g.add_argument("--slug", action="append", help="Only this book slug (repeatable).")
     g.add_argument("--pen-name", help="Only books for this pen name.")
-    g.add_argument("--variant", action="append", choices=VARIANTS, help="Only these variants (repeatable).")
+    g.add_argument("--variant", action="append", choices=ALL_VARIANTS,
+                   help="Only these variants (repeatable). Default set: " + ", ".join(VARIANTS) +
+                        f"; also available: {', '.join(OPTIONAL_VARIANTS)}.")
     g.add_argument("--refresh", action="store_true", help="Bump the seed to make fresh creatives.")
     g.add_argument("--force", action="store_true", help="Overwrite even if the image content matches an existing one.")
 
