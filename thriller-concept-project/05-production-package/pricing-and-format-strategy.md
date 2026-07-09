@@ -33,7 +33,7 @@ Grounded in the indie economics research (`../research-data/economics.md`) and p
 Rationale from the research:
 - Thriller/psych is **~73% KU-penetrated**; the target reader is a **heavy KU subscriber**. *(economics.md §1)*
 - **KU borrowers read through series at higher rates than buyers** — the next book is free to them. For an obsession-thriller series engineered for bingeing, this is the whole game. *(economics.md §3)*
-- **KENP ~$0.0043/page**; an ~85k-word (~450 KENP) book pays **~$1.90 on a full read** [estimate] — *on top of* any sales, and it stacks across the series with near-frictionless read-through. *(economics.md §1)*
+- **KENP ~$0.0043/page**; an ~85,000-word book normalizes to **~400 KENP**, paying **~$1.70 on a full read** [estimate] — *on top of* any sales, and it stacks across the series with near-frictionless read-through. *(economics.md §1; 100k ≈ 400–500 KENP)*
 
 **The cost:** KU requires **Amazon exclusivity** (no Apple/Kobo/Google/wide for enrolled titles). We accept this **for the launch phase and likely the life of the series**, because a no-platform solo author gets *discovery* from Amazon that wide can't replicate cold. Revisit only if/when a direct audience exists (see §5).
 

@@ -19,7 +19,7 @@ Amazon front-loads visibility for new titles: strongest **New Releases** push in
 **Do not publish Book 1 alone and hope.** The plan:
 
 ### Phase 0 — Write ahead (pre-launch, ~6–10 months)
-- Draft **Books 1–3 complete** before launching anything. The Obsession Thriller's single-craft, ~80–95k-word, short-chapter format is explicitly chosen to make this feasible for a solo author with AI-assisted drafting.
+- Draft **Books 1–3 complete** before launching anything. The Obsession Thriller's single-craft, ~85,000-word, short-chapter format is explicitly chosen to make this feasible for a solo author with AI-assisted drafting.
 - Build the newsletter/reader-magnet funnel in parallel (see `reader-magnet-newsletter-arc-launch-plan.md`).
 
 ### Phase 1 — Rapid-release the opening trilogy (months 0–3)

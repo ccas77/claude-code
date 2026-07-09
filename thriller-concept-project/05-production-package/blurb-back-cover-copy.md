@@ -36,7 +36,7 @@ Built on the thriller blurb formula (packaging.md §2): **Hook → Premise → S
 
 - **Tagline (cover/ad):** *The follower who knew too much just moved in.*
 - **BookTok caption:** *"POV: your favorite influencer just hired her most obsessed follower — and neither of them is telling you the truth."*
-- **One-liner:** *She came to save her. She's done this before.*
+- **One-liner:** *She came to save her. She loved someone this way once — and that one didn't survive it.*
 
 ---
 
@@ -50,3 +50,6 @@ Built on the thriller blurb formula (packaging.md §2): **Hook → Premise → S
 
 ## Honesty guardrail
 Market the **"no safe endings"** promise plainly (in newsletter/BookTok, not necessarily the retail blurb). Setting the expectation of a dark, twisty, non-HEA read is what keeps the dark-romance crossover readers satisfied and prevents the "not what I expected" reviews the skeptics warned about.
+
+## Copy guardrail — the "done this before" trap
+Wren's past is a **pattern of engulfing, surveilling love that once ended in a death she failed to prevent — NOT a murder, NOT a serial pattern.** The tournament deliberately cut the "repeat killer" reading. Avoid copy that implies she's a serial predator (e.g. a bare *"she's done this before"* reads as *serial killer*, the exact framing we rejected). Steer every "again"/"before" line toward **love-as-surveillance that gets people hurt** ("she loved someone this way once…"), preserving the reader-proxy sympathy that makes the ending ache instead of curdle.

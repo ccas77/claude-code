@@ -64,7 +64,7 @@ Since the mid-2023 overhaul, KDP allows **3 selectable browse categories**, exte
 
 ## 5. Format/length conventions
 
-- **Word count:** ~**80,000–95,000** (psych-thriller norm; short enough to "finish in a night," long enough for KENP page-reads). Deliberately toward the *lower* end for binge velocity and rapid-release cadence.
+- **Word count:** **~85,000** (psych-thriller norm; short enough to "finish in a night," long enough for KENP page-reads). Deliberately toward the *lower* end for binge velocity and rapid-release cadence. *(Canonical figure used across this package.)*
 - **Chapter architecture:** **short chapters (1,200–2,500 words), each ending on a hook.** This is "the product" — every high-read-through comp uses it.
 - **POV:** first-person (or close-third) obsessive narrator, optionally a **dual-timeline** or **dual-POV** counterweight to control information.
 

@@ -32,7 +32,7 @@ The recommendation engine never changes its nature and is never defeated — it 
 - **Voice:** intimate, controlled, blackly precise; competence as seduction; tenderness that reads as surveillance.
 - **Structure:** 60–70 chapters, **1,000–2,000 words each**, every chapter ends on a hook (*knows-too-much* or *wrongness-in-the-house*).
 - **Interstitials:** captions, DM threads, comment sections, annotation logs, engagement graphs — 1/2–1 page, for pace and screenshot-native shareability. ~1 per 2–3 chapters.
-- **Length:** 85–90k words. **No explicit HEA. Earned dark resolution.**
+- **Length:** ~85,000 words. **No explicit HEA. Earned dark resolution.**
 - **Research burden:** low — annotation work, engagement metrics, basic OSINT (reflection geolocation, posting-cadence analysis). *Googleable in a weekend.*
 
 ---

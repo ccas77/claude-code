@@ -13,7 +13,9 @@ Fifteen thriller subgenres were scored on eight weighted criteria for a solo aut
 > ### The "Obsession Thriller"
 > A **single-craft psychological/domestic thriller**, thriller-shelved, carrying **dark-romance emotional voltage** (obsession, toxic intimacy, *"I shouldn't want them"*) delivered entirely with thriller tools — **with no guaranteed happy ending.** A real, earned twist is the promise and the line against dark romance.
 
-This captures the #1 *demand* signal (desire + danger, where 2026 reader energy is migrating) at the #1 *buildability* profile (single-craft, no gatekeeper). It exploits genuine **white space** between clinical twist-thrillers (McFadden — plot but no charge) and dark romance (charge but mandatory HEA + romance craft). *Details: `thriller-subset-market-evaluation.md`, `skeptic-and-reconciliation.md`.*
+This captures the #1 *demand* signal (desire + danger, where 2026 reader energy is migrating) at the #1 *buildability* profile (single-craft, no gatekeeper). It exploits genuine **white space** between clinical twist-thrillers (McFadden — plot but no charge) and dark romance (charge but mandatory HEA + romance craft).
+
+**A transparency note on the scoring:** the final position is a deliberate *synthesis*, not simply the top row of the table. Romantic-suspense scored #1 (8.7) on raw demand; single-craft psychological thriller scored #8 (7.7) on raw buildability. The chosen "Obsession Thriller" is the **intersection** the eight-criteria table can't score directly — it takes the *demand* that made romantic-suspense win and delivers it at the *buildability/discoverability* profile of single-craft psych thriller. The adversarial pass is what surfaced that intersection; we followed the *evidence and the stress-test*, not a single column. *Details: `thriller-subset-market-evaluation.md`, `skeptic-and-reconciliation.md`.*
 
 ---
 

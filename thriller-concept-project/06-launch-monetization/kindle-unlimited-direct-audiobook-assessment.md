@@ -12,7 +12,7 @@ A channel-by-channel verdict for *FEED*, grounded in `../research-data/economics
 |---|---|
 | **Reader fit** | Target reader is a **heavy KU subscriber**; psych/domestic thriller is **~73% KU-penetrated**. This is where the audience already reads. |
 | **Read-through** | **KU borrowers read through series at higher rates than buyers** (next book is free to them). *FEED*'s short-chapter, cliffhanger, connected-standalone design is engineered to convert borrows into binges. |
-| **Page-read revenue** | KENP ~**$0.0043/page**; an ~85k-word book ≈ **450 KENP ≈ ~$1.90 per full read** [est.], *stacking* across the series on top of any sales. |
+| **Page-read revenue** | KENP ~**$0.0043/page**; an ~85,000-word book ≈ **~400 KENP ≈ ~$1.70 per full read** [est.], *stacking* across the series on top of any sales. |
 | **Discovery** | A no-platform solo author gets **algorithmic discovery** from Amazon that wide retail can't replicate cold. |
 | **Cost** | **Amazon exclusivity** — no Apple/Kobo/Google/wide for enrolled titles. *Accepted.* |
 

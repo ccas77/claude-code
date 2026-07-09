@@ -90,17 +90,17 @@ I don't know why I already knew there'd be something under it.
 > **@morningwithdana** Praying it's someone who deserves you 🥹
 > **@thekettleclub_official** DM open, love. Always here first. 🫖
 > **@_wren_reads_** *(comment deleted by author)*
-> **@honestlyeloise** *replying to a comment you can no longer see:* you always did know me best x
+> **@honestlyeloise** *replying to a comment you can no longer see:* 🤍
 
 ---
 
-*[End of sample. In the full manuscript, Chapter 3 opens on the annotation floor again — Camille asking Wren why she'd quit a real job for a rich stranger's spare room — and the reader clocks, without Wren, that Wren never answers a question about the past directly. The deleted @_wren_reads_ comment and Eloise's reply to "a comment you can no longer see" are the midpoint reveal, planted here on page nine.]*
+*[End of sample. In the full manuscript, Chapter 3 opens on the annotation floor again — Camille asking Wren why she'd quit a real job for a rich stranger's spare room — and the reader clocks, without Wren, that Wren never answers a question about the past directly. The deleted @_wren_reads_ comment and Eloise's wordless reply to "a comment you can no longer see" are the seed of the midpoint reveal, planted here on page nine — deliberately opaque so it reads as generic influencer warmth on the first pass. The line "you always did like the blue mug" is withheld until the midpoint, where it lands as the recognition; nothing here tips that Eloise has already clocked her superfan, preserving both the "applied as a stranger" beat and the near-miss tension of Act 1.]*
 
 ---
 
 ## Craft notes (for the author/ghostwriter)
 
 - **Voice:** controlled, blackly precise; competence as seduction; every act of surveillance narrated as tenderness. Keep sentences clean; let the dread come from what's *withheld.*
-- **Clues planted in this sample (all discriminate toward Twist Two on reread):** the **passport hesitation** (a woman who can't be looked up); **"the money from before"** (the settlement); the **eucalyptus / bathwater / swallowed name** (the prior death); **"this time I'll be careful, this time is different"**; the **impossible fluency** (reflection-geolocation, reading a face like moderation tiles); the **repainted handprint-height patch**; and the interstitial's **deleted @_wren_reads_ comment** + Eloise's *"you always did know me best"* (the midpoint domestic flip, seeded on page one of the feed).
+- **Clues planted in this sample (all discriminate toward Twist Two on reread):** the **passport hesitation** (a woman who can't be looked up); **"the money from before"** (the settlement); the **eucalyptus / bathwater / swallowed name** (the prior death); **"this time I'll be careful, this time is different"**; the **impossible fluency** (reflection-geolocation, reading a face like moderation tiles); the **repainted handprint-height patch**; and the interstitial's **deleted @_wren_reads_ comment** + Eloise's **wordless 🤍 reply** to a now-invisible comment (the midpoint domestic flip, seeded opaquely on page one of the feed — the actual recognition line, "you always did like the blue mug," is held back to the midpoint so nothing here undercuts the stranger premise).
 - **Hook discipline:** Ch. 1 ends on *"I knew"* → the job. Ch. 2 ends on the palm against the wall and *"I don't know why I already knew there'd be something under it."* Every chapter earns the next.
 - **Interstitial:** does triple duty — advances plot (the hiring post), plants the Kettle Club (whale-mining), and buries the midpoint reveal in plain sight where BookTok can screenshot it.
