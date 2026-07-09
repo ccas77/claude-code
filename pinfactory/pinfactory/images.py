@@ -32,6 +32,9 @@ from .themes import Theme, ThemeSet, hex_to_rgb
 
 VARIANTS = ["headline", "trope_hook", "quote_card", "comp_card"]
 
+# Candidate 5th templates (previewed for approval; not yet in the default set).
+CANDIDATE_VARIANTS = ["tropes_checklist", "stats_card"]
+
 # Image formats we accept as covers / textures.
 _IMG_EXTS = {".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tif", ".tiff"}
 
@@ -341,12 +344,21 @@ class ImageGenerator:
             return RenderResult(variant, template, None, None, seed, skipped=True,
                                 reason="no tagline supplied (quote-card skipped)")
 
+        if variant == "tropes_checklist" and not dbmod.book_tropes(book):
+            return RenderResult(variant, template, None, None, seed, skipped=True,
+                                reason="no trope tags (checklist skipped)")
+        if variant == "stats_card" and not (book["subgenre"] or dbmod.book_tropes(book)):
+            return RenderResult(variant, template, None, None, seed, skipped=True,
+                                reason="no subgenre/tropes (stats card skipped)")
+
         rng = random.Random(seed)
         builder: Callable = {
             "headline": self._tpl_headline,
             "trope_hook": self._tpl_trope_hook,
             "quote_card": self._tpl_quote_card,
             "comp_card": self._tpl_comp_card,
+            "tropes_checklist": self._tpl_tropes_checklist,
+            "stats_card": self._tpl_stats_card,
         }[variant]
         img = builder(book, theme, cover, rng)
 
@@ -543,6 +555,143 @@ class ImageGenerator:
                    max_w=self.width - 2 * m, line_spacing=1.06)
         return base
 
+    def _tpl_tropes_checklist(self, book, theme, cover, rng) -> Image.Image:
+        """(candidate) 'This book has →' checklist of the book's trope tags.
+
+        The Pinterest/BookTok "tropes" pin — high save rate. Pure metadata.
+        """
+        size = (self.width, self.height)
+        base = self.backgrounds.gradient_grain(size, theme, rng).convert("RGB")
+        draw = ImageDraw.Draw(base)
+        m = int(self.width * 0.12)
+        maxw = self.width - 2 * m
+        col = hex_to_rgb(theme.palette["headline"])
+        acc = hex_to_rgb(theme.palette["accent"])
+        sub = hex_to_rgb(theme.palette["subtext"])
+
+        # header
+        hf = self.themes.load_font(theme.fonts["body_bold"], 34)
+        draw_lines(draw, ["THIS BOOK HAS"], hf, (m, int(self.height * 0.085)), acc,
+                   align="center", tracking=9, max_w=maxw)
+
+        tropes = [t.strip().title() for t in dbmod.book_tropes(book)[:6]]
+        has_cover = cover is not None
+        # size rows to the count so the block always sits comfortably
+        rf_size = 52 if len(tropes) <= 3 else (44 if len(tropes) <= 4 else 36)
+        rf = self.themes.load_font(theme.fonts["serif"], rf_size)
+        # shrink if any row is too wide with the check gutter
+        gutter = int(rf_size * 1.05)
+        while rf_size > 26 and max(_text_w(draw, t, rf) for t in tropes) > maxw - gutter:
+            rf_size -= 2
+            rf = self.themes.load_font(theme.fonts["serif"], rf_size)
+            gutter = int(rf_size * 1.05)
+        row_h = int(rf_size * 1.7)
+
+        block_w = gutter + max(_text_w(draw, t, rf) for t in tropes)
+        x0 = (self.width - block_w) // 2
+        # centre the checklist in the space between the header and the cover
+        region_top = int(self.height * 0.185)
+        region_bottom = int(self.height * 0.665) if has_cover else int(self.height * 0.86)
+        block_h = row_h * len(tropes)
+        top = region_top + max(0, (region_bottom - region_top - block_h) // 2)
+        y = top
+        for t in tropes:
+            self._draw_check(draw, x0, y + rf_size * 0.20, int(rf_size * 0.62), acc, 6)
+            draw.text((x0 + gutter, y), t, font=rf, fill=col)
+            y += row_h
+
+        if has_cover:
+            self._place_cover(base, cover, target_h=int(self.height * 0.24),
+                              cy=int(self.height * 0.79))
+            draw = ImageDraw.Draw(base)
+            ty = int(self.height * 0.925)
+        else:
+            ty = y + 40
+        tf = self.themes.load_font(theme.fonts["body_bold"], 30)
+        draw_lines(draw, [(book["title"] or book["slug"]).upper()], tf, (m, ty), sub,
+                   align="center", tracking=4, max_w=maxw)
+        return base
+
+    def _tpl_stats_card(self, book, theme, cover, rng) -> Image.Image:
+        """(candidate) 'At a glance' spec-sheet card: subgenre / series / tropes.
+
+        A clean, typographic 'book stats' card (no cover). Pure metadata; extra
+        optional fields (POV, heat, HEA) render automatically if you add them.
+        """
+        size = (self.width, self.height)
+        base = self.backgrounds.texture_or_gradient(size, theme, rng).convert("RGB")
+        draw = ImageDraw.Draw(base)
+        m = int(self.width * 0.12)
+        maxw = self.width - 2 * m
+        col = hex_to_rgb(theme.palette["headline"])
+        acc = hex_to_rgb(theme.palette["accent"])
+        sub = hex_to_rgb(theme.palette["subtext"])
+
+        kf = self.themes.load_font(theme.fonts["body_bold"], 32)
+        draw_lines(draw, ["AT A GLANCE"], kf, (m, int(self.height * 0.095)), acc,
+                   align="center", tracking=10, max_w=maxw)
+
+        # build rows only from data that exists (never invent values)
+        rows: list[tuple[str, str]] = []
+        if book["subgenre"]:
+            rows.append(("SUBGENRE", book["subgenre"].title()))
+        rows.append(("SERIES", book["series"].title() if book["series"] else "Standalone"))
+        tropes = dbmod.book_tropes(book)
+        if tropes:
+            rows.append(("TROPES", ", ".join(t.title() for t in tropes)))
+        for key, label in (("pov", "POV"), ("heat", "HEAT"), ("hea", "ENDING")):
+            val = _opt(book, key)
+            if val:
+                rows.append((label, str(val).title()))
+
+        # --- measure the title + rows block, then centre it vertically ---
+        tf, tlines, _ = fit_text(draw, book["title"] or book["slug"], self.themes,
+                                 theme.fonts["headline"], maxw, int(self.height * 0.14),
+                                 max_size=76, min_size=34, line_spacing=1.05)
+        title_lh = int(tf.size * 1.05)
+        title_h = title_lh * len(tlines)
+
+        lf = self.themes.load_font(theme.fonts["body_bold"], 26)
+        vf_name = theme.fonts["serif"]
+        row_specs = []
+        rows_h = 0
+        for label, value in rows:
+            vf, vlines, _ = fit_text(draw, value, self.themes, vf_name, maxw, 130,
+                                     max_size=40, min_size=24, line_spacing=1.15)
+            vlh = int(vf.size * 1.15)
+            r_h = 40 + vlh * len(vlines) + 34
+            row_specs.append((label, vf, vlines, vlh))
+            rows_h += r_h
+
+        block_h = title_h + 84 + rows_h
+        region_top, region_bottom = int(self.height * 0.185), int(self.height * 0.86)
+        y = region_top + max(0, (region_bottom - region_top - block_h) // 2)
+
+        y = draw_lines(draw, tlines, tf, (m, y), col, align="center", max_w=maxw,
+                       line_spacing=1.05)
+        draw.line([(self.width // 2 - 70, y + 34), (self.width // 2 + 70, y + 34)],
+                  fill=acc, width=2)
+        y += 84
+        for label, vf, vlines, vlh in row_specs:
+            draw_lines(draw, [label], lf, (m, y), acc, align="center", tracking=6, max_w=maxw)
+            y += 40
+            y = draw_lines(draw, vlines, vf, (m, y), col, align="center", max_w=maxw,
+                           line_spacing=1.15)
+            y += 34
+
+        if book["pen_name"]:
+            pf = self.themes.load_font(theme.fonts["accent"], 42)
+            draw_lines(draw, [book["pen_name"]], pf, (m, int(self.height * 0.90)), acc,
+                       align="center", max_w=maxw)
+        return base
+
+    @staticmethod
+    def _draw_check(draw, x, y, size, color, width):
+        """Draw a tick mark anchored at (x, y) within a `size` box."""
+        draw.line([(x + size * 0.12, y + size * 0.55),
+                   (x + size * 0.42, y + size * 0.85),
+                   (x + size * 0.95, y + size * 0.12)], fill=color, width=width, joint="curve")
+
     # -- helpers ------------------------------------------------------------
     def _load_cover(self, book) -> Image.Image | None:
         path = book["cover_path"]
@@ -566,6 +715,14 @@ def _trope_hook_text(tropes: list[str], subgenre: str) -> str:
     if subgenre:
         return subgenre.title()
     return ""
+
+
+def _opt(row, key: str) -> str:
+    """Read an optional column from a sqlite3.Row without raising if absent."""
+    try:
+        return row[key] if key in row.keys() else ""
+    except (IndexError, KeyError, AttributeError):
+        return ""
 
 
 def _safe(name: str) -> str:
