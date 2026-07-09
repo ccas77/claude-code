@@ -263,8 +263,12 @@ export function renderSupportPage(page) {
 }
 
 function aboutBody() {
+  // Light, generic material-connection line — names no one, reveals nothing
+  // personal. It exists only to signal (per FTC best practice) that some picks
+  // are published in-house. Edit the wording or delete it entirely to taste;
+  // it is not a hard Amazon Associates requirement.
   return `<p>${escapeHtml(config.site.brand)} is a reader-first recommendation site organized by trope and vibe. Lists blend lesser-known titles with widely-read comparable books so you can find your next read fast.</p>
-<p class="flag"><strong>[FLAG — decide disclosure wording]</strong> Some recommended titles are published under pen names operated by the site's editor. Decide how you want to disclose this relationship and replace this paragraph. The site's byline is a genre-brand persona (“${escapeHtml(config.site.persona)}”), not any individual pen name.</p>
+<p>Some titles featured here are published through our own imprint. We recommend them on the same editorial basis as every other book on the site — because they fit the trope, tone and heat level — never as paid placements.</p>
 <p>${escapeHtml(AMAZON_DISCLOSURE)}</p>`;
 }
 function disclosureBody() {
