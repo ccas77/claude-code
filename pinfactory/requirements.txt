@@ -1,0 +1,10 @@
+# Component 1 (image generator) — required now:
+Pillow>=10.0
+PyYAML>=6.0
+python-dotenv>=1.0
+
+# Component 2 (copy generator) — required once that component is built:
+anthropic>=0.40
+
+# Component 3 (Pinterest scheduler) — required once that component is built:
+requests>=2.31

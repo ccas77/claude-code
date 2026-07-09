@@ -1,0 +1,65 @@
+# themes.yaml — per-pen-name colour palettes and fonts. EDIT ME.
+#
+# `defaults` is used for any pen name not listed under `pen_names`, so the app
+# always has a sensible look and never invents one you didn't specify.
+# The example pen names below are PLACEHOLDERS — rename them to YOUR pen names
+# (they must match the `pen_name` field in your catalogue) and tune the colours.
+#
+# Colours are hex. Fonts are filenames in your fonts/ folder (bundled set:
+# Gloock, CrimsonPro, Lora, WorkSans, Outfit, Italiana, NothingYouCouldDo).
+
+defaults:
+  fonts:
+    headline: Gloock-Regular.ttf        # dramatic display serif
+    headline_alt: CrimsonPro-Bold.ttf
+    body: WorkSans-Regular.ttf
+    body_bold: WorkSans-Bold.ttf
+    serif: Lora-Regular.ttf
+    serif_italic: Lora-Italic.ttf
+    accent: NothingYouCouldDo-Regular.ttf   # handwritten accent
+  palette:
+    bg_top: "#2A1B2E"      # gradient start
+    bg_bottom: "#100A16"   # gradient end
+    scrim: "#05030A"       # legibility overlay / tint
+    headline: "#F5E9DA"    # main text
+    subtext: "#D8C9BC"     # secondary text
+    accent: "#C98A5E"      # kickers, rules, pen-name flourish
+    band: "#1B1220"
+
+pen_names:
+  # ── EXAMPLE (dark romance) — rename to your pen name ──────────────────────
+  "Example Dark Romance Pen":
+    palette:
+      bg_top: "#3A0E1E"
+      bg_bottom: "#0B0407"
+      scrim: "#050202"
+      headline: "#F3E4DE"
+      subtext: "#D8B8AE"
+      accent: "#B54A4A"
+    fonts:
+      headline: Gloock-Regular.ttf
+
+  # ── EXAMPLE (small-town / contemporary) — rename to your pen name ─────────
+  "Example Small-Town Pen":
+    palette:
+      bg_top: "#274A45"
+      bg_bottom: "#0F1E1B"
+      scrim: "#05100E"
+      headline: "#F6F1E7"
+      subtext: "#CFE0D6"
+      accent: "#E0A45C"
+    fonts:
+      headline: CrimsonPro-Bold.ttf
+      serif: Lora-Regular.ttf
+
+  # ── EXAMPLE (fantasy / mafia — moody + gold) — rename to your pen name ────
+  "Example Fantasy Pen":
+    palette:
+      bg_top: "#1C1B33"
+      bg_bottom: "#08070F"
+      scrim: "#040309"
+      headline: "#F1ECFF"
+      subtext: "#BFB8DA"
+      accent: "#C7A24A"
+    fonts:
+      headline: Italiana-Regular.ttf
