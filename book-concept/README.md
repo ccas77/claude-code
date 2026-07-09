@@ -23,6 +23,7 @@ Read the files in numbered order for the full story, or jump to what you need:
 | **`08-author-platform-and-economics.md`** | The author-platform plan + market size (TAM/SAM/SOM) + a skeleton P&L | To model the acquisition and the decisive author question |
 | **`09-adversarial-review.md`** | The 5-front skeptic gauntlet, the corrections it forced, and the residual risks | To see how hard the concept was attacked and what survived |
 | **`10-completeness-review.md`** | The completeness critic's grade against the Definition of Done + the remediation log | To verify the package is actually complete |
+| **`pitch-materials/`** | Editor/agent-ready sell assets: a visual one-page pitch (HTML), sell sheet, back-cover copy, title workshop, and a sample query letter | To see the concept sold, not just described |
 | `research/` | Raw machine-readable outputs, the orchestration scripts, and journals | To audit the underlying agent data |
 
 ---
