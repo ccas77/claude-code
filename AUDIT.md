@@ -1,16 +1,22 @@
 # App Audit & Consolidation Proposal
 
-**Date:** 2026-07-10 (updated same day — second pass)
-**Status: 12 of 24+ projects fully audited.** First pass covered the 6 projects in this repo; this second pass adds the 6 apps pulled from GitHub (slideshow-generator, slideshow-creator, tslides, aesthetic, tinkerboxxx, facebook-library). The slideshow head-to-head is now done for 3 of the 4 family members (bookslide's source is unreachable — see below).
+**Date:** 2026-07-10 (updated same day — third pass)
+**Status: 25 of 24+ projects fully audited — every reachable app is now covered.** First pass covered the 6 local projects; second pass added 6 GitHub-cloned apps + my-toolkit; this third pass adds the 13 remaining apps that were previously "source only on your machine" or "private GitHub" but exist locally (meme-maker, book-video-bot, ai-ugc-pipeline, inkwell, trialreels, siggy, dictabook, simplepostr, authorbids, kinetic, quadrants, reposter, socialato).
 
 Remaining blockers (details in [Blockers](#blockers--questions--need-answers-before-going-further)):
 
 1. **`content-engine-architecture.md` is still missing** — destination columns below remain based on the summary in your instructions.
-2. **8 private GitHub repos** (meme-maker, book-video-bot, inkwell, trialreels, siggy, dictabook, simplepostr, authorbids) are pending session access — the add-repo approval flow is flaky; one repo per user message ("add ccas77/NAME") is what worked for tslides and my-toolkit. **ccas77/bookshelf does not exist on GitHub** — the Vercel project (bookshelf.bookpulls.com) is CLI-deployed from the owner's machine, and the copy in this monorepo is the only auditable source.
-3. **7 Vercel projects have no reachable source** — traced via Vercel deployment metadata: kinetic, quadrants, reposter, socialato (CLI-deployed from your local machine; source only there), bookslide (CLI-deployed by Codex, no git metadata), public (static shell), aimoviebot (misconfigured project pointed at this monorepo; every build errors — nothing to audit, candidate for deletion).
+2. **2 Vercel projects still have no reachable source:** `bookslide` (CLI-deployed by Codex, no git metadata, not present locally) and `public` (static shell, not present locally). `aimoviebot` remains a candidate for Vercel-project deletion.
+3. **`ccas77/bookshelf` does not exist on GitHub** — the Vercel project (bookshelf.bookpulls.com) is CLI-deployed from the owner's machine, and the copy in this monorepo is the only auditable source (already covered in the first-pass audit).
 
 > ### ⚠️ URGENT SECURITY — rotate now
-> **`slideshow-generator` is a PUBLIC GitHub repo and has a live production `CRON_SECRET` committed in `.claude/settings.local.json`** (appears ~20× in allow-listed curl commands, alongside the deployed URL `slideshow-generator-nine.vercel.app`). That token gates the cron AND admin routes (`clear-scheduled`, `migrate-configs`, …) — anyone on the internet can currently fire them. Actions: (1) rotate `CRON_SECRET` in Vercel, (2) delete the file and rewrite git history or make the repo private, (3) check Vercel logs for unexpected cron/admin hits. None of the other 11 audited repos have committed secrets.
+> **`slideshow-generator` is a PUBLIC GitHub repo and has a live production `CRON_SECRET` committed in `.claude/settings.local.json`** (appears ~20× in allow-listed curl commands, alongside the deployed URL `slideshow-generator-nine.vercel.app`). That token gates the cron AND admin routes (`clear-scheduled`, `migrate-configs`, …) — anyone on the internet can currently fire them. Actions: (1) rotate `CRON_SECRET` in Vercel, (2) delete the file and rewrite git history or make the repo private, (3) check Vercel logs for unexpected cron/admin hits.
+>
+> **No new committed-secret leaks found in the 13 third-pass apps.** `.env.local` / `.env.check` files exist on your dev machine for many of them but every one is properly `.gitignore`'d — verified with `git ls-files` in each per-app repo. The only tracked env files are `.env.example` / `.env.local.example` variants. `kinetic` has no `.git` directory at all (never committed anywhere), so nothing can leak from it via GitHub.
+>
+> **Non-leak security issues to fix at the code level (not commit history):**
+> - 🟡 **siggy** — `app/api/claude/route.ts:6` accepts an `_apiKey` field in the POST body and falls back to `process.env.OPENAI_API_KEY`. The client-side pattern that fills that field puts the key in browser DevTools + network logs. Plus the route name lies (uses OpenAI, not Claude), the Redis KV store has no auth, and 500 error bodies leak the full system prompt. **Recommend: delete the Vercel deployment; do not port.**
+> - 🟡 **authorbids** — Amazon Ads LWA OAuth is intentionally scoped to sandbox only (`advertising::test:create_account`); production scope switch is a Phase-4 action not yet taken. Not a leak, just a live-write gate to keep in place.
 
 ---
 
@@ -27,23 +33,23 @@ Remaining blockers (details in [Blockers](#blockers--questions--need-answers-bef
 | aesthetic | ✅ cloned (public repo) | ✅ | **KEEPER** — quote-video renderer + prompt bank |
 | tinkerboxxx | ✅ cloned (public repo) | ✅ | **KEEPER** — ops/fleet dashboard + Post Bridge verification |
 | facebook-library | ✅ cloned (public repo) | ✅ | **KEEPER (data + ingest patterns)** — 999-post performance library |
-| meme-maker | GitHub (private) — pending access | ❌ | pending |
-| ai-ugc-pipeline | GitHub (private) — pending access | ❌ | pending |
-| book-video-bot | GitHub (private) — pending access | ❌ | pending |
-| inkwell | GitHub (private) — pending access | ❌ | pending |
-| simplepostr | GitHub (private) — pending access | ❌ | pending |
-| authorbids | GitHub (private) — pending access | ❌ | pending |
+| meme-maker | ✅ In this folder (own git repo) | ✅ | **KEEPER** — deterministic combo-rotation scheduler + Remotion WebGL chroma-key renderer |
+| ai-ugc-pipeline | ✅ In this folder (own git repo) | ✅ | **KEEPER** — checkpoint-enforcement state machine for Higgsfield Seedance UGC batches |
+| book-video-bot | ✅ In this folder (own git repo) | ✅ | **KEEPER (partial)** — HITL 6-screen BookTok pipeline; strong ffmpeg wobble+drift renderer |
+| inkwell | ✅ In this folder (own git repo) | ✅ | **KEEPER (partial)** — Phase-1 skeleton of a Sudowrite-style novelist writing tool; unrelated to my-toolkit's slideshow-consolidation SPEC |
+| simplepostr | ✅ In this folder (own git repo) | ✅ | **KEEPER (foundation only)** — multi-tenant SaaS skeleton (workspaces, entitlements, envelope-encrypted credentials); Meta vertical slice pending |
+| authorbids | ✅ In this folder (own git repo) | ✅ | **KEEPER (defer)** — Phase-1 Amazon Ads read-only mirror; NOT in content-engine scope |
 | my-toolkit | ✅ cloned (added to session) | ✅ | **KEEPER — the canonical shared-patterns library** (see audit below; contains the slideshow-consolidation SPEC) |
-| dictabook | GitHub (private) — pending access | ❌ | pending |
-| siggy | GitHub (private) — pending access | ❌ | pending |
-| trialreels | GitHub (private) — pending access | ❌ | pending |
+| dictabook | ✅ In this folder (own git repo) | ✅ | **KEEPER (out of scope)** — Whisper dictation w/ 25MB re-encode fallback; not a posting app |
+| siggy | ✅ In this folder (own git repo) | ✅ | **DELETE** — insecure single-JSX prototype; API key in request body, unauthenticated Redis, hardcoded to one pen name |
+| trialreels | ✅ In this folder (own git repo) | ✅ | **KEEPER (partial, Layers 3–5 unfinished)** — hook-generator + Pexels mood board; Layers 3–5 schema only |
 | aimoviebot | Vercel project mislinked to this monorepo; all builds ERROR | n/a | **DELETE the Vercel project** — no codebase exists |
-| kinetic | CLI-deployed from your machine (same local commit as quadrants) | ❌ | source only on your machine — push to GitHub to audit |
-| quadrants | CLI-deployed from your machine | ❌ | source only on your machine |
-| reposter | CLI-deployed from your machine (branch `master`, "PB" = Post Bridge) | ❌ | source only on your machine |
-| socialato | CLI-deployed from your machine (has custom domain socialato.com) | ❌ | source only on your machine |
-| bookslide | CLI-deployed by Codex, no git metadata (⚠️ slideshow family) | ❌ | source only on your machine |
-| public | CLI-deployed static shell, no git metadata | ❌ | probably just hosted assets — confirm & likely delete |
+| kinetic | ✅ In this folder (NO git — never committed) | ✅ | **DELETE / rebuild** — static HTML + stubbed API endpoints, no working app |
+| quadrants | ✅ In this folder (own dir, no `.git`) | ✅ | **KEEPER** — 6-step BookTok carousel factory; few-shot caption prompt + 2×2 quadrant renderer |
+| reposter | ✅ In this folder (own git repo) | ✅ | **KEEPER** — most hardened PB client in fleet; TikTok scrape → R2 → staggered re-post; winners module |
+| socialato | ✅ In this folder (own git repo) | ✅ | **PROTOTYPE (gated)** — Phase-0 vision-ranked shortlist; do not proceed until user's Phase-0 sign-off |
+| bookslide | CLI-deployed by Codex, no git metadata (⚠️ slideshow family) | ❌ | source only on your machine — **not present locally either** |
+| public | CLI-deployed static shell, no git metadata | ❌ | source only on your machine — **not present locally either** |
 
 ### Other projects found in this folder (not on the Vercel list)
 
@@ -233,6 +239,219 @@ Market-research/concept package for a thriller series produced by an earlier mul
 
 ---
 
+## Per-app audits — the 13 local apps (third pass)
+
+### meme-maker — KEEPER
+
+- **Purpose:** Zero-duplicate branded short-form video scheduler built around template × product (book) × account rotation. Upload a green-screen clip, configure text-overlay variants and background prompts, and the deterministic scheduler queues posts across TikTok/IG/Facebook/Pinterest so no `(text variant, background prompt)` combo ever repeats on the same account.
+- **Stack:** Next.js 16 on Vercel; **Neon Postgres accessed via raw SQL (no ORM)**; Vercel Blob for uploads; Remotion 4 for WebGL chroma-key rendering in an external worker (Fly.io); Gemini Imagen-4 for backgrounds; Post Bridge for publishing.
+- **External APIs / key references** (env-only; **no committed secrets** — `.env.local` is gitignored, only `.env.example` is tracked):
+  - Post Bridge — `lib/post-bridge.ts` (`POST_BRIDGE_API_KEY`; accounts, post-results, analytics, delete; 5-page pagination cap with retry)
+  - Gemini / Imagen via Google AI (`GEMINI_API_KEY`)
+  - Vercel Blob for the raw green-screen uploads (`BLOB_READ_WRITE_TOKEN`)
+  - Postgres (`POSTGRES_URL`)
+- **Crown jewels:**
+  - `lib/scheduler.ts` — **deterministic combo-rotation**: combos are `(textVariantIdx, bgPromptIdx)` pairs, and each account's next combo is `(postCount % totalCombos)`. Guarantees no two posts of the same product/template repeat the same words-and-background pair. Novel anti-repeat pattern the fleet doesn't have elsewhere.
+  - `state/schema.sql` — `rotation_state` per `(account, product, template)` with `last_used_at`; `posting_windows_json` supports per-account windows + `posts_per_day` auto-refill; **sibling-account spacing** enforces a 30-min minimum gap between any two posts from the same author.
+  - Remotion + WebGL chroma-key pipeline is a novel option vs. the ffmpeg-based renderers in bookshelf/tslides/book-video-bot.
+- **State:** complete, actively maintained (last commit 2026-07-02); no TODOs; clean web-app-plus-render-worker split.
+- **Consolidation:** lift the combo-rotation scheduler and the sibling-spacing rule into `src/services/scheduling/`; the Remotion chroma-key path is worth keeping as a fourth renderer alongside the sharp/text-to-svg/Pango options. Raw SQL → Drizzle; cron loop → Inngest.
+
+### book-video-bot — KEEPER (partial — HITL pipeline; renderer is the reusable asset)
+
+- **Purpose:** Human-in-the-loop BookTok video builder with an approval gate at every stage: seed title → Claude finds traits + candidate books → user approves traits → user picks books → render preview → review → caption + hashtags → confirm accounts (danger dialog) → nothing publishes until "PUBLISH" is typed. Six screens, and a pull-back (delete) button for already-published videos.
+- **Stack:** Next.js 16 on Vercel; Neon Postgres via raw migrations in `migrations/`; Vercel Blob; **`@ffmpeg-installer/ffmpeg` + `fluent-ffmpeg`** (aligned with my-toolkit's captions runbook, not `ffmpeg-static`); Claude + Gemini for book sourcing; Apify for Goodreads cover scraping.
+- **External APIs / key references** (env-only; **no committed secrets**):
+  - Anthropic (`lib/claude.js`) — web-search + trait generation
+  - Gemini (`lib/gemini.js`) — image descriptions
+  - Post Bridge (`lib/postBridge.js`) — 3× exponential backoff on 429, explicit `accountIds` required (no default fan-out), per-platform upload + AAC audio
+  - Apify (`lib/assets.js`) — Goodreads cover scraper + fallback search
+  - Vercel Blob for MP4 + background images
+- **Crown jewels:**
+  - `lib/video.js` — **filter-complex builder with a handheld-camera wobble via crop oscillation** + per-book fade-in/out with timed title/author/rating overlays, Ken Burns zoom on the music track, TikTok safe-zone aware `y=1320` baseline for titles. This is a distinctive rendering effect none of the other apps have.
+  - `lib/postBridge.js` — a compact but hardened PB client; parallel to bookshelf's variant.
+  - The **PUBLISH-typed danger dialog + per-account checkbox + pull-back delete** pattern encodes the fleet's editorial-gate feel end-to-end.
+  - Schema (`drafts` w/ JSON `status`, `posts` w/ `platform_urls`) is a good approval-state-machine template.
+- **State:** complete, production-live; one latent bug — `lib/settings.ts` does not hard-fail on missing `APP_SECRET`; concurrent `traits`/`analyse` calls race between Claude and Gemini paths.
+- **Consolidation:** the ffmpeg wobble+drift renderer is the module-1 addition; the "typed-PUBLISH + explicit account checkbox" flow becomes the shared publish-confirm UX for one-shot posting surfaces. Raw SQL → Drizzle; DIY scheduler → Inngest.
+
+### ai-ugc-pipeline — KEEPER
+
+- **Purpose:** Deterministic batch UGC video pipeline built around a **checkpoint-enforcement state machine** so LLMs cannot silently drift a 30-item batch. Character + niche seed → Initiation Prompt + caption spec (Claude) → Higgsfield Seedance 2.0 base videos → **human review checkpoint** → ffmpeg compose (captions + audio) → Blob output.
+- **Stack:** Next.js 15 on Vercel Pro (Fluid Compute for ffmpeg); **Vercel KV (Upstash Redis) for run persistence** (no SQL); Blob for assets; Higgsfield via MCP OAuth; `@ffmpeg-installer/ffmpeg` (ffmpeg 4.x — see below).
+- **External APIs / key references** (env-only; **no committed secrets**):
+  - Higgsfield MCP — `lib/higgsfield/mcp-client.ts` (JSON-RPC over Bearer), `lib/higgsfield/oauth.ts` (Authorization Code + PKCE + refresh). ⚠️ **This app calls the banned `soul_2` model as well as `seedance_2_0`** — in violation of the "no `soul_*` / no `marketing_studio_*`" hard rule. Decide whether the pipeline can be reworked around Seedance only or whether the whole approach retires.
+  - Anthropic (`lib/captions/generate.ts`) — single-shot, no-memory caption batch
+  - Vercel KV — run state
+- **Crown jewels:**
+  - `lib/pipeline/state-machine.ts` — **`HUMAN_CHECKPOINTS`** enforces manual advancement out of `inputs_locked` and `base_videos_ready`; any auto-transition throws `CheckpointError`. Exactly the drift-prevention pattern the storyforge/pinfactory/tropesite audits converged on.
+  - `lib/pipeline/prompt-builder.ts` — parameterized Initiation Prompt + caption-spec batch contract.
+  - `lib/ffmpeg/compose.ts` — TikTok Sans Bold, white + 4px black border, centered at `y=340`, 0.5s audio fade in/out, libass-ready for future kinetic captions.
+  - `lib/render/greenscreen.ts` + `lib/render/ass.ts` — the Bookshelf-style kinetic caption renderer already ported in, currently unused.
+  - Explicit negative-prompt hardening on the Seedance side ("no smiling, happy, cheerful, playful, exaggerated makeup…") to fight the default UGC-model style.
+- **State:** core pipeline complete; README's own caveat is that the MCP OAuth from-backend flow "can't be fully validated without live token round-trip." **ffmpeg is 4.x** (per my auto-memory) — the compose module uses per-line drawtext workarounds instead of the 6.1-only `text_align`, which is correct.
+- **Consolidation:** the state machine is the flagship IP — it becomes the shared pipeline runtime once ported to Inngest (Inngest steps map naturally onto stages, and human checkpoints become explicit `waitForEvent` calls). KV → Postgres for multi-workspace. **Blocker to resolve first:** replace `soul_2` before this can go into the engine.
+
+### inkwell — KEEPER (partial — Phase 1 skeleton; a Sudowrite-style writing tool, unrelated to my-toolkit's slideshow-consolidation SPEC)
+
+- **Naming mismatch:** despite the coincidence, this repo is **not** an implementation of my-toolkit's slideshow-consolidation SPEC (`patterns/slideshow-consolidation-spec/SPEC.md`, an earlier session confusingly named it "Inkwell v2"). This is a **Sudowrite-style AI fiction-writing tool** — completely different product. Flag it explicitly so the SPEC's `apps/web` + `packages/{db,rendering,postbridge,automation,types}` layout is not conflated with anything here.
+- **Purpose:** Self-hosted AI writing tool for series-fiction novelists: extract and anchor voice + world-canon so every generation respects both. Owner-only (Phase 1). See `/spec.md` in the repo for phases 1–9.
+- **Stack:** Next.js 16 + React 19 on Vercel; **Supabase Postgres + pgcrypto** (server-side symmetric encryption of the Anthropic API key so it never crosses to the browser); Tiptap rich-text editor; RLS-per-user isolation.
+- **External APIs / key references** (env-only; **no committed secrets**):
+  - Anthropic (`lib/engine/anthropic.ts`) — claude-opus-4-7 / sonnet-4-6 / haiku-4-5, SSE streaming
+  - Supabase — auth + Postgres + pgcrypto
+  - Deterministic test mode via `/api/engine/mock-recordings` (snapshot-driven)
+- **Crown jewels:**
+  - `lib/crypto/api-key.ts` + `supabase/migrations/0001_init.sql` — **pgcrypto AES-GCM at rest for the user's Anthropic key**; decrypted server-side on demand. The cleanest multi-user LLM-key pattern in the fleet — better than bookshelf's `TOKEN_ENCRYPTION_KEY`-based approach because it uses Postgres primitives.
+  - Schema: `projects`, `chapters`, `fingerprints` (editable style), `bible_entries` (world canon), `mcp_tokens`, `event_log`, RLS policies. Model-worthy for the engine's per-user isolation layer.
+  - `lib/engine/stream.ts` — Anthropic streaming → SSE normalizer with error redaction that scrubs the API key from thrown errors.
+  - `tests/phase1/run.ts` — phase-gated harness driven by `INKWELL_PHASE` env; mock-recording fixture engine; custom tsconfig aliases `server-only` to a no-op stub for CI.
+- **State:** Phase 1 (auth + CRUD + editor) done and deployed; Phases 2+ (fingerprint extraction, bible parsing, generation pipeline) scaffolded but not implemented. Deliberately gated: Phase 1 exists to validate Supabase + Anthropic integration before generation code lands. Zero TODOs.
+- **Consolidation:** absorb the **pgcrypto per-user API-key pattern**, the RLS policy shape, and the `event_log` audit table into the engine's core schema. The generation endpoints (continue, describe, rewrite, brainstorm, style-extract) are series-fiction-specific — leave them in inkwell unless a "long-form writing" module makes the cut. Do not merge as a whole until Phase 2+ lands; the current repo has no shippable generation surface.
+
+### trialreels — KEEPER (partial — Layer 2B live, Layers 3–5 schema only)
+
+- **Purpose:** Five-layer romance-marketing studio: books/scenes catalog → hook-pattern generator (Claude + synonym swap) → visual-mood browser (Pexels) → production/render queue (schema only) → metrics feedback loop (schema only). Layers 1–2B live; Layer 3 UI, Layer 4 render worker integration, and Layer 5 metrics are still ahead.
+- **Stack:** Next.js 14.2 App Router on Vercel; **Supabase Postgres + Google OAuth with an `allowlist` table for gating**; Pexels API; a Render.com Node worker (`/worker/`) polling a Supabase queue table and writing outputs to Supabase Storage.
+- **External APIs / key references** (env-only; **no committed secrets** — `.env.local` is gitignored):
+  - Anthropic (`app/api/hooks/generate/route.ts`) — claude-sonnet-4-6 for hook generation + synonym swaps; degrades gracefully if the key is missing
+  - Pexels (`app/api/pexels/*.ts`) — preview / search / backfill / health checks (200 req/hr free tier)
+  - Supabase — Postgres + auth + Storage
+- **Crown jewels:**
+  - `lib/hook-prompt.ts` + `lib/hookTransforms.ts` — **specificity-scored hook generator** with a 10-register taxonomy (fear, desire, grief, revenge, …) and per-register pattern matches; `buildSceneContextLines()` distils scene synopses into AI-usable context. Romance-specific but the register-scored approach generalises.
+  - `app/api/ai/{analyse-scene,analyse-book,extract-scenes}.ts` — Claude-vision scene/book distillers → teasers, chapter structure, character beats.
+  - `supabase/migrations/` — three idempotent DDL files defining books, scenes, hooks, visual_moods, production queue tables. The queue-table + external-worker pattern is a clean alternative to Inngest for isolated pipelines.
+  - `render.yaml` + `/worker/` — Render.com blueprint + polling worker; the closest thing in the fleet to a shippable durable-worker pattern that isn't Inngest.
+- **State:** Layers 1–2B production-live; Layer 3 has schema without UI; Layer 4 worker exists but integration is untested; Layer 5 is schema only. README is up to date.
+- **Consolidation:** the register-scored hook prompt goes into `src/services/ai/prompts/` (mark as romance-specific); the queue-table + external-worker pattern is a fallback option for the scheduling layer if Inngest is later rejected. Google OAuth + email `allowlist` is a good pattern for the friends-multi-user gate on bookshelf. Do not port Layers 3–5 until they're built out in-place.
+
+### siggy — DELETE (insecure prototype; no reusable IP)
+
+- **Purpose:** Chapter-writing assistant hardcoded to one paranormal-romance pen name; a single JSX component wraps an OpenAI call and stores drafts in Upstash.
+- **Stack:** Next.js 16 App Router; React 19; Tailwind 4; **Upstash Redis (no Postgres, no auth, no user model)**; raw OpenAI GPT-4o via `fetch` (not the SDK, no streaming).
+- **External APIs / key references** (env-only for now; **runtime security is the problem**):
+  - OpenAI (`app/api/claude/route.ts:6` — route name lies; it proxies OpenAI). Accepts `_apiKey` in the POST body OR falls back to `process.env.OPENAI_API_KEY`.
+  - Upstash Redis (`app/api/storage/route.ts`) — unauthenticated read/write of any key with the `siggy:` prefix.
+- **Crown jewels:** the system prompt in `components/SiggyApp.jsx` (lines 13–100) hardcodes the author's voice, creature-type taxonomy, and three hard content rules. It **is** the IP, but it's welded to one author with no abstraction layer — you'd have to lift the prompt as text and rebuild everything else.
+- **State:** **Live but insecure.** No auth. API key in request body → visible in DevTools + network logs. 500 error bodies leak the system prompt. Route name mismatches provider. No rate limiting. No audit trail.
+- **Consolidation:** **delete the Vercel deployment.** If a "personal writing AI" module is ever wanted, rebuild on the inkwell foundation (pgcrypto-encrypted per-user key, Supabase auth, Anthropic SDK, RLS-isolated draft table). Do not port anything code-level.
+
+### dictabook — KEEPER (out of scope for the content engine)
+
+- **Purpose:** Mobile-first audio dictation + transcription tool for fiction authors: record chapters on mobile, transcripts via Whisper, chapter-level cleanup via Claude, EPUB/TXT export. Includes Stripe usage billing by audio-minute.
+- **Stack:** Next.js 16 on Vercel; **Supabase** (auth + Postgres + Storage) via Vercel Marketplace auto-injection; Stripe; **`@ffmpeg-installer/ffmpeg`** for server-side re-encode of >25 MB audio; Whisper via OpenAI; Sentry.
+- **External APIs / key references** (env-only; **no committed secrets**):
+  - OpenAI Whisper — `app/api/transcribe/route.ts` (`OPENAI_API_KEY`, direct HTTP to `/v1/audio/transcriptions`)
+  - Supabase — auth, DB, Storage
+  - Stripe (`lib/stripe.ts`) — per-minute billing
+  - Sentry
+- **Crown jewels:**
+  - `app/api/transcribe/route.ts` — Whisper client with a **25 MB oversize detector that re-encodes to opus mono 24 kbps via ffmpeg before upload**, so 2 h+ recordings fit in one submission.
+  - `lib/cleanup-prompt.ts` + `lib/cleanup.ts` — Claude tidy-prose prompt + diff-and-apply back to local chapter state.
+  - `lib/audio-buffer.ts` — IndexedDB audio ring buffer that batches local recording before the cloud ACK (handles offline / flaky-network capture).
+  - `lib/usage.ts` — per-event usage row (event + audio_seconds + `cost_cents`) — a good template if the engine ever needs per-workspace metered features.
+  - `lib/allowlist.ts` — owner-email allowlist for settings admin.
+- **State:** feature-complete and production-live; owner-locked; no TODOs.
+- **Consolidation:** **not a content-engine app.** The Whisper oversize-re-encode client and the audio ring buffer are reusable in isolation if a future dictation or audio-hook feature ever ships. Otherwise leave it as its own product (it's the only fleet app on the "author-workflow" side rather than the posting side).
+
+### simplepostr — KEEPER (foundation only — multi-tenant SaaS skeleton)
+
+- **Purpose:** Multi-tenant social publishing & scheduling SaaS. Foundation shipped: users, workspaces, memberships, entitlement tiers, resumable Blob uploads, post + `posts_targets` model, envelope-encrypted social credentials, audit log. The Meta vertical slice + publication worker are the next stage (matches auto-memory: "Meta vertical slice is next; three manual setup steps pending"). Deployed at simplepostr.vercel.app.
+- **Stack:** Next.js 16 App Router on Vercel; **Neon Postgres + Drizzle (20+ migrations)** — the target stack in miniature; Vercel Blob (resumable client multipart); Vercel Queues + Cron for workers; Resend; argon2id passwords; **AES-256-GCM envelope encryption for at-rest credentials** with the DEK env-var-supplied (swappable for KMS later).
+- **External APIs / key references** (env-only; **no committed secrets** — `.env.local`, `.env.check` are gitignored, only `.env.example` tracked; the sub-agent's "committed" flag was a false positive I verified with `git ls-files`):
+  - Meta OAuth (dev-mode stubs) — `lib/providers/meta/*`, callbacks under `app/api/callbacks/meta/`
+  - Stripe test-mode only (`lib/billing/stripe.ts`) — client refuses non-`sk_test_` keys
+  - Resend (`lib/email.ts`) — silent-fails without `RESEND_API_KEY` (matches the "3 manual setup steps still pending" note)
+  - Bluesky provider — experimental scaffold in `lib/providers/bluesky/`, not UI-wired
+  - TikTok — sandbox stubs; CLAUDE.md explicitly forbids live publishing
+- **Crown jewels:**
+  - `lib/db/tenant.ts` + `lib/db/` schema — **the multi-tenant workspace model**: `workspaces`, `memberships`, `media`, `posts`, `posts_targets`, `audit_logs`, `notifications`, `entitlements`, `quota_reservations`, `social_accounts`, `apple_credentials`. Every query goes through a workspace filter. This is the **best foundation for the engine's multi-tenant layer** — the closest match to the fleet-wide target we already have running.
+  - `lib/entitlements.ts` — plan tiers + monthly-post / collaborator / GB quotas + `quota_reservations` for atomic pre-scheduling enforcement.
+  - `lib/auth/session.ts` — argon2id + email verification + 30-day session cookies; production-shape auth (not just Google OAuth).
+  - `lib/crypto/envelope.ts` — AES-256-GCM envelope, DEK-in-env now, KMS later; social-credential encryption at rest.
+  - `lib/providers/contract.ts` — abstract provider interface; matches the "Post Bridge is the posting layer, but providers are pluggable" architecture principle.
+  - `docs/spec.md` (~75 KB) — the closest thing in the fleet to a written product spec; source-of-truth for tenancy, entitlements, endpoints.
+- **State:** foundation shipped; per DEPLOY.md three manual browser-side setup steps remain (Resend terms, Stripe real key, Meta app credentials). CLAUDE.md hard rule: no live publishing to real accounts outside test accounts. No TODOs beyond those.
+- **Consolidation:** **absorb simplepostr's schema and encryption pattern as the tenancy backbone of the engine** — this is the strongest structural match to the target architecture besides tslides. Do NOT bring in the Meta OAuth stack (Post Bridge is the posting layer for the engine). Keep `docs/spec.md` as an input alongside `patterns/slideshow-consolidation-spec/SPEC.md` when the real `content-engine-architecture.md` is drafted.
+
+### authorbids — KEEPER (defer — out of content-engine scope but well-architected)
+
+- **Purpose:** Profit-aware Amazon Ads bid automation for indie KDP authors. Phase 1 (live): LWA OAuth + one-way mirror of campaigns/ad-groups/product-ads/targets into a local schema. Phase 2 (planned): Publisher Champ profitability feed. Phase 3 (planned): rule engine, dry-run only. Phase 4 (deferred): guardrail-checked bid writes.
+- **Stack:** Next.js 15 App Router on Vercel; **Neon Postgres + Drizzle**; AES-256-GCM for refresh-token encryption (`src/lib/crypto.ts`); Amazon Ads API v3 + Reporting API v3.
+- **External APIs / key references** (env-only; **no committed secrets**):
+  - Amazon Ads LWA — `src/lib/amazon/oauth.ts` (`LWA_CLIENT_ID`, `LWA_CLIENT_SECRET`, `AMAZON_ADS_SANDBOX="true"`, `LWA_SCOPE = "advertising::test:create_account"` — sandbox only by design)
+  - Amazon Ads Reporting (async request → poll → gzipped JSON, planned for Phase 2)
+  - Publisher Champ (planned; schema provisional in `specs/schema.md §4`)
+  - `ENCRYPTION_KEY` — 32-byte base64 AES-GCM key
+- **Crown jewels:**
+  - `specs/schema.md` v1.1, `specs/rules-engine.md`, `specs/executor.md` — three cleanly separated spec documents covering data model, evaluation cycle, and executor lifecycle. Uncommon rigour; worth reading as a template for how the content-engine spec should be structured.
+  - `src/lib/amazon/client.ts` — **Phase-1 hard rule is enforced in code**: only GET + POST-list-pagination paths exposed, with a top-of-file gate blocking write helpers until the executor lands. Prevents accidental live writes by construction.
+  - `src/db/schema.ts` — Drizzle schema for campaigns / adGroups / productAds / targets + `amazonCredentials` (encrypted refresh token) + `actionLog` (audit trail scaffolded for Phase 3+).
+- **State:** Phase 1 complete and production-safe; Phase 2–4 are docs, not code.
+- **Consolidation:** **out of scope for the content engine.** Amazon Ads is a different domain (spend, not content). The phase-gating pattern (Phase 1 with a code-level no-write rule, spec docs before implementation) is worth adopting for any risky module in the engine. If a future "recommend which post to promote" feature emerges, it becomes the integration point; not today.
+
+### kinetic — DELETE / rebuild (never committed anywhere; not a working app)
+
+- **Purpose:** Nominally a "kinetic video FX" prototype. The folder contains four `.md` design briefs, one 28 KB `index.html` wireframe, three stub API files (`api/assets.js`, `api/clips.js`, `api/upload-token.js`), a `package.json`, and an `.env.local`. No app router, no real business logic.
+- **Stack:** static HTML + minimal JavaScript. Vercel Blob was intended as storage. No database. No auth.
+- **External APIs / key references:** `.env.local` on disk holds `BLOB_READ_WRITE_TOKEN` + `VERCEL_OIDC_TOKEN`. **This directory has no `.git` at all — nothing has ever been committed from it**, so there is no repo leak; but treat the tokens as local-only and rotate them if the folder is shared.
+- **Crown jewels:** none. The briefs are prose; the HTML is a mockup.
+- **State:** never actually built.
+- **Consolidation:** delete the Vercel project (or repoint the deploy). If the "kinetic FX" concept is still wanted, restart from the ai-ugc-pipeline foundation.
+
+### quadrants — KEEPER (BookTok carousel factory)
+
+- **Purpose:** Six-step BookTok production pipeline: book metadata → premise + characters → calibration captions (few-shot exemplars) → LLM-generated caption candidates → scene/asset tagging → 2×2 image quadrant (1080×1080 JPG) with serif overlays. Produces manual-carousel-ready assets.
+- **Stack:** Next.js 16 App Router + React 19 on Vercel; **Neon Postgres + Drizzle** (migrations tracked); Vercel Blob; Anthropic `claude-opus-4-7` via AI SDK; Tailwind v4; sharp for composition. Legacy Python CLI preserved in `./cli/` but not deployed. Password-gated deployment. (No `.git` in the folder — the deploy history lives on the machine, not GitHub.)
+- **External APIs / key references** (env-only; **no committed secrets**):
+  - Anthropic — `src/lib/captions.ts`
+  - Higgsfield via MCP OAuth — `src/lib/higgsfield-oauth.ts`, `src/lib/higgsfield.ts`, model `gpt_image_2`; token AES-encrypted in Postgres. **Uses the sanctioned MCP path** (contrast with aesthetic's Clerk-cookie path); no banned `soul_*` or `marketing_studio_*` model use.
+  - OpenAI fallback — `src/lib/openai-image.ts` (`gpt-image-1`)
+  - Post Bridge — `src/lib/post-bridge.ts`
+- **Crown jewels:**
+  - `src/lib/captions.ts` — **the few-shot caption prompt with calibration examples as in-context learning**, plus four documented formulas: **Parallel Cast Intro, Context Inversion, Decree + Unexpected Agent, Surface + Real Motive**. Voice rule: "trope-loaded role descriptors, never character names" — mirrors the generator's "not 'Dante' — 'your mafia boss'" rule.
+  - `src/lib/formulas.ts` — formula-schema validation (2-slide structures with typed slots).
+  - `src/lib/grid-renderer.ts` — Satori render of the 2×2 quadrant layout with EB Garamond / Cormorant Garamond serif overlays.
+  - `src/db/schema.ts` — books, characters, calibration_captions, scenes, captions (draft/approved/posted state), assets (uploaded vs. generated, tagged by character/slot/scene).
+- **State:** end-to-end working; all six UI steps functional. Rough edges: dual-key PB logic not exercised; scene image prompts are somewhat generic.
+- **Consolidation:** the caption-formula system + calibration-example few-shot pattern go into `src/services/ai/prompts/`; the 2×2 quadrant renderer is a new template type for the slideshow module (alongside pinfactory's six templates); the Higgsfield MCP OAuth code is a second reference implementation to line up next to bookshelf's and tslides'.
+
+### reposter — KEEPER (the fleet's most hardened Post Bridge client + a winners module)
+
+- **Purpose:** TikTok competitive-cloning engine: Apify scrapes a target profile → captions/metadata extracted → videos stored in R2 → a dashboard lets you tag/filter/review → manual or scheduled re-posting to your own accounts via Post Bridge on a stagger. A separate "winners" module ranks by engagement and prioritises the winners. **Authorized connectors are Apify + R2 + Post Bridge only** (per project memory); nothing else without explicit approval.
+- **Stack:** Next.js 15 + React 19; Tailwind v3; **Upstash Redis** (KV store for automation index + state); **Cloudflare R2** via `@aws-sdk/client-s3`; Radix UI; Papa Parse + xlsx for import/export.
+- **External APIs / key references** (env-only; **no committed secrets** — `.env.local` is gitignored):
+  - Apify — `lib/apify.ts` (`APIFY_TOKEN`; `clockworks~tiktok-profile-scraper` — the exact actor my-toolkit recommends to dodge the $0.50 minimum charge); `getApifyUsage()` tracks credit burn
+  - Post Bridge — `lib/post-bridge.ts`
+  - R2 — `lib/r2.ts` (`R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`)
+  - Upstash Redis KV (`KV_REST_API_URL`, `KV_REST_API_TOKEN`)
+- **Crown jewels:**
+  - `lib/post-bridge.ts` — **the most hardened PB client in the fleet.** Jittered backoff on `create-upload-url` 500s, full retry loop on pagination, per-platform `platform_configurations` matrix, idempotency, multi-media carousel support via `r2Keys[]`. Should be the base of the engine's PB service, ahead of bookshelf's variant.
+  - `lib/store.ts` — VideoSource schema (scraper vs. upload), origin-account provenance, cycle-based rotation state.
+  - `lib/recycler.ts` — staggered re-poster: per-account cycle rotation with retry-on-failure and per-account targeting.
+  - `lib/winners/` — engagement-ranked re-posting; UI dashboard on top.
+  - `WINNERS_MODULE_PLAN.md` + `SAAS_PLAN.md` — architectural notes for the multi-tenant SaaS evolution (per-tenant KV key prefix `t:{tenantId}:*`, per-tenant PB keys, encrypted credential storage). Useful input alongside simplepostr's schema.
+- **State:** single-tenant MVP; all core flows wired. Known-good ceiling: no first-comment, no per-platform scheduled delays (matches the my-toolkit PB gap notes). Upstash KV is not the target stack.
+- **Consolidation:** **`lib/post-bridge.ts` becomes the base of `src/services/posting/`** — merge with tinkerboxxx's rate-limited paginator (already flagged in the extraction map). The winners module goes into `src/modules/` as its own content type. Migrate Upstash → Postgres. Do NOT reach for Higgsfield/OpenAI/email inside this module without explicit sign-off (per the "authorized connectors" rule).
+
+### socialato — PROTOTYPE (gated — do not proceed past Phase 0 without sign-off)
+
+- **Purpose:** Media-curation assistant: upload a photo/video dump ("bucket") → run vision (Claude Opus) to score each item's relevance to a stated intent → surface a ~15-item shortlist → approve/reject → assemble an Instagram carousel + caption. Phase 0 gates on a vision-reliability test; Phase 1 is the carousel output; Phase 2 is video remixing with rambles; Phase 3 is direct publishing.
+- **Stack:** Next.js 16 + React 19; **Anthropic `claude-opus-4-7` via AI SDK**; AWS S3 for media ingest (file is misnamed `lib/r2.ts` — actually S3 SDK; the naming should be corrected). Vercel Blob for preview cache. **No database yet** — the Phase 1 spec calls for Postgres + pgvector.
+- **External APIs / key references** (env-only; **no committed secrets**):
+  - Anthropic — `lib/anthropic.ts` (`ANTHROPIC_API_KEY`, per-item `costUSD()` tracking — separates Opus input/output/cache tokens)
+  - AWS S3 — `lib/r2.ts` (should be renamed)
+  - Vercel Blob — preview cache
+- **Crown jewels:**
+  - `lib/anthropic.ts` — **per-item Opus cost tracking** (input / output / cache priced separately). If cost transparency ever becomes a feature, this is the pattern.
+  - `app/api/analyze/[slug]/route.ts` — vision-tagging pipeline; the Phase 1 spec wants frame extraction + tags + postability score + per-item embeddings.
+  - `app/api/shortlist/[slug]/route.ts` — semantic retrieval + ranking stub.
+  - `CLAUDE.md` — the authoritative build spec with **hard gates** ("Gate 1: vision-reliability test must pass before Phase 1"). This is the strongest example in the fleet of a codebase gating its own scope creep — worth adopting fleet-wide.
+- **State:** early prototype; API routes stubbed; no embedding storage or semantic retrieval yet. Phase 0 not signed off.
+- **Consolidation:** **do not integrate until Phase 0 is signed off.** The cost-tracking pattern and the hard-gate spec discipline are portable ideas rather than portable code. When Phase 1 lands, the vision-tag-and-shortlist pipeline is a candidate for the engine's asset-ingest surface (goes with facebook-library's "performance-ranked" idea).
+
+---
+
 ## Slideshow head-to-head (3 of 4 audited; bookslide unreachable)
 
 **Lineage:** slideshow-generator (single-user original) → slideshow-creator (multi-user SaaS mirror, bookpulls.com). tslides is a separate, more advanced concept (clone-a-competitor pipeline). bookslide's source exists only on your machine (Codex CLI deploy) — its Vercel domain (`i-would-like-to-build-an.vercel.app`) suggests an early prompt-built prototype; likely superseded, but unverified.
@@ -303,7 +522,29 @@ Market-research/concept package for a thriller series produced by an earlier mul
 | OFL fonts + role documentation | pinfactory `fonts/*.ttf`, `FONTS.md` | asset library upload (workspace-shared) |
 | Compliance audit engine + JSON-LD + AI-crawler robots | tropesite `src/audit.mjs`, `jsonld.mjs`, `robots.mjs` | only if an SEO-site module makes the cut |
 
-Explicitly **not** carried: the Redis-only storage layers (generator/creator), single-`APP_PASSWORD` auth, pinfactory's Pinterest v5 client, bookshelf's pg-boss/cron plumbing, aesthetic's dead OAuth/MCP subsystem, tslides' Apify mirroring UI (unless competitive cloning becomes a module — spec question), tropesite's SQLite/static-deploy machinery, facebook-library's client-side OCR (redo at ingest), all Python CLI scaffolding.
+Explicitly **not** carried: the Redis-only storage layers (generator/creator, siggy, reposter's KV, ai-ugc-pipeline's KV, meme-maker's raw SQL layer), single-`APP_PASSWORD` auth, pinfactory's Pinterest v5 client, bookshelf's pg-boss/cron plumbing, aesthetic's dead OAuth/MCP subsystem, tslides' Apify mirroring UI (unless competitive cloning becomes a module — spec question), tropesite's SQLite/static-deploy machinery, facebook-library's client-side OCR (redo at ingest), all Python CLI scaffolding, siggy entirely, kinetic entirely, book-video-bot's DIY scheduler, simplepostr's Meta OAuth stack (Post Bridge is the posting layer), dictabook's Stripe billing (out of scope), authorbids in full (out of scope), ai-ugc-pipeline's use of the banned `soul_2` Higgsfield model.
+
+**New extractions from the third pass** (drop into the extraction map at the natural rows above):
+| What | Source | Lands in |
+|---|---|---|
+| Multi-tenant tenancy schema (workspaces, memberships, entitlements, quota reservations, audit_logs, encrypted social_accounts) | simplepostr `lib/db/` | core schema of the new engine |
+| Envelope AES-256-GCM encryption for at-rest credentials (DEK-in-env, KMS-swappable) | simplepostr `lib/crypto/envelope.ts` | `src/lib/crypto/` |
+| pgcrypto AES-GCM per-user LLM-key pattern + RLS policies + `event_log` | inkwell `lib/crypto/api-key.ts`, `supabase/migrations/0001_init.sql` | core schema + Supabase RLS layer |
+| argon2id passwords + email verification + 30-day session cookies | simplepostr `lib/auth/session.ts` | `src/lib/auth/` |
+| Hardened Post Bridge client (jittered 500-retry on `create-upload-url`, per-platform config matrix, multi-media carousel) | reposter `lib/post-bridge.ts` | base of `src/services/posting/` (merge with tinkerboxxx's rate-limited paginator) |
+| Checkpoint-enforcement state machine (human gates prevent LLM drift) | ai-ugc-pipeline `lib/pipeline/state-machine.ts` | `src/services/pipeline/` (map onto Inngest steps + `waitForEvent`) |
+| Combo-rotation scheduler (`(textVariant, bgPrompt)` mod postCount) + sibling-account 30-min spacing | meme-maker `lib/scheduler.ts`, `state/schema.sql` | `src/services/scheduling/` |
+| Remotion WebGL chroma-key rendering pipeline | meme-maker (`Remotion 4` worker) | `src/services/rendering/video` (fourth renderer alongside sharp / text-to-svg / Pango) |
+| Ffmpeg handheld-wobble + Ken Burns + safe-zone title renderer | book-video-bot `lib/video.js` | `src/services/rendering/video` |
+| Typed-PUBLISH danger-dialog + per-account checkbox + pull-back delete UX | book-video-bot `app/publish/*` | shared publish-confirm surface |
+| Register-scored hook generator (10-register taxonomy + pattern library) | trialreels `lib/hook-prompt.ts` | `src/services/ai/prompts/` (romance-specific) |
+| Claude-vision scene / book distillers | trialreels `app/api/ai/{analyse-scene,analyse-book,extract-scenes}.ts` | `src/services/ai/prompts/` |
+| Few-shot calibration-example caption prompt + four documented formulas | quadrants `src/lib/captions.ts`, `formulas.ts` | `src/services/ai/prompts/` |
+| 2×2 quadrant Satori renderer + serif overlay templates | quadrants `src/lib/grid-renderer.ts` | `src/modules/slideshow/templates/` |
+| Winners module (engagement-ranked re-posting) | reposter `lib/winners/` | `src/modules/winners/` |
+| Whisper 25 MB oversize-detect + ffmpeg re-encode | dictabook `app/api/transcribe/route.ts` | `src/services/ai/whisper/` (only if audio ever ships) |
+| Per-item Opus cost tracking (input/output/cache split) | socialato `lib/anthropic.ts` | `src/lib/observability/cost.ts` |
+| Phase-gate discipline (no-write executor, spec-before-code, hard-gates in CLAUDE.md) | authorbids `specs/*.md` + `src/lib/amazon/client.ts`; socialato `CLAUDE.md` Gate 1; ai-ugc-pipeline `HUMAN_CHECKPOINTS` | fleet-wide engineering norm — bake into the engine's own spec |
 
 ---
 
@@ -311,31 +552,41 @@ Explicitly **not** carried: the Redis-only storage layers (generator/creator), s
 
 | Service | Used for | Seen in |
 |---|---|---|
-| **Post Bridge** | all posting + analytics | bookshelf, book-social-media, generator, creator, tslides, aesthetic, tinkerboxxx (⚠️ bookshelf has owner+shared keys; PB rate cap ~10 req/s; `social_account_id` filter silently ignored; deep pagination 500s) |
-| **Anthropic** | copy/script/vision (claude-sonnet-4-6 everywhere) | 10 of 12 audited apps |
-| **Google Gemini** | image gen + vision QA (direct + via AI Gateway) | storyforge, bookshelf, generator, creator, tslides (as NSFW-tolerant fallback) |
+| **Post Bridge** | all posting + analytics | bookshelf, book-social-media, generator, creator, tslides, aesthetic, tinkerboxxx, meme-maker, book-video-bot, reposter, quadrants (⚠️ bookshelf has owner+shared keys; PB rate cap ~10 req/s; `social_account_id` filter silently ignored; deep pagination 500s) |
+| **Anthropic** | copy/script/vision (claude-sonnet-4-6 / opus-4-7 everywhere) | 18 of 25 audited apps |
+| **Google Gemini** | image gen + vision QA (direct + via AI Gateway) | storyforge, bookshelf, generator, creator, tslides (as NSFW-tolerant fallback), meme-maker, book-video-bot |
 | **Vercel AI Gateway** | model routing/failover (`AI_GATEWAY_API_KEY` / OIDC) | generator, creator, tslides, bookshelf |
-| **OpenAI** | gpt-image-1/2 image gen, Whisper, gpt-4o-mini vision | bookshelf, tslides, tinkerboxxx |
-| **Higgsfield** | primary image gen — two integration styles: MCP OAuth (bookshelf, tslides) vs Clerk-cookie "unlimited" (aesthetic) | bookshelf, tslides, aesthetic |
-| **Apify** | TikTok/FB scraping | tslides (`APIFY_TOKEN`), facebook-library (data source) |
-| **Upstash Redis** | KV store (legacy — being replaced) | generator, creator |
-| **Supabase** | DB/auth/storage (target stack; already live in one app) | tinkerboxxx |
+| **OpenAI** | gpt-image-1/2 image gen, Whisper, gpt-4o-mini vision | bookshelf, tslides, tinkerboxxx, quadrants (fallback), dictabook (Whisper), siggy (raw fetch — insecure) |
+| **Higgsfield** | primary image gen — MCP OAuth (bookshelf, tslides, ai-ugc-pipeline, quadrants) vs Clerk-cookie "unlimited" (aesthetic). ⚠️ ai-ugc-pipeline calls the banned `soul_2` model | bookshelf, tslides, aesthetic, ai-ugc-pipeline, quadrants |
+| **Apify** | TikTok/FB scraping | tslides (`APIFY_TOKEN`), facebook-library (data source), reposter, book-video-bot (Goodreads) |
+| **Upstash Redis** | KV store (legacy — being replaced) | generator, creator, siggy, reposter, ai-ugc-pipeline |
+| **Neon Postgres + Drizzle** | target relational stack | tslides, bookshelf, simplepostr, authorbids, quadrants, meme-maker (raw SQL), book-video-bot (raw SQL) |
+| **Supabase** | DB/auth/storage (target stack; already live in several apps) | tinkerboxxx, inkwell, trialreels, dictabook |
+| **Cloudflare R2** | S3-compatible video store | reposter |
 | **Replicate** | Demucs vocal separation | bookshelf |
 | **ElevenLabs** | TTS narration | storyforge |
-| **Resend** | failure/alert email | bookshelf, generator, creator, tslides, tinkerboxxx |
+| **Resend** | failure/alert email | bookshelf, generator, creator, tslides, tinkerboxxx, simplepostr |
 | **PublisherChamp** | analytics | generator, creator |
-| **Google OAuth** | user auth | creator (tinkerboxxx uses Supabase auth) |
+| **Google OAuth** | user auth | creator, inkwell (Supabase-mediated), trialreels (+ email allowlist gate), dictabook |
+| **Stripe** | usage / plan billing | dictabook (per-audio-minute), simplepostr (test-mode only) |
+| **Pexels** | free-tier image search | trialreels |
+| **Sentry** | error tracking | dictabook |
+| **Remotion** | WebGL video rendering (worker) | meme-maker |
 | **Pinterest v5 OAuth** | direct pinning (reference only) | pinfactory |
+| **Amazon Ads (LWA OAuth)** | ad-management API (out of engine scope) | authorbids |
 | **Amazon Associates** | affiliate links (SEO module only) | tropesite |
-| Internal secrets | `CRON_SECRET` (→ Inngest signing key), `TOKEN_ENCRYPTION_KEY`/`TSLIDES_TOKEN_SECRET` (keep the AES-GCM pattern, avoid tslides' weak fallback) | several |
+| Internal secrets | `CRON_SECRET` (→ Inngest signing key), `TOKEN_ENCRYPTION_KEY`/`TSLIDES_TOKEN_SECRET`/`ENCRYPTION_KEY`/`ENVELOPE_DEK` (keep the AES-GCM pattern; simplepostr's envelope + inkwell's pgcrypto are the two best per-user models — avoid tslides' weak `DATABASE_URL` fallback) | several |
 
-**Security findings across all 12 audited apps:**
-1. 🔴 **slideshow-generator: live `CRON_SECRET` committed in a public repo** (see box at top). Rotate now.
-2. 🟡 generator `generate-slides` route gates on `process.env.PASSWORD` instead of `APP_PASSWORD` — likely unauthenticated in prod.
-3. 🟡 tslides `lib/crypto.ts` token-encryption key silently falls back to `DATABASE_URL` → literal dev string; set `TSLIDES_TOKEN_SECRET`.
-4. 🟡 aesthetic's Higgsfield Clerk cookie is a full account credential in env (by design; ToS-gray "unlimited mode" — decide if the consolidated app keeps this or the sanctioned MCP path).
-5. 🟡 creator's `analyze-slide`/`describe-image`/`fetch-image-url` fetch arbitrary user URLs server-side (SSRF surface) — the new engine needs allowlisting.
-6. ⚪ tslides/aesthetic Blob assets are public-if-URL-known; fine for posts, not for private workspace assets.
+**Security findings across all 25 audited apps:**
+1. 🔴 **slideshow-generator: live `CRON_SECRET` committed in a public repo** (see box at top). Rotate now. Still the only committed-secret leak found.
+2. 🟡 **siggy**: `app/api/claude/route.ts:6` accepts an `_apiKey` field in the POST body, leaks the system prompt in 500-error bodies, and the Redis KV store is unauthenticated. **Recommend: delete the deployment**; do not port.
+3. 🟡 **ai-ugc-pipeline** calls the banned Higgsfield `soul_2` model in violation of the fleet-wide hard rule. Rework around Seedance only before this can go into the engine.
+4. 🟡 generator `generate-slides` route gates on `process.env.PASSWORD` instead of `APP_PASSWORD` — likely unauthenticated in prod.
+5. 🟡 tslides `lib/crypto.ts` token-encryption key silently falls back to `DATABASE_URL` → literal dev string; set `TSLIDES_TOKEN_SECRET`.
+6. 🟡 aesthetic's Higgsfield Clerk cookie is a full account credential in env (by design; ToS-gray "unlimited mode" — decide if the consolidated app keeps this or the sanctioned MCP path).
+7. 🟡 creator's `analyze-slide`/`describe-image`/`fetch-image-url` fetch arbitrary user URLs server-side (SSRF surface) — the new engine needs allowlisting.
+8. ⚪ tslides/aesthetic/reposter Blob/R2 assets are public-if-URL-known; fine for posts, not for private workspace assets.
+9. ⚪ **False alarms verified and dismissed** (via `git ls-files` in each per-app repo): the flags on `meme-maker`, `trialreels`, `simplepostr`, `reposter`, and `kinetic`'s `.env.local` / `.env.check` files. Every one of those is properly gitignored. Only `.env.example` / `.env.local.example` variants are tracked. `kinetic` has no `.git` directory at all. On-disk env values on your dev machine are private, not committed.
 
 ---
 
@@ -359,23 +610,30 @@ Explicitly **not** carried: the Redis-only storage layers (generator/creator), s
 ## Recommended build order (updated)
 
 1. **Rotate the leaked CRON_SECRET** (before anything else).
-2. **Core scaffold:** Supabase + Drizzle schema seeded from bookshelf's `cards`/`event_log`/`automation_configs` + tslides' slideshow/book tables; Inngest wiring; workspace/user model.
-3. **Posting service:** bookshelf `postbridge.ts` as the base + tinkerboxxx's rate limiter/paginator + generator's non-retryable-POST rule and verification helpers; per-workspace keys.
-4. **Scheduling service:** bookshelf windows/caps + tslides two-phase dispatcher/retry classifier + pinfactory anti-spam + LRU anti-repeat, as Inngest functions.
-5. **Asset library:** storage buckets + brand kits (pinfactory fonts/palettes, bookshelf style recipes, aesthetic prompt bank) + performance-metrics-on-assets; **import facebook-library's 999 posts now** (re-host images, OCR at ingest).
-6. **Slideshow module (Module #1):** per the head-to-head above — tslides structure, generator/creator prompt IP, one of the two proven overlay renderers, no-text guard, fallback chain w/ content-rejection routing, QA gate.
-7. **Copy/caption service:** merged prompt library + LLM-JSON hardening.
-8. **Approval/review UI** across content types.
-9. **Ops dashboard:** absorb tinkerboxxx Manager cross-check.
-10. Later modules per spec (quote-videos from aesthetic, narrated video from storyforge/bookshelf, memes, SEO site…) once remaining audits land.
+2. **Core scaffold:** target Postgres (Neon or Supabase) + Drizzle. Seed the **tenancy schema from simplepostr** (workspaces, memberships, entitlements, quota_reservations, audit_logs, encrypted social_accounts) — it's already the closest match to the target and is in production. Layer **inkwell's pgcrypto per-user LLM-key pattern + RLS policies + event_log** on top. Add bookshelf's `cards` state machine + tslides' slideshow/book tables. Inngest wiring; envelope encryption (simplepostr) for at-rest social credentials.
+3. **Posting service:** **reposter `lib/post-bridge.ts` is the new base** — most hardened in fleet — merged with tinkerboxxx's rate-limited paginator and generator's non-retryable-POST rule + verification helpers; per-workspace keys and default-deny allow-list of `allowedAccountIds` (my-toolkit finding: PB has no workspace isolation).
+4. **Scheduling service:** bookshelf windows/caps + tslides two-phase dispatcher/retry classifier + pinfactory anti-spam + LRU anti-repeat + **meme-maker's deterministic combo-rotation + sibling-account 30-min spacing**, as Inngest functions.
+5. **Pipeline runtime:** port **ai-ugc-pipeline's checkpoint-enforcement state machine** onto Inngest (`waitForEvent` for `HUMAN_CHECKPOINTS`) — makes drift-prevention native to every module. **Fix first: replace `soul_2`** so this can be lifted.
+6. **Asset library:** storage buckets + brand kits (pinfactory fonts/palettes, bookshelf style recipes, aesthetic prompt bank) + performance-metrics-on-assets; **import facebook-library's 999 posts now** (re-host images, OCR at ingest).
+7. **Slideshow module (Module #1):** per the head-to-head — tslides structure, generator/creator prompt IP, one of the two proven overlay renderers, no-text guard, fallback chain w/ content-rejection routing, QA gate. Add **quadrants' few-shot calibration-caption formula system** and the 2×2 quadrant template.
+8. **Copy/caption service:** merged prompt library + LLM-JSON hardening; per-item **Opus cost tracking from socialato**.
+9. **Approval/review UI** across content types — adopt **book-video-bot's typed-PUBLISH + per-account checkbox** as the standard publish-confirm surface.
+10. **Ops dashboard:** absorb tinkerboxxx Manager cross-check.
+11. **Video renderers** as they become needed: bookshelf ffmpeg + kinetic-captions engine (primary); aesthetic sepia-grade + drawtext + beat-sync (quote video); book-video-bot handheld-wobble + Ken Burns (BookTok); meme-maker Remotion WebGL chroma-key (green-screen memes).
+12. Later modules per spec (winners re-poster from reposter, competitive cloning from tslides, narrated video from storyforge/bookshelf, SEO site from tropesite) subject to the real `content-engine-architecture.md`.
 
 ---
 
 ## Blockers & questions — need answers before going further
 
-1. **Where is `content-engine-architecture.md`?** Not in this repo, and my-toolkit's audit confirms it doesn't exist there either. The nearest artifact is **my-toolkit `patterns/slideshow-consolidation-spec/SPEC.md`** (2-app consolidation spec — a strong seed to widen into the real fleet-wide spec). Decide: widen that SPEC, or write the content-engine spec fresh with it as input.
-2. **8 private repos pending:** meme-maker, book-video-bot, inkwell, trialreels, siggy, dictabook, simplepostr, authorbids. The add-repo approval flow only works one repo per user-typed message (`add ccas77/NAME`). Note: the `inkwell` repo is a Sudowrite clone (AI fiction-writing tool) — unrelated to my-toolkit's slideshow-consolidation SPEC, which an earlier Claude session had confusingly named "Inkwell v2" (now renamed in my-toolkit). As a writing tool it may sit outside the content-engine scope entirely (owner to decide whether it's even in the 24-app consolidation).
-3. **7 apps with local-only source:** kinetic, quadrants, reposter, socialato, bookslide, public — push those folders to GitHub (private is fine) and I'll audit them. aimoviebot needs no push — its Vercel project just needs deleting or relinking.
-4. **Is the local `bookshelf` folder the same code as the Vercel project + the private `ccas77/bookshelf` repo?** Adding the repo will answer this.
-5. **Scope check:** should `video-generator`, `book-boyfriend`, `book-writer-app`, `bookpulls-runbook` be considered?
-6. **Policy questions surfaced by the audit:** keep the censorship/`is_aigc:false` evasion features? Keep aesthetic's Clerk-cookie Higgsfield bypass or standardize on the MCP path? Is competitive cloning (tslides) a module?
+1. **Where is `content-engine-architecture.md`?** Still not in this repo. The three seed artefacts we now have: **my-toolkit `patterns/slideshow-consolidation-spec/SPEC.md`** (2-app slideshow consolidation — previously misnamed "Inkwell v2" and renamed in my-toolkit), **simplepostr `docs/spec.md`** (multi-tenant SaaS shape already shipped), and **authorbids `specs/{schema,rules-engine,executor}.md`** (phase-gating discipline). Decide: widen the slideshow-consolidation SPEC into the fleet-wide spec, or write the content-engine spec fresh with all three as input.
+2. **inkwell naming resolved:** the `ccas77/inkwell` repo is a **Sudowrite-style AI fiction-writing tool**, unrelated to my-toolkit's slideshow-consolidation SPEC (an earlier Claude session had confusingly named that SPEC "Inkwell v2"; now renamed in my-toolkit). As a writing tool, inkwell may sit outside the content-engine consolidation scope entirely — owner to decide whether it belongs in the 24-app roll-up.
+3. **Remaining unreachable sources (down from 7 to 2):** `bookslide` and `public` — neither is present locally either. `aimoviebot` remains a Vercel-project-deletion candidate. `kinetic` is present locally but has no `.git` at all — treat as never-shipped prototype, decide keep-or-delete.
+4. **Is the local `bookshelf` folder the same code as the Vercel project + the private `ccas77/bookshelf` repo?** Still open — `ccas77/bookshelf` doesn't exist on GitHub.
+5. **Scope check:** should `video-generator`, `book-boyfriend`, `book-writer-app`, `bookpulls-runbook` be considered? (All present locally; not yet audited.)
+6. **Policy questions surfaced by the audit** — now four:
+   - Keep the censorship / `is_aigc:false` platform-evasion features?
+   - Keep aesthetic's Clerk-cookie Higgsfield bypass or standardize on the MCP path (bookshelf/tslides/quadrants/ai-ugc-pipeline)?
+   - Is competitive cloning (tslides) a module? Is the winners re-poster (reposter) a module?
+   - **NEW: replace `soul_2` in ai-ugc-pipeline** (`lib/higgsfield/mcp-client.ts:138`) — the hard ban on Higgsfield `soul_*` / `marketing_studio_*` is being violated in production; pipeline needs a Seedance-only rework before it can enter the engine.
+7. **NEW: siggy retirement.** Ship a deletion of the Vercel deployment before that endpoint gets discovered — it's an unauthenticated Redis + API-key-in-request-body + prompt-leaking service.
