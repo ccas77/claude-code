@@ -6,7 +6,7 @@
 Remaining blockers (details in [Blockers](#blockers--questions--need-answers-before-going-further)):
 
 1. **`content-engine-architecture.md` is still missing** — destination columns below remain based on the summary in your instructions.
-2. **10 private GitHub repos** (meme-maker, book-video-bot, my-toolkit, inkwell, trialreels, siggy, dictabook, simplepostr, authorbids, bookshelf) are pending session access — the add-repo approval flow is flaky; one repo per user message ("add ccas77/NAME") is what worked for tslides.
+2. **8 private GitHub repos** (meme-maker, book-video-bot, inkwell, trialreels, siggy, dictabook, simplepostr, authorbids) are pending session access — the add-repo approval flow is flaky; one repo per user message ("add ccas77/NAME") is what worked for tslides and my-toolkit. **ccas77/bookshelf does not exist on GitHub** — the Vercel project (bookshelf.bookpulls.com) is CLI-deployed from the owner's machine, and the copy in this monorepo is the only auditable source.
 3. **7 Vercel projects have no reachable source** — traced via Vercel deployment metadata: kinetic, quadrants, reposter, socialato (CLI-deployed from your local machine; source only there), bookslide (CLI-deployed by Codex, no git metadata), public (static shell), aimoviebot (misconfigured project pointed at this monorepo; every build errors — nothing to audit, candidate for deletion).
 
 > ### ⚠️ URGENT SECURITY — rotate now
@@ -33,7 +33,7 @@ Remaining blockers (details in [Blockers](#blockers--questions--need-answers-bef
 | inkwell | GitHub (private) — pending access | ❌ | pending |
 | simplepostr | GitHub (private) — pending access | ❌ | pending |
 | authorbids | GitHub (private) — pending access | ❌ | pending |
-| my-toolkit | GitHub (private) — pending access | ❌ | pending (referenced by tslides + aesthetic as the shared-patterns home — high priority) |
+| my-toolkit | ✅ cloned (added to session) | ✅ | **KEEPER — the canonical shared-patterns library** (see audit below; contains the Inkwell v2 SPEC) |
 | dictabook | GitHub (private) — pending access | ❌ | pending |
 | siggy | GitHub (private) — pending access | ❌ | pending |
 | trialreels | GitHub (private) — pending access | ❌ | pending |
@@ -121,6 +121,18 @@ Remaining blockers (details in [Blockers](#blockers--questions--need-answers-bef
 - **Crown jewels:** `api/analytics.js` — production PB client with promise-chained ~8 req/s throttle, 429 retry via `rate_limit.reset_ms`, safe pagination; `api/aggregate.js` `crossCheckApp`/`diagnose` — reconciles app claims vs PB reality, classifying confirmed / queued / rejected / **missing-from-PB (silent failure)**; `api/cron/dead-account-check.js` — daily 0-views alerting (skips Facebook, PB doesn't sync it); `api/image-to-prompt.js` — a 60-120-word **nano-banana-tuned image→prompt** system prompt with strict "NO INTERPRETATION" rules; `api/generate-icon.js` — app-icon prompt. Its `CONN_LABEL` badge registry enumerates the exact integration roster of the fleet (Post Bridge, Apify, Higgsfield, OpenAI, Claude, Gemini, R2, Blob, Database, Resend, KV).
 - **State:** complete, actively iterated (battle-scar comments about PB rate caps and deep-page 500s). README stale.
 - **Consolidation:** absorb the Manager cross-check + analytics client as the new engine's ops/observability view rather than rebuilding it.
+
+### my-toolkit — KEEPER (the canonical shared-patterns library; contains the only architecture spec found)
+
+- **What it is:** a docs-first pattern library, not a runnable app — one 48 KB `CLAUDE.md` master runbook + `patterns/` with 12 reference patterns (~3,300 lines). This is the repo tslides and aesthetic cite as the canonical source of their Post Bridge/Apify code. **No hardcoded secrets.**
+- **🔑 `patterns/inkwell-v2/SPEC.md` — the closest thing to the missing `content-engine-architecture.md`.** A full consolidation plan, but scoped to exactly TWO apps (slideshow-generator + slideshow-creator → one monorepo, "Inkwell"): Turborepo layout (`apps/web` + `packages/{db,rendering,postbridge,automation,types}`), a complete Postgres/Drizzle schema that **separates user-editable `automation_configs` from cron-managed `automation_state`** (fixes read-modify-write races), append-only audit logs, one generic `AutomationHandler` interface + single cron dispatcher replacing 5 duplicated cron files, and a feature-parity migration checklist. It predates the fleet-wide content-engine framing (no Inngest, no workspace asset library, no Gemini module) — a seed for the real spec, not the spec itself. It also carries a "NEVER start building without EXPLICIT permission" guard.
+- **The 12 patterns:** postbridge (canonical typed client), postbridge-analytics (the **most hardened** PB networking anywhere in the fleet: ~8 req/s promise-chain self-throttle, 429 retry driven by the response's `rate_limit.reset_ms`, deep-page-500 graceful degradation, MAX_PAGES ceiling, the analytics→username join), apify-tiktok (canonical scraper client + the three slideshow-data traps + "use `clockworks~tiktok-profile-scraper` to dodge the $0.50 minimum charge"), higgsfield-mcp (full OAuth 2.1/DCR/PKCE with the serverless PKCE-cookie trick), ai-riffed-captions (Gemini caption prompt + 5 proven prompt-design rules), caption-overlay (Claude caption bank, doc-only, removed from ai-ugc-pipeline 2026-06-20), word-timed-captions (Whisper→ASS→libass runbook: **`@ffmpeg-installer/ffmpeg`, NOT `ffmpeg-static`** — static lacks drawtext/libass), chroma-key, automation-overview (bulk-endpoint-over-N-fetches rule for 50+ accounts), account-health-chip, plus schema sketches.
+- **Decision-changing findings:**
+  - **Post Bridge has NO workspace isolation** (CLAUDE.md:190) — one key sees every connected account across all apps. The multi-user engine MUST enforce its own per-user `allowedAccountIds` allow-list (default deny). Hard architectural constraint.
+  - **PB feature gaps:** no first-comment, no comment/DM automation, no per-platform `scheduled_at` — anything needing IG first-comment must call the native API post-publish.
+  - **ffmpeg contradiction to resolve:** the SPEC recommends `ffmpeg-static`, but the captions pattern proves it can't burn captions. Standardize on `@ffmpeg-installer/ffmpeg`.
+  - **Doc drift:** the richest guidance (Apify cursor model, PB platform-config tables) lives only in CLAUDE.md, not the `.ts` files — apps that copied just the code are missing hardening. Treat my-toolkit's CLAUDE.md as source of truth when consolidating.
+  - The new engine's PB client should be **analytics.js's fetch core + post-bridge.ts's typed surface**, not either alone.
 
 ### facebook-library — KEEPER for data + ingest patterns
 
@@ -361,8 +373,8 @@ Explicitly **not** carried: the Redis-only storage layers (generator/creator), s
 
 ## Blockers & questions — need answers before going further
 
-1. **Where is `content-engine-architecture.md`?** Still not in this repo. Paste it, commit it, or point me at it.
-2. **10 private repos pending:** meme-maker, book-video-bot, **my-toolkit** (highest priority — tslides and aesthetic both cite it as the canonical shared-patterns source), inkwell, trialreels, siggy, dictabook, simplepostr, authorbids, bookshelf. The add-repo approval flow only works one repo per user-typed message (`add ccas77/NAME`); the batch attempt failed on infrastructure.
+1. **Where is `content-engine-architecture.md`?** Not in this repo, and my-toolkit's audit confirms it doesn't exist there either. The nearest artifact is **my-toolkit `patterns/inkwell-v2/SPEC.md`** (2-app consolidation spec — a strong seed to widen into the real fleet-wide spec). Decide: widen that SPEC, or write the content-engine spec fresh with it as input.
+2. **8 private repos pending:** meme-maker, book-video-bot, inkwell, trialreels, siggy, dictabook, simplepostr, authorbids. The add-repo approval flow only works one repo per user-typed message (`add ccas77/NAME`). Note: an app named "inkwell" exists as a repo AND "Inkwell" is the name of my-toolkit's 2-app consolidation spec — check whether the repo is an implementation of that spec.
 3. **7 apps with local-only source:** kinetic, quadrants, reposter, socialato, bookslide, public — push those folders to GitHub (private is fine) and I'll audit them. aimoviebot needs no push — its Vercel project just needs deleting or relinking.
 4. **Is the local `bookshelf` folder the same code as the Vercel project + the private `ccas77/bookshelf` repo?** Adding the repo will answer this.
 5. **Scope check:** should `video-generator`, `book-boyfriend`, `book-writer-app`, `bookpulls-runbook` be considered?
