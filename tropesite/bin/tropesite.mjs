@@ -40,6 +40,8 @@ Usage: tropesite <command> [options]
 
 Setup & data
   seed                      Load the sample catalog (idempotent). Placeholder data.
+  import --books FILE.csv [--comps FILE.csv] [--replace]
+                            Import YOUR real catalog from CSV (templates/*.csv).
   plan                      Show the proposed page list (does not generate).
 
 Comps (comp-title intake/approval)
@@ -81,6 +83,12 @@ async function main() {
       console.log(`Seeded sample catalog: ${stats.penNames} pen names, ${stats.books} books, ${stats.subgenres} subgenres, ${stats.tropes} tropes, ${stats.comps} comps.`);
       console.log(`(Placeholder data — point TROPESITE_DB at your real pinfactory.db to replace.)`);
       console.log(`Next: tropesite plan`);
+      break;
+    }
+
+    case 'import': {
+      const { importCatalog } = await import('../src/import.mjs');
+      importCatalog({ booksCsv: args.books, compsCsv: args.comps, replace: !!args.replace });
       break;
     }
 

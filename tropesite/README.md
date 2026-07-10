@@ -17,9 +17,33 @@ by AI search assistants and rank for long-tail reader queries.
   link inside the email capture, broken internal link, or invalid schema.
 
 > **Catalog status:** ships with a **clearly-labeled sample catalog** (fictional
-> titles/authors) so every command runs today. Point `TROPESITE_DB` at your real
-> `pinfactory.db`, or import your rows, to replace it. Nothing about real books
-> is ever fabricated — see "No fabrication" below.
+> titles/authors) so every command runs today. Replace it three ways:
+> (a) `tropesite import` from a CSV of your real books — the fastest path, and
+> it needs no `pinfactory`; (b) point `TROPESITE_DB` at a real `pinfactory.db`
+> once that exists; or (c) write rows directly. Nothing about real books is ever
+> fabricated — see "No fabrication" below.
+
+## Getting your real catalog in (no pinfactory required)
+
+You don't need `pinfactory` finished to launch. Fill in the two CSV templates and
+import them:
+
+```bash
+cp templates/books.csv my-books.csv     # edit: your titles, pen names, blurbs, tropes, ASINs
+cp templates/comps.csv my-comps.csv      # optional: comparable titles + factual descriptions
+node bin/tropesite.mjs import --books my-books.csv --comps my-comps.csv --replace
+node bin/tropesite.mjs plan               # see which trope pages your inventory unlocks (≥6 books)
+```
+
+- **books.csv** columns: `title, pen_name, subgenre, series, series_index, blurb,
+  heat_level, content_notes, asin, retailer_url, tropes, published_year`
+  (`tropes` is `;`-separated, e.g. `Enemies to Lovers; Morally Grey Hero`).
+- **comps.csv** columns: `title, author, tropes, asin, retailer_url,
+  factual_description, status`. A comp marked `approved` **must** have a
+  `factual_description`, or it's imported as `proposed` for you to confirm.
+- Pen names, subgenres and tropes are created automatically from what you supply.
+- When `pinfactory` is ready, it can either write this schema directly or export
+  these same CSVs — the importer is the stable contract.
 
 ## Quick start
 
@@ -41,6 +65,7 @@ node bin/tropesite.mjs audit  # compliance + crawlability report
 | Command | What it does |
 |---|---|
 | `seed` | Load the sample catalog (idempotent placeholder data). |
+| `import --books F.csv [--comps F.csv] [--replace]` | Import your real catalog from CSV (templates in `templates/`). |
 | `plan` | Print the proposed page list (hubs ≥ 6 books, books-like, book pages). No generation. |
 | `comps list [--status s]` | List comp titles by status (`proposed`/`approved`/`rejected`). |
 | `comps review` | Show trope inventory gaps and comps awaiting your action. |

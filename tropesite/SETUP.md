@@ -23,8 +23,20 @@ cp .env.example .env      # then edit
 
 ## 1. Wire in your catalog
 
-The generator reads a SQLite database whose shape is documented in
-`src/schema.sql`. Two ways to use your real data:
+**Fastest path — CSV import (no pinfactory needed).** If your catalog isn't in a
+database yet, don't wait. Fill in the templates and import:
+
+```bash
+cp templates/books.csv my-books.csv    # your titles, pen names, blurbs, tropes, ASINs
+cp templates/comps.csv my-comps.csv     # optional comparable titles
+node bin/tropesite.mjs import --books my-books.csv --comps my-comps.csv --replace
+```
+
+When pinfactory is finished, it can export these same CSVs (or write `src/schema.sql`
+directly) and nothing downstream changes.
+
+**Or use an existing SQLite database.** The generator reads a database whose shape
+is documented in `src/schema.sql`. Two ways:
 
 - **Point at it:** set `TROPESITE_DB=/path/to/pinfactory.db` in `.env`. If your
   pinfactory tables differ, either add the extension tables tropesite needs
