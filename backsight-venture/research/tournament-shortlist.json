@@ -1,0 +1,539 @@
+[
+ {
+  "title": "Standalone maintenance-agreement (membership) tracker for small HVAC/plumbing shops",
+  "customer": "Owner-operators of residential HVAC, plumbing, and electrical shops with roughly 2-10 technicians who sell annual maintenance plans/memberships but run their operations on spreadsheets, QuickBooks, or a low-tier FSM plan (Jobber Core, Housecall Pro basic) that lacks real agreement management",
+  "pain_description": "Maintenance agreements are the recurring-revenue engine of a small HVAC/plumbing shop, but tracking them in spreadsheets and sticky notes means missed spring/fall visits, missed renewals, and billing that silently lapses. Industry sources put concrete numbers on it: a renewal rate dropping from 80% to 60% on 500 agreements at $300 average is $30,000/year of lost recurring revenue, and each $300 agreement typically pulls through ~$900 in total annual revenue (2:1 pull-through ratio). The most common failure mode is collecting payment for a plan and then never scheduling the included visits \u2014 the customer discovers they paid for nothing and churns. The 'proper' fix, ServiceTitan, costs $250-$500 per technician per month with $5,000-$50,000 implementation and 6-12 month onboarding; Housecall Pro gates comparable features behind add-ons that users report adding ~$1,200/year.",
+  "evidence": [
+   {
+    "claim": "When renewals rely on spreadsheets/sticky notes, missing 10 renewals a month costs a mid-size shop tens of thousands; 80%\u219260% renewal on 500 agreements at $300 avg = $30,000/yr lost, and pull-through work runs ~2:1, so one lost $300 agreement \u2248 $900 total revenue gone; the #1 contract killer is selling the plan and never scheduling the visits",
+    "source_title": "Maintenance Agreement Tracking in Field Operations \u2014 Simply Connected Systems",
+    "source_url": "https://help.simplyconnectedsystems.com/pain/service-contracts"
+   },
+   {
+    "claim": "ServiceTitan averages $250-$500 per technician per month, implementation fees run $5,000-$50,000, onboarding takes 6-12 months, and small shops (<10 techs) commonly find it too expensive and overwhelming \u2014 with BBB complaints from contractors who paid a full year without being fully onboarded",
+    "source_title": "ServiceTitan Pricing 2026: Real Costs Exposed \u2014 FieldCamp",
+    "source_url": "https://fieldcamp.ai/reviews/servicetitan/"
+   },
+   {
+    "claim": "Housecall Pro users report add-on cost creep as the single most common reason for churn \u2014 signing up at $59-$149/mo then having the bill double or triple; one user reported adding pictures and Service Plans (the maintenance-agreement feature) raised their cost by $1,200/year",
+    "source_title": "Housecall Pro Review 2026 \u2014 FieldCamp",
+    "source_url": "https://fieldcamp.ai/reviews/housecall-pro/"
+   },
+   {
+    "claim": "Jobber's per-employee pricing penalizes growth (Connect for Teams $170/mo, Grow for Teams $349/mo, Plus $599/mo + $29/user), and everyday features like review automation and email campaigns cost an extra $80/mo Marketing Suite add-on \u2014 leaving small shops squeezed between cheap-but-limited and bloated-but-expensive",
+    "source_title": "Jobber's Biggest Problem Exposed: Add-Ons, Extra Fees & More \u2014 QuoteIQ",
+    "source_url": "https://myquoteiq.com/jobbers-biggest-problem-exposed/"
+   },
+   {
+    "claim": "HVAC companies traditionally relied on spreadsheets, paper forms, or manual methods to manage maintenance contracts, which are prone to errors, miscommunication and missed appointments that damage retention",
+    "source_title": "How HVAC Companies Track Maintenance Contracts With Software \u2014 Velappity",
+    "source_url": "https://www.velappity.com/how-do-hvac-companies-track-maintenance-contracts-with-software/"
+   }
+  ],
+  "existing_alternatives": "Spreadsheets + QuickBooks memorized transactions; agreement modules inside ServiceTitan (enterprise-priced), Housecall Pro (paid add-on), Jobber Grow tier ($199-$349/mo); generic CMMS tools like OxMaint that aren't built around residential memberships. No well-loved, affordable standalone 'membership manager' that sits alongside whatever FSM/accounting stack the shop already has.",
+  "why_underserved": "Incumbents bundle agreement management into expensive all-in-one suites, so the 2-10 tech shop must either overbuy (ServiceTitan) or cobble spreadsheets. The niche-depth product \u2014 agreements, auto-billing, visit scheduling reminders, renewal chasing, and a simple profitability view, priced flat at ~$50-150/mo \u2014 doesn't have a dominant player; every vendor's blog acknowledges the spreadsheet status quo because that's what most small shops still do.",
+  "willingness_to_pay_signal": "These buyers already pay $59-$600+/mo for FSM software and complain about add-on fees, proving budget exists; the pain is directly denominated in dollars ($30k/yr lost renewals on a 500-agreement base), so a tool that saves even a handful of renewals pays for itself many times over. Housecall Pro users demonstrably paid +$1,200/yr just to unlock Service Plans.",
+  "buildability_notes": "Very buildable by an indie dev: CRUD app (customers, equipment, agreements, visit schedule), Stripe subscriptions for auto-billing, cron-driven email/SMS renewal and visit reminders (SendGrid/Twilio), CSV import from spreadsheets, optional QuickBooks Online public API integration later. No gated APIs, no licensing, data model is simple; can demo entirely with mock data.",
+  "scout": "smb-trades",
+  "key": "hvac-agreements",
+  "merged_from": [
+   0
+  ]
+ },
+ {
+  "title": "Affordable COI (certificate of insurance) collection and expiry-chasing for small GCs and property managers",
+  "customer": "Small general contractors, remodelers, and independent/regional property management companies who hire 10-75 subcontractors/vendors per year and currently track ACORD certificates in Excel and email inboxes; secondary: HOAs and facility managers",
+  "pain_description": "Every sub and vendor must carry valid liability/workers-comp insurance, and the hiring firm bears the risk if a certificate lapses: documented cases include an $8M lawsuit on a $1.5M project after a sub's COI expired, and a GC whose own policy absorbed $680,000 in defense and settlement after a sub's policy lapsed three weeks before mobilization. Yet the workflow is manual hell \u2014 industry data says roughly 7 of 10 collected COIs are non-compliant and each certificate takes ~3 follow-up emails to fix, so someone in the office is perpetually chasing agents and updating a spreadsheet that breaks the moment volume grows. The market leader, myCOI, hides pricing, runs ~$30-$60 per vendor per year ($1,500-$3,000+ for a 50-vendor shop) plus seats and per-extraction charges, and users report surprise fees. || SECOND INDEPENDENT SCOUT: Every vendor/subcontractor must have a current ACORD 25 certificate with correct coverage limits, additional-insured wording, and unexpired dates. Small firms track this in spreadsheets and email folders: certificates expire silently, chasing renewals is a manual email grind, and one lapsed cert exposes the firm to uninsured-claim liability and failed audits. The enterprise incumbent myCOI starts at roughly $500+/month with custom contracts and weeks-long implementation, and its certificate reviews take 2 days to 2 weeks during renewal season; its vendor portal requires subs to register and manage logins, so subs simply ignore the emails. Firms below ~200 certificates are priced out entirely and fall back to Excel.",
+  "evidence": [
+   {
+    "claim": "A company was sued for over $8M on a $1.5M project because a certificate of insurance expired and the sub was permitted on site; COI tracking is a painstaking chore that quickly overwhelms short-staffed companies",
+    "source_title": "The Importance of Tracking Insurance \u2014 Billy",
+    "source_url": "https://billyforinsurance.com/resources/the-importance-of-tracking-insurance/"
+   },
+   {
+    "claim": "Usually seven out of ten collected COIs are non-compliant and it takes about three follow-ups to make a certificate fully compliant; inbox/spreadsheet tracking 'works with 5 subs and fails at 50'",
+    "source_title": "How to Manage Subcontractor Certificates of Insurance (COIs) \u2014 Jones",
+    "source_url": "https://getjones.com/blog/how-to-manage-subcontractor-certificates-of-insurance-cois/"
+   },
+   {
+    "claim": "A GC on a $4.2M project absorbed $680,000 in defense costs and settlement after a drywall sub's policy lapsed three weeks before mobilization and the carrier denied the claim",
+    "source_title": "Subcontractor Insurance Requirements: A GC's Field Guide \u2014 Struvia",
+    "source_url": "https://struvia.co/blog/subcontractor-insurance-requirements"
+   },
+   {
+    "claim": "myCOI does not publish pricing; entry-level runs an estimated $30-$60 per vendor per year ($1,500-$3,000+ annually for 50 vendors) before seats and per-extraction charges, and its assignment-based pricing makes costs nearly impossible to predict, with users reporting surprise fees",
+    "source_title": "myCOI Alternatives (2026): Real Pricing, No Sales Call \u2014 TrackMyVendor",
+    "source_url": "https://trackmyvendor.com/mycoi-alternatives"
+   },
+   {
+    "claim": "Free Excel templates for COI tracking are widely distributed (Billy, TrackMyVendor, SubcontractorCOI), confirming the spreadsheet status quo at the small end of the market",
+    "source_title": "Free Certificate of Insurance Tracking Excel Template \u2014 Billy",
+    "source_url": "https://billyforinsurance.com/certificate-of-insurance-tracking-template-excel/"
+   },
+   {
+    "claim": "myCOI pricing starts at $500+/month with custom contracts, mandatory demo, and weeks-long implementation; it is designed for organizations managing 200+ certificates, and below that threshold you pay enterprise pricing for features you don't need. For GCs with 10-150 subs or property managers running 20-80 vendors, 'myCOI... was never designed for you.'",
+    "source_title": "myCOI Alternatives (2026): Simpler COI Tracking for SMBs",
+    "source_url": "https://trackmyvendor.com/mycoi-alternatives"
+   },
+   {
+    "claim": "Property managers report myCOI certificate review/audit turnaround of two days to two weeks, especially during construction/renewal season, plus a steep learning curve and frustrating document organization.",
+    "source_title": "Certificate of Insurance Tracking Solutions for Property Managers: bcs vs. MyCOI",
+    "source_url": "https://www.getbcs.com/blog/certificate-of-insurance-tracking-solutions-for-property-managers-bcs-vs.-mycoi"
+   },
+   {
+    "claim": "G2 reviewers describe myCOI's UI as outdated and cumbersome ('the certificate or document view drop-down is chunky and cumbersome to navigate'), and vendors uploading documents cite unclear instructions and complicated login credentials.",
+    "source_title": "myCOI Reviews 2026 | G2",
+    "source_url": "https://www.g2.com/products/mycoi/reviews"
+   },
+   {
+    "claim": "Review roundups of COI tracking tools confirm slow myCOI review speed during renewal periods and vendor-portal friction (subs skipping registration), which is driving demand for simpler alternatives.",
+    "source_title": "4 Best COI Tracking Software Tools Reviewed (Jones)",
+    "source_url": "https://getjones.com/blog/4-coi-tracking-software-tools-comparison/"
+   },
+   {
+    "claim": "An emerging cluster of small challengers (COI File, TrackMyVendor, bcs, Certificial) confirms active demand for sub-enterprise COI tracking, but the SMB tier remains fragmented with no dominant well-loved player.",
+    "source_title": "Best COI Management Software 2026 | COI File",
+    "source_url": "https://coifile.com/blog/coi-management-software/"
+   }
+  ],
+  "existing_alternatives": "Excel/Google Sheets templates and Outlook reminders (dominant at the low end); myCOI, Jones, Evident, bcs, and Billy at the mid/enterprise tier (sales-call pricing, per-vendor fees, insurance-services upsells); early low-cost entrants like TrackMyVendor ($39-79/mo) showing the demand but with tiny footprints and no category winner for the SMB tier.",
+  "why_underserved": "Incumbents built for enterprises with compliance departments: opaque per-vendor pricing, mandatory sales calls, vendor-portal friction. The sub-50-vendor GC/property manager is explicitly told by the industry to 'use a spreadsheet until it breaks.' The recent appearance of multiple scrappy low-end alternatives with free tiers signals validated demand without an entrenched, well-loved winner \u2014 the SMB tier is still up for grabs on distribution and simplicity, not technology. || Incumbents monetize via human certificate-review teams, which forces $500+/month pricing and multi-week onboarding \u2014 economically impossible to offer downmarket. LLM/vision document extraction now makes automated ACORD 25 parsing feasible at software margins, so a $50-150/month self-serve product can serve the 20-150-vendor segment the incumbents structurally cannot. The SMB tier is fragmented among tiny new entrants; no well-loved winner.",
+  "willingness_to_pay_signal": "Risk is denominated in six-to-seven-figure lawsuit outcomes and insurance-audit penalties, and buyers already pay myCOI $1,500-$3,000+/yr while complaining about it; commercial property insurance carriers increasingly require COI programs, creating urgency. A $50-150/mo self-serve tool undercuts incumbents by 5-10x while staying highly profitable.",
+  "buildability_notes": "Classic indie-buildable web app: vendor records, document upload (S3), expiration dates, automated email chase sequences, compliance dashboard, magic-link vendor upload pages (no portal accounts). ACORD 25 certificates are a standardized public form \u2014 LLM-based field extraction (Claude API) makes 'auto-read the COI' feasible without proprietary data. No licensing required as long as you position as tracking software, not insurance advice.",
+  "scout": "smb-trades",
+  "key": "coi-tracking",
+  "merged_from": [
+   1,
+   4
+  ]
+ },
+ {
+  "title": "Backflow test report filing + annual retest reminder engine for plumbers and certified backflow testers",
+  "customer": "Certified backflow testers and small plumbing companies (often 1-5 person operations) that perform annual backflow-preventer tests for commercial and residential customers and must file results with each local water authority",
+  "pain_description": "Annual backflow testing is legally mandated by most municipalities, but every city has a different submission process \u2014 one wants a PDF, the next has its own portal, another still requires paper mail \u2014 so a 15-minute, $75-$150 test drags a further ~30 minutes of paperwork per job, multiplied across several tests per day. A wrong form or missing field can get the tester's client fined by the city, which loses the tester the account, and most small testers have no central record or audit trail when disputes arise. On the revenue side, testers lose repeat business because they have no systematic way to remind hundreds of past customers that their device is due again in 12 months \u2014 the entire business model is an annual-recurrence machine run out of a truck and a filing cabinet.",
+  "evidence": [
+   {
+    "claim": "Every city differs (Plano wants a PDF, Frisco has a portal, Denton wants paper mail); the test takes 15 minutes but paperwork takes double that for every job; one wrong form can get the client fined and lose the tester the account; there is typically a 30-day filing deadline and testers lack any central record or audit trail",
+    "source_title": "FlowCert \u2014 Backflow Testing Software for Plumbers (blog)",
+    "source_url": "https://flowcert.co/blog/how-to-become-certified-backflow-tester"
+   },
+   {
+    "claim": "Backflow testing costs $30-$300 per device (commonly $75-$150 residential, $150-$300 commercial), and most municipalities require testing annually \u2014 making every customer an automatic yearly repeat sale if the tester remembers to chase it",
+    "source_title": "How Much Does Backflow Testing Cost? (2026) \u2014 HomeGuide",
+    "source_url": "https://homeguide.com/costs/backflow-testing-cost"
+   },
+   {
+    "claim": "Direct submission to the water utility by the tester is the preferred workflow because reports going missing is a real failure mode that breaks the documentation trail",
+    "source_title": "Who Files Backflow Test Reports With the City? \u2014 Pacific Backflow",
+    "source_url": "https://www.pacificbackflow.com/post/who-files-backflow-test-reports-with-city-explained-simply"
+   },
+   {
+    "claim": "SwiftComply sells primarily to water utilities (testers are pushed into whichever portal each city bought), and Inspect Point targets fire/life-safety contractors \u2014 leaving the small independent tester's side of the workflow thinly served",
+    "source_title": "Backflow Testers \u2014 SwiftComply",
+    "source_url": "https://www.swiftcomply.com/backflow-testers/"
+   }
+  ],
+  "existing_alternatives": "Paper forms and the trunk of the truck; per-city municipal portals (SwiftComply, BSI Online/Aqua Backflow) that testers must juggle and often pay per-report filing fees into; general FSM software with no backflow-specific forms; FlowCert, a new entrant generating ready-to-submit PDFs with a database of ~1,700 cities \u2014 evidence the niche is real but far from locked up.",
+  "why_underserved": "The dominant vendors (SwiftComply, BSI) sell to the municipality, not the tester, so the tester experience is fragmented across dozens of inconsistent portals \u2014 nobody with scale is optimizing the contractor's side. Field-service incumbents ignore the niche because it's form-and-filing centric rather than dispatch centric. Only one visible small startup (FlowCert) is attacking it, and thousands of certified testers per state still run on paper.",
+  "willingness_to_pay_signal": "Testers gross $75-$300 per 15-minute test and do several per day; software that cuts 30 minutes of paperwork per job directly increases daily test capacity, and automated 12-month retest reminders convert a one-time customer list into guaranteed annual recurring revenue \u2014 a $50-100/mo price is trivially justified. The city-fine risk adds urgency beyond convenience.",
+  "buildability_notes": "Indie-buildable: form-template engine that maps standard test-gauge readings onto per-jurisdiction PDF layouts (public municipal forms), customer/device database, cron-based annual reminder emails/SMS, and a submission log/audit trail. City form templates can be added incrementally starting with one metro area; PDFs generated server-side. No gated APIs \u2014 where a city has a portal, the tool still generates the data sheet and logs the submission. Tester certification is the customer's license, not the software's.",
+  "scout": "smb-trades",
+  "key": "backflow-compliance",
+  "merged_from": [
+   2
+  ]
+ },
+ {
+  "title": "Carrier commission reconciliation for small independent insurance agencies",
+  "customer": "Independent insurance agencies and brokerages (P&C, life/health, Medicare) with 2-20 producers \u2014 the owner or agency bookkeeper who reconciles carrier commission statements and calculates producer splits every month.",
+  "pain_description": "Each carrier sends a monthly commission statement in its own format (PDF, Excel, CSV, portal download). The agency must normalize every statement, match thousands of line items against its book of business, detect short-pays and missing payments, and compute producer split payouts. Done in Excel this takes 8-12+ hours a month, and errors are invisible: agencies lose an estimated $10,000-$16,000 per year (roughly $1,200-$4,000/month) to unrecovered carrier underpayments. A mid-size book of 500 policies across 15 carriers generates 7,500+ line items a year \u2014 practically impossible to reconcile by hand, so most small agencies simply don't, and eat the leakage.",
+  "evidence": [
+   {
+    "claim": "Agents/agencies lose $10,000-$16,000 annually in commission discrepancies; 500 policies x 15 carriers = 7,500+ line items per year, practically impossible to reconcile manually.",
+    "source_title": "Insurance Commission Reconciliation: How to Recover $10K-$16K in Annual Lost Revenue",
+    "source_url": "https://unlockedcrm.ai/blog/insurance-commission-reconciliation-guide"
+   },
+   {
+    "claim": "Comparing carrier statements against the agency's books takes 8-12 hours per month for the average agency; the vendor also claims the average agency loses $1,200-$4,000/month to carrier short payments.",
+    "source_title": "CommissionIQ \u2014 Insurance Commission Management",
+    "source_url": "https://mycommissioniq.com/"
+   },
+   {
+    "claim": "Carrier statements routinely disagree with internal records due to mid-term policy adjustments, cancellations, and timing delays; the most time-consuming part of manual reconciliation is normalizing each carrier's data format, repeated every month for every carrier.",
+    "source_title": "Insurance Commission Reconciliation: A Practical Guide (EnrollHere)",
+    "source_url": "https://enrollhere.com/blogs/insurance-commission-reconciliation-guide"
+   },
+   {
+    "claim": "Industry incumbent AgencyBloc publishes an entire content series on why agencies must move off Excel for commission processing \u2014 spreadsheets hide keying errors, delay agent payroll, and mask commission leakage \u2014 confirming spreadsheets are still the status quo at small agencies.",
+    "source_title": "Spreadsheets vs. Commissions Software: 5 Reasons Insurance Agencies Are Making the Switch (AgencyBloc)",
+    "source_url": "https://www.agencybloc.com/commissions-management/efficiency/reasons-you-shouldnt-use-excel-spreadsheets-to-process-commissions/"
+   }
+  ],
+  "existing_alternatives": "Excel (the actual incumbent at small agencies); AgencyBloc (health/benefits-focused, requires adopting a full AMS); Applied Recon (locked to the Applied Systems enterprise ecosystem); Commission Tracker and CommissionIQ (small, dated players); outsourced bookkeeping services. Nothing modern, self-serve, and standalone for a 5-person P&C or Medicare agency.",
+  "why_underserved": "Existing tools are either bolted onto full agency-management systems (forcing a painful platform migration to get one feature) or are legacy desktop-era products. The core technical barrier \u2014 parsing dozens of heterogeneous PDF/Excel carrier statement formats \u2014 used to require hand-built templates per carrier, which only enterprise vendors could afford; LLM-based extraction removes that barrier and makes a standalone SMB tool feasible for the first time. Roughly 40,000 independent agencies in the US, most too small for AgencyBloc/Applied pricing.",
+  "willingness_to_pay_signal": "The product recovers hard dollars: if an agency recoups even a fraction of $10K-$16K/year in short-pays and saves 8-12 bookkeeper-hours a month, a $99-$299/month subscription pays for itself immediately. Agencies already pay for AMS software and outsourced commission-processing services (eNoah and others sell this as a manual service), proving budget exists.",
+  "buildability_notes": "Buildable solo: users upload carrier statements (PDF/CSV/XLSX) and a book-of-business export from their AMS or a spreadsheet; LLM extracts and normalizes line items; deterministic matching engine flags missing/short payments; computes producer splits; exports payroll and dispute reports. No carrier API access needed (statements are files the agency already has), no licensing \u2014 the software does math on the customer's own data, it doesn't sell insurance. Mock statements are easy to generate for development.",
+  "scout": "niche-pros",
+  "key": "commission-recon",
+  "merged_from": [
+   5
+  ]
+ },
+ {
+  "title": "Continuous EAA/WCAG compliance monitoring + accessibility statement generator for SMB e-commerce (anti-overlay positioning)",
+  "customer": "Small/mid-size e-commerce stores (Shopify, WooCommerce, custom) selling into the EU with 10+ employees or >\u20ac2M turnover, plus the web agencies that maintain their sites",
+  "pain_description": "The European Accessibility Act became enforceable on 28 June 2025 with no grace period for existing sites. Any store selling digital services to EU consumers must meet WCAG/EN 301 549, publish an accessibility statement, and keep it current as the site changes. French disability groups sent formal legal notices to retailers within days and filed the first EAA lawsuits in November 2025; penalties can exceed \u20ac100,000 plus market exclusion. SMB owners face a nasty choice: manual agency audits cost $1,500-$5,500 per pass (and go stale with every theme update), or one-click 'overlay' widgets that courts reject and that were themselves the subject of an FTC penalty. There is no cheap, honest, continuous option: scan my store weekly, tell me the real WCAG failures in plain language with fix instructions for my platform, keep my accessibility statement and compliance evidence file up to date, and alert me when a deploy breaks something.",
+  "evidence": [
+   {
+    "claim": "EAA enforcement began 28 June 2025 with no grace period for existing e-commerce services; French disability organizations sent formal legal notices to four grocery retailers on 7 July 2025 and filed emergency injunctions in November 2025 \u2014 the first EAA lawsuits in Europe",
+    "source_title": "European Accessibility Act Made Simple for Ecommerce Brands (TestParty)",
+    "source_url": "https://testparty.ai/blog/european-accessibility-act-ecommerce-brands-2025-guide"
+   },
+   {
+    "claim": "Only microenterprises (<10 employees and <\u20ac2M turnover) get limited exemptions; the EAA applies to any ecommerce brand selling to EU customers regardless of headquarters location, with penalties exceeding \u20ac100,000 and market exclusion possible",
+    "source_title": "A guide to navigating the European Accessibility Act (Bird & Bird)",
+    "source_url": "https://www.twobirds.com/en/insights/2025/a-guide-to-navigating-the-european-accessibility-act-for-online-retailers-service-providers-and-plat"
+   },
+   {
+    "claim": "Over 800 businesses using overlay widgets (AccessiBe, UserWay, EqualWeb) were sued in 2023-2024 \u2014 roughly 25% of all digital accessibility lawsuits \u2014 and courts reject overlay installation as evidence of compliance",
+    "source_title": "Why 800+ Businesses with AccessiBe Were Still Sued (TestParty)",
+    "source_url": "https://testparty.ai/blog/why-800-businesses-with-accessibe-were-still-sued"
+   },
+   {
+    "claim": "In April 2025 the FTC hit AccessiBe with a $1 million penalty for misrepresenting that its AI overlay could make any website WCAG-compliant",
+    "source_title": "Accessibility Overlay Widgets Attract Lawsuits (Accessibility.Works)",
+    "source_url": "https://www.accessibility.works/blog/avoid-accessibility-overlay-tools-toolbar-plugins/"
+   },
+   {
+    "claim": "Manual accessibility audits for small business sites run $1,500-$5,500 (often $100-$250 per page), with remediation costing $5,000-$20,000 more \u2014 pricing that repeats every time the site materially changes",
+    "source_title": "Web Accessibility Audit Cost Guide (DigitalA11Y)",
+    "source_url": "https://www.digitala11y.com/how-much-does-a-web-accessibility-audit-cost/"
+   }
+  ],
+  "existing_alternatives": "Overlay widgets (accessiBe ~$490+/yr, UserWay) \u2014 now legally discredited and FTC-sanctioned; enterprise platforms (Level Access, Siteimprove, AudioEye) priced and sold for large companies; one-off manual agency audits at $1.5k-$5.5k that go stale; TestParty (VC-backed) focuses on automated code remediation for larger brands; free one-page checkers (WAVE, Lighthouse) with no monitoring, statement generation, or evidence trail",
+  "why_underserved": "The incumbents at the SMB price point are the overlays, and they are now radioactive \u2014 courts reject them, the FTC fined the market leader, and settlements require their removal. The honest players (Level Access, Deque, Siteimprove) sell enterprise contracts. Nobody well-loved owns 'continuous, honest, plain-language EAA compliance for a Shopify store at $30-80/month with an auto-maintained accessibility statement and evidence file.' The June 2025 enforcement date plus first lawsuits created urgency that didn't exist before.",
+  "willingness_to_pay_signal": "SMBs already pay $490+/yr for overlays that don't work and $1,500-$5,500 per manual audit; EAA fines exceed \u20ac100,000 and French plaintiffs are actively litigating; ADA lawsuit-driven demand in the US already sustains a whole industry of paid tools, and the EAA adds a second continent of buyers",
+  "buildability_notes": "Highly buildable by an indie dev: crawl the customer's own public site with Playwright + axe-core (open-source, industry-standard rules engine), diff results over time, map violations to plain-language platform-specific fixes (Shopify/Woo theme patterns), generate the EU-format accessibility statement from a template, schedule weekly scans and email alerts. No gated APIs, no scraping third parties, no licensed-profession claims needed (position as monitoring + guidance, not legal certification). Simple DB of scans/violations/statements.",
+  "scout": "reg-compliance",
+  "key": "eaa-accessibility",
+  "merged_from": [
+   8
+  ]
+ },
+ {
+  "title": "Auto-renewal law (ARL) compliance auditor and annual-reminder engine for subscription businesses",
+  "customer": "DTC subscription brands, SaaS companies, and membership businesses selling to US consumers (especially those on Stripe/Shopify/Recharge without in-house counsel)",
+  "pain_description": "A wave of class actions is hitting subscription businesses over state automatic-renewal laws. California's amended ARL (AB 2863, effective July 1, 2025) requires click-to-cancel in the same medium as signup, expanded free-trial consent, and annual renewal reminders \u2014 and immediately triggered a surge of class actions. Settlements are real money: HelloFresh $7.5M consent judgment, Google Play $5M, System1 $2.5M, and the FTC's $2.5B Amazon settlement. Requirements now vary state by state (Maryland demands 14 days' notice before a trial converts, Utah 3 days; 20+ states have ARLs), and the FTC restarted click-to-cancel rulemaking in January 2026 after the Eighth Circuit vacated the old rule. A small subscription brand has no tool that audits its actual signup/cancel/reminder flows against this shifting matrix and operates the legally-required annual reminders \u2014 they discover gaps when the demand letter arrives.",
+  "evidence": [
+   {
+    "claim": "A dozen new ARL lawsuits and two $7.5M settlements (including HelloFresh) signal a new era of automatic-renewal enforcement; CART's HelloFresh consent judgment is its largest in recent years",
+    "source_title": "A Dozen New Lawsuits And Two $7.5M Settlements Signal A New Era For Automatic Renewal Compliance (Benesch Law)",
+    "source_url": "https://www.beneschlaw.com/insight/a-dozen-new-lawsuits-and-two-7-5m-settlements-signal-a-new-era-for-automatic-renewal-compliance/"
+   },
+   {
+    "claim": "California's amended ARL took effect July 1, 2025 and gave rise to a growing wave of consumer class actions targeting subscription-based businesses, from skincare to online memberships",
+    "source_title": "California's Automatic Renewal Laws: How to Defend A Growing Wave of Class Action Lawsuits (Jeffer Mangels, March 2026)",
+    "source_url": "https://articles.jeffer.com/2026/03/11/californias-automatic-renewal-laws-how-to-defend-a-growing-wave-of-class-action-lawsuits-targeting-subscription-based-businesses/"
+   },
+   {
+    "claim": "AB 2863 requires cancellation via the same medium as signup, clear pre-consent disclosures, affirmative consent covering free-to-pay conversions, and annual renewal reminders",
+    "source_title": "Click To Cancel: California Updates Automatic Renewal Law (Davis Wright Tremaine)",
+    "source_url": "https://www.dwt.com/insights/2024/10/ab-2863-updates-california-automatic-renewal-law"
+   },
+   {
+    "claim": "The FTC's click-to-cancel rule was vacated by the Eighth Circuit in July 2025, but the FTC restarted rulemaking in January 2026 with a new ANPRM while state AGs continue subscription enforcement \u2014 every state ARL remains fully enforceable, with requirements varying (e.g., Maryland 14 days' pre-trial-conversion notice vs Utah 3 days)",
+    "source_title": "FTC and State AGs Continue To Scrutinize Subscription Practices (Arnold & Porter, Feb 2026)",
+    "source_url": "https://www.arnoldporter.com/en/perspectives/advisories/2026/02/ftc-and-state-ags-continue-to-scrutinize-subscription-practices"
+   },
+   {
+    "claim": "Plaintiff firms are actively soliciting auto-renewal class action claimants in 2026, keeping every consumer-facing subscription business exposed",
+    "source_title": "Ongoing Class Action Investigations 2026 (OpenClassActions)",
+    "source_url": "https://openclassactions.com/auto-renewal-class-actions.php"
+   }
+  ],
+  "existing_alternatives": "Law firms billing hourly for flow reviews (Fenwick, DWT publish alerts but service is bespoke); churn tools like ProsperStack and Chargebee Retention that optimize cancellation flows for retention, not legal compliance; Loop Subscriptions publishes a help-doc state matrix for Shopify merchants; no popular product audits flows against the state matrix, generates compliant disclosure copy, and operates the mandated annual reminders",
+  "why_underserved": "The tooling market grew from the churn-reduction side (make cancellation harder), which is now precisely the legal risk. Compliance advice lives with law firms at $500+/hr, priced out of reach of the DTC brands getting sued. The regulatory churn (state amendments 2025-2026, FTC re-rulemaking) makes a continuously-updated product genuinely valuable versus a one-time legal memo that expires.",
+  "willingness_to_pay_signal": "Settlements of $2.5M-$7.5M against mid-size companies, plus documented spend on subscription-adjacent tooling (ProsperStack cites Nutrafol, Hootsuite as customers); a $99-299/month compliance product is cheap insurance against a class action, and fear-driven purchases convert fast after each publicized settlement",
+  "buildability_notes": "Buildable without being a law firm (position as compliance checklists + workflow tooling, 'not legal advice'): curated state-law requirements matrix (public statutes and firm alerts as sources), guided self-audit that walks the founder through their own signup/cancel/reminder flows with screenshots, generated disclosure/consent copy templates, and a scheduler that sends the legally required annual reminders via the merchant's ESP or Stripe/Shopify webhooks (public APIs, merchant's own credentials). Simple DB; the maintained legal matrix is the recurring-value moat.",
+  "scout": "reg-compliance",
+  "key": "autorenewal-compliance",
+  "merged_from": [
+   10
+  ]
+ },
+ {
+  "title": "Per-client LLM cost attribution and margin tracking for agencies and dev shops embedding AI in client work",
+  "customer": "AI automation agencies, dev shops, and micro-SaaS studios (1-20 people) that run OpenAI/Anthropic/Gemini API usage on behalf of multiple clients and need to invoice or protect margins",
+  "pain_description": "Agencies building chatbots, automations, and AI features for clients run all usage through a handful of provider API keys, then face a month-end nightmare: which client burned which tokens? Provider dashboards attribute by API key at best, consumption pricing spikes without warning (78% of IT leaders report unexpected AI charges), and horror stories abound \u2014 a $1.3M OpenAI bill in 30 days, a leaked-key incident turning a $7 budget into $18,000. For an agency, an unattributed spike is not an inconvenience; it is unbillable cost that comes straight out of margin, and a runaway client workflow can wipe out a month's profit overnight. || SECOND INDEPENDENT SCOUT: AI products broke the zero-marginal-cost SaaS model: gross margins run 50-60% instead of 80-90%, heavy users cost 10-50x more than light users while paying the same, and the top 10% of users can drive 60% of AI spend. Founders report underestimating real token cost by 2-5x and discovering unprofitable customers only after the OpenAI/Anthropic bill lands. Stripe's native usage-based billing is widely criticized as inadequate for AI patterns (no real-time authorization/debit, no live per-customer margin), and the HN canon \u2014 'Billing systems are a nightmare for engineers' (330+ comments) \u2014 documents months of engineering sunk into workarounds. Full billing platforms (Metronome, Orb, Lago) are enterprise-oriented or heavy to self-host; small teams just want to see margin per customer and enforce caps/overage without rebuilding billing.",
+  "evidence": [
+   {
+    "claim": "Developer community threads show teams unable to explain their own API costs ('Why are my API costs so high?') with no per-project attribution",
+    "source_title": "Why are my api costs so high? \u2014 OpenAI Developer Community",
+    "source_url": "https://community.openai.com/t/why-are-my-api-costs-so-high/1370029"
+   },
+   {
+    "claim": "Documented runaway-bill incidents: a $1.3M OpenAI API charge in 30 days (Peter Steinberger/OpenClaw), an unmonitored account with no usage limit, and a leaked Google Cloud key turning a $7 budget into $18,000",
+    "source_title": "AI Token Bills Surge: 500M, 1.3M, and 18K in One Night \u2014 KuCoin News",
+    "source_url": "https://www.kucoin.com/news/flash/ai-token-bills-explode-500m-1-3m-and-18k-in-one-night"
+   },
+   {
+    "claim": "78% of IT leaders reported unexpected charges tied to consumption-based or AI pricing models; AI spend is consumption-priced and hard to forecast",
+    "source_title": "AI for the CFO: variable cost, vendor sprawl, and the playbook that ends the surprise bill \u2014 Houtini",
+    "source_url": "https://houtini.com/articles/ai-for-the-cfo-variable-cost/"
+   },
+   {
+    "claim": "Ramp data shows business monthly AI spend grew 4x from Feb 2025 to Feb 2026, with a '$1 trillion AI spend blind spot' in visibility",
+    "source_title": "The $1 trillion AI spend blind spot \u2014 Ramp",
+    "source_url": "https://ramp.com/3-steps-to-manage-ai-spend"
+   },
+   {
+    "claim": "Existing AI spend management entrants (Torii AI Management Platform, May 2026) target enterprise IT \u2014 slicing employee/SaaS usage \u2014 not agency per-client billing attribution",
+    "source_title": "6 AI Spend Management Tools to Control AI SaaS Costs in 2026 \u2014 Torii",
+    "source_url": "https://www.toriihq.com/articles/six-ai-spend-management-tools"
+   },
+   {
+    "claim": "Heavy users cost 10-50x more than light users but pay the same; top 10% of users account for ~60% of AI costs \u2014 flat-rate AI SaaS silently accumulates unprofitable customers",
+    "source_title": "Unit economics for AI SaaS companies: A survival guide for CFOs - Drivetrain",
+    "source_url": "https://www.drivetrain.ai/post/unit-economics-of-ai-saas-companies-cfo-guide-for-managing-token-based-costs-and-margins"
+   },
+   {
+    "claim": "AI-first SaaS gross margins run 50-60% vs 80-90% for traditional SaaS, and most operators underestimate real token cost by 2-5x, discovering it only after launch",
+    "source_title": "AI-First SaaS Unit Economics: The Margin Math Every Founder Gets Wrong - Ertas AI",
+    "source_url": "https://www.ertas.ai/blog/ai-saas-unit-economics-margin-math"
+   },
+   {
+    "claim": "Detailed technical critique that Stripe's usage-based billing cannot natively handle AI needs \u2014 real-time authorization, real-time debit, live per-customer margin, and customer-visible rate cards all require 'exception engineering'",
+    "source_title": "Why Stripe usage-based billing is fundamentally broken for AI products - HackerNoon",
+    "source_url": "https://hackernoon.com/why-stripe-usage-based-billing-is-fundamentally-broken-for-ai-products"
+   },
+   {
+    "claim": "HN discussion 'Why Stripe can't handle complex usage-based billing?' \u2014 practitioners confirm Stripe Billing's architecture requires many workarounds for usage-based models",
+    "source_title": "Why Stripe can't handle complex usage-based billing? - Hacker News",
+    "source_url": "https://news.ycombinator.com/item?id=44580829"
+   },
+   {
+    "claim": "'Billing systems are a nightmare for engineers' drew 330+ HN comments confirming teams sink months into metering/billing edge cases \u2014 a durable, loudly-expressed developer pain",
+    "source_title": "Billing systems are a nightmare for engineers - Hacker News",
+    "source_url": "https://news.ycombinator.com/item?id=31424450"
+   },
+   {
+    "claim": "CFO-oriented analysis: token costs jumping from $25 to $40 on the same $100 of revenue drops gross margin from 75% to 60%; hidden costs (retries, RAG, context management) add 40-60% on top of tracked spend",
+    "source_title": "Your AI Feature Is Quietly Destroying Your Gross Margin - The SaaS CFO",
+    "source_url": "https://www.thesaascfo.com/your-ai-feature-is-quietly-destroying-your-gross-margin/"
+   }
+  ],
+  "existing_alternatives": "Provider dashboards (OpenAI/Anthropic usage pages \u2014 per-key, not per-client, no margin view); developer observability proxies (Helicone, Langfuse, LiteLLM) \u2014 self-hostable and powerful but engineer-oriented, with no invoicing/margin/markup concepts; enterprise SaaS-spend platforms (Torii, Cledara, Vantage) aimed at internal IT spend, not client billing; spreadsheets built from CSV exports.",
+  "why_underserved": "Observability vendors frame the problem as debugging/tracing for engineers; spend-management vendors frame it as internal IT cost control for CFOs. The agency use case \u2014 tag every request to a client/project, set per-client budgets and kill-switch alerts, apply markup, and emit a monthly billable-usage statement per client \u2014 sits between the two and is served by neither. It's too small for Datadog/Vantage and off-thesis for Langfuse, but it's exactly the workflow of thousands of fast-multiplying AI agencies. || The gap is the middle: LLM cost trackers stop at cost, billing platforms start at enterprise. No simple, loved product answers 'which of my customers are unprofitable this month?' and enforces caps/overage into Stripe for a $99/mo price. Incumbent hate (Stripe Billing complaints, Lago complexity) is loud and recent, and the AI-margin squeeze is a 2025-2026 phenomenon incumbents haven't productized down-market.",
+  "willingness_to_pay_signal": "The cost is existential: unattributed usage is unbillable margin loss, and one runaway loop can cost more than a year of any SaaS subscription (documented $18K-$1.3M incidents). Agencies already pay for LiteLLM cloud, Helicone paid tiers, and time-tracking/invoicing tools per client \u2014 a $49-199/month tool that turns raw tokens into a client invoice line pays for itself with one recovered billing cycle.",
+  "buildability_notes": "Indie-buildable: a thin OpenAI-compatible proxy (or LiteLLM-style drop-in base URL) that tags requests with client/project metadata, plus ingestion of official usage/cost APIs from OpenAI and Anthropic (public, documented, customer's own keys). Standard DB + dashboards, budget alerts via email/Slack webhook, PDF/CSV client statements with configurable markup. No gated APIs, no scraping; demoable end-to-end with mocked usage data.",
+  "scout": "ai-era-ops",
+  "key": "ai-cost-margin",
+  "merged_from": [
+   16,
+   28
+  ]
+ },
+ {
+  "title": "Affordable sponsorship-operations hub for indie newsletters and podcasts (the sub-$50/mo gap below Sponsy and Passionfroot)",
+  "customer": "Newsletter operators (5K-100K subscribers) and indie podcasters who sell their own ad slots directly to sponsors \u2014 solo or 2-person media businesses making $500-$20K/mo from sponsorships",
+  "pain_description": "Selling your own ad inventory means juggling: which slots (dates/placements) are available, collecting sponsor assets/copy, deadlines per issue/episode, deliverable verification, performance reports back to sponsors, invoicing, and rebooking. A podcaster with three sponsors on different packages across eight monthly episodes has 30+ deliverables to track every month. Everyone starts in a spreadsheet, which breaks down fast \u2014 double-booked slots, missed asset deadlines, forgotten sponsor reports, lost renewal revenue. The dedicated tools price out exactly this segment: Sponsy starts at $139/mo, Passionfroot killed its free plan and now charges $199/mo plus 5-15% commission on every deal, forever.",
+  "evidence": [
+   {
+    "claim": "A podcaster with three sponsors on different packages across eight monthly episodes has 30+ individual deliverables to track, schedule and verify every month; spreadsheets break down fast",
+    "source_title": "Podcast Sponsorship Management: From Pitch to Payment [2026 Guide] - SponsorFlo",
+    "source_url": "https://www.sponsorflo.ai/blog/podcast-sponsorship-management-guide"
+   },
+   {
+    "claim": "Sponsy pricing starts at $139/mo for 1 publication and goes to $349/mo \u2014 priced for media operators, not indie creators",
+    "source_title": "Sponsy Review 2026 - Ecommerce Fastlane",
+    "source_url": "https://ecommercefastlane.com/sponsy-review-2026/"
+   },
+   {
+    "claim": "Passionfroot replaced its free plan with a $199/month subscription and charges 5% on organic deals and 15% on network deals \u2014 'on every deal, forever,' with no volume graduation",
+    "source_title": "Passionfroot Review (2026): Sponsorship Management Pricing, Features & Honest Take - CreatorStackClub",
+    "source_url": "https://www.creatorstackclub.com/software/passionfroot"
+   },
+   {
+    "claim": "Among monetizing independent podcasters, sponsorship/advertising is the top revenue method \u2014 65% have set up a sponsorship or ad deal, and 41% got their best results from it (survey of 558 creators)",
+    "source_title": "The Independent Podcaster Report 2025 - Alitu",
+    "source_url": "https://alitu.com/creator/content-creation/the-independent-podcaster-report-2025/"
+   },
+   {
+    "claim": "Users 'started with a simple spreadsheet and found themselves with dozens of sponsors, multiple ad slots... losing deals in cells, and spending hours on manual updates'; HubSpot adapted for sponsor tracking requires heavy customization and has no newsletter/ESP integration",
+    "source_title": "Passionfroot vs Sponsy - InboxReads",
+    "source_url": "https://inboxreads.co/tools/passionfroot/vs/sponsy"
+   }
+  ],
+  "existing_alternatives": "Sponsy ($139-349/mo, aimed at multi-publication media ops), Passionfroot ($199/mo + 5-15% take rate, marketplace-centric), Paved/beehiiv ad network (network takes a large cut and controls the sponsor relationship), Notion/Airtable/Google Sheets templates, generic CRMs. Sponsonizer ('Calendly for newsletter ad slots') exists but is a thin single-feature tool \u2014 a sign of demand, not a dominant incumbent.",
+  "why_underserved": "The two real incumbents both repriced upward toward mid-market media companies in 2024-2026, abandoning the long tail. Ad networks solve sales but not operations for directly-sold deals (which pay creators the most). Nobody owns 'sponsorship ops in a box' at $19-49/mo flat with zero commission \u2014 the exact segment (indie newsletter/podcast operators) is large, reachable in public communities (beehiiv/Ghost/podcasting subreddits, creator Twitter), and already paying for adjacent tools.",
+  "willingness_to_pay_signal": "This tool sits directly on the revenue path: a double-booked slot or missed sponsor report costs a $300-2,000 placement or a renewal. Users demonstrably paid Passionfroot even after it went to $199/mo + commission, and complain about the price rather than the category \u2014 classic overpriced-incumbent signal. Sponsorship is the #1 monetization method for podcasters who earn (Alitu).",
+  "market_size_estimate": "beehiiv alone reports tens of thousands of active newsletters; add Ghost, Kit, Substack ad-sellers and ~100K+ active podcasts with any sponsorship. Realistic SAM of 50-150K directly-sponsored publications; at $29/mo, 3K customers = ~$1M ARR \u2014 achievable indie scale.",
+  "buildability_notes": "Standard web-app patterns: availability calendar of ad slots, sponsor portal for asset upload (S3/R2), deliverable checklists, automated deadline emails, Stripe payment links/invoices, simple report builder. Optional public-API integrations (beehiiv, Mailchimp, Ghost all have public documented APIs) to auto-pull open/click stats for sponsor reports \u2014 nice-to-have, not core. No gated APIs, no scraping. Fully mockable for MVP.",
+  "scout": "creators-solo",
+  "key": "sponsorship-ops",
+  "merged_from": [
+   18
+  ]
+ },
+ {
+  "title": "Affiliate link-rot monitor for YouTube creators (dead/out-of-stock product links silently draining commissions)",
+  "customer": "YouTubers and multi-channel creators (tech reviewers, home/kitchen, beauty, outdoors) with 50+ videos carrying Amazon and other affiliate links in descriptions, plus bloggers with parallel link-in-bio/storefronts",
+  "pain_description": "Affiliate links in old video descriptions break silently: products get discontinued, listings removed, sellers vanish, programs restructure. Amazon sends no notification when a promoted product goes 'Currently unavailable' \u2014 the link just stops converting. Roughly 15-20% of Amazon affiliate links develop issues over time, and a creator with 100K subscribers loses an estimated ~$2,400/month to broken links; worse, a dead landing page also forfeits Amazon's 24-hour cookie on everything else the viewer would have bought. Long-tail videos keep pulling clicks for years, so the leak compounds while the creator has no way to see it without manually opening hundreds of descriptions.",
+  "evidence": [
+   {
+    "claim": "Broken affiliate links cost the average 100K-subscriber YouTube creator roughly $2,400/month; ~15-20% of Amazon affiliate links develop issues over time; Amazon sends no notification when a listing dies \u2014 'no email, no dashboard alert, nothing'",
+    "source_title": "Broken Affiliate Links on YouTube: Finding, Fixing, and Preventing Lost Commissions - Youfiliate",
+    "source_url": "https://www.youfiliate.com/blog/broken-affiliate-links-costing-you-money"
+   },
+   {
+    "claim": "Out-of-stock Amazon products in YouTube descriptions cause a double penalty: lost product commission plus loss of the 24-hour cookie window on the viewer's other purchases",
+    "source_title": "Are Your YouTube Amazon Affiliate Links Pointing to Out-of-Stock Products? - Youfiliate",
+    "source_url": "https://www.youfiliate.com/blog/amazon-affiliate-links-out-of-stock-youtube"
+   },
+   {
+    "claim": "Geniuslink (a major affiliate link tool) documents the broken-Amazon-link problem and notes its own link-checking plugin became unavailable \u2014 the segment's tooling is thin and partially abandoned",
+    "source_title": "Finding Broken Amazon Associates Links - Geniuslink",
+    "source_url": "https://geniuslink.com/blog/finding-broken-amazon-associates-links/"
+   },
+   {
+    "claim": "AMZ Watcher scans websites and YouTube channels for broken/unavailable Amazon links and alerts on missing tags \u2014 proof of demand, but it is Amazon-centric and primarily built for WordPress site owners",
+    "source_title": "Amazon Affiliate Link Checking & Monitoring Tool - AMZ Watcher",
+    "source_url": "https://amzwatcher.com/"
+   }
+  ],
+  "existing_alternatives": "AMZ Watcher (Amazon-only, website-first, YouTube on higher paid plans), Youfiliate (brand-new micro-tool, unproven), Geniuslink (link localization; its broken-link checker lapsed), manual spot-checking. None do multi-network (Amazon + LTK + ShareASale + brand-direct) monitoring across YouTube descriptions, pinned comments, and link-in-bio pages with suggested replacements and one-click bulk description updates via the YouTube API.",
+  "why_underserved": "The niche has only small, single-network, website-first tools; no well-loved incumbent owns 'revenue leak detection for video creators.' Amazon's silence on dead listings guarantees the problem persists, and the wedge of bulk-updating YouTube descriptions via the official API (which competitors largely don't do) is genuine product depth an indie can ship.",
+  "willingness_to_pay_signal": "The pain is denominated in dollars per month ($2,400/mo estimate for a 100K-sub channel); a $19-49/mo monitor that recovers even one converting link pays for itself. Creators already pay AMZ Watcher and Geniuslink subscriptions for weaker versions of this, proving budget exists.",
+  "market_size_estimate": "Amazon Associates alone has ~900K+ active affiliates; hundreds of thousands of YouTube channels monetize via affiliate links (affiliate is a top-3 revenue stream for review/tutorial channels). A 5-10K customer niche at $29/mo (~$2-3.5M ARR) is realistic indie scale.",
+  "buildability_notes": "MVP: YouTube Data API v3 (public, API-key/OAuth, free quota) to pull all video descriptions, extract affiliate URLs, resolve redirects, and check destination status/availability; dashboard of broken/at-risk links ranked by video views; email alerts; OAuth-based one-click description updates. Caveat: Amazon availability checks are the sensitive piece \u2014 best handled via Amazon's PA-API using each customer's own Associates credentials (affiliates qualify for PA-API), with plain HTTP status checks for other networks, so fragile scraping is not the core mechanism. No licensing, no proprietary data.",
+  "scout": "creators-solo",
+  "key": "affiliate-linkrot",
+  "merged_from": [
+   20
+  ]
+ },
+ {
+  "title": "3PL and fulfillment invoice auditing for small DTC brands (dim-weight, hidden fees, dispute-window tracking)",
+  "customer": "DTC e-commerce brands doing roughly $500K\u2013$20M/yr that outsource fulfillment to a 3PL (ShipBob, ShipMonk, Selery-class or regional 3PLs) \u2014 the founder or ops manager who eyeballs a multi-tab monthly invoice in Excel",
+  "pain_description": "3PL invoices are riddled with errors that quietly eat margins: dimensional-weight overcharges are the single most common billing error and can inflate shipping costs 15-40% on lightweight items; storage rate changes buried in contract fine print, Q4 surcharges applied without notice, minimum pick fees, and duplicate line items. Billing errors and service-failure refunds represent 1-9% of total invoice value, but most contracts only allow disputes within 30-90 days \u2014 miss the window and the money is gone. Small brands have no tooling: they reconcile hundreds of line items against a rate card manually in spreadsheets, or simply don't audit at all.",
+  "evidence": [
+   {
+    "claim": "Dimensional weight overcharges are the single most common fulfillment billing error and can increase shipping costs 15-40% on lightweight items; invoices drift via buried storage rate changes, minimum order fees, and unannounced surcharges; disputes must typically be filed within 30-90 days",
+    "source_title": "The Hidden 3PL Fees That Are Eating Your Margins | Selery Fulfillment",
+    "source_url": "https://www.seleryfulfillment.com/the-hidden-3pl-fees/"
+   },
+   {
+    "claim": "Hidden fees, vague billing lines, and unclear surcharges are among the most common frustrations ecommerce brands share on logistics forums like Reddit and LinkedIn; brands are advised to run manual billing audits line-by-line",
+    "source_title": "3PL Billing Audit: How to Spot Overcharges and Hidden Fees | ShipDudes",
+    "source_url": "https://shipdudes.com/blog/3pl-billing-audit-how-to-spot-overcharges-and-hidden-fees"
+   },
+   {
+    "claim": "Parcel/fulfillment audit services typically recover 2-5% of total shipping spend (some report 1-9% of invoice value) from late deliveries, duplicate charges, incorrect surcharges, and billing errors",
+    "source_title": "Parcel Audit Services: How They Work & What They Recover in 2026 | D'Arrigo Consulting",
+    "source_url": "https://www.darrigoconsulting.com/blog/parcel-audit-services-guide"
+   },
+   {
+    "claim": "Incumbent contingency audit firms charge 25-50% of recovered amounts (Refund Retriever charges 50% of refunds obtained)",
+    "source_title": "Shipping Refunds | Package Auditing FAQ | Refund Retriever",
+    "source_url": "https://www.refundretriever.com/questions"
+   },
+   {
+    "claim": "The freight-audit software market (Intelligent Audit since 1996, Loop, Enveyo, Pando, FreightPOP) targets enterprise and mid-market shippers and 3PLs, not small DTC brands auditing their own 3PL bills",
+    "source_title": "4 best freight audit companies to streamline logistics costs | Loop",
+    "source_url": "https://www.loop.com/article/4-best-freight-audit-companies-to-streamline-logistics-costs"
+   }
+  ],
+  "existing_alternatives": "Enterprise freight audit platforms (Intelligent Audit, Loop, Enveyo \u2014 enterprise sales, per-invoice pricing for large shippers), contingency parcel-audit firms taking 25-50% of recoveries (and focused on carrier refunds like late UPS/FedEx deliveries, not 3PL fulfillment fees), manual Excel reconciliation, or nothing.",
+  "why_underserved": "Everything in the audit market points at either huge shippers (enterprise SaaS) or carrier late-delivery refunds (contingency firms). The specific artifact \u2014 a small brand's monthly 3PL fulfillment invoice reconciled against its own rate card and shipment data \u2014 has no dedicated SMB tool; the advice content (ShipDudes, Selery) literally tells brands to do it by hand. Contingency firms' 50% take rate is widely resented, which is exactly the hated-incumbent-pricing signal.",
+  "willingness_to_pay_signal": "Recoveries of 2-5% of shipping spend are real money: a brand spending $30K/mo on fulfillment leaves $600-1,500/mo on the table. Merchants already prove willingness to pay by giving contingency auditors 25-50% of recoveries; a flat $99-299/mo SaaS that catches the same errors and drafts the dispute email inside the 30-90 day window is an easy trade. Buyer is a business owner with direct P&L pain and a hard deadline (dispute window) creating urgency.",
+  "buildability_notes": "Very buildable: core data arrives as user-uploaded 3PL invoices (CSV/PDF) and the brand's own rate card \u2014 no gated APIs required for the MVP. LLM-based invoice parsing into line items, rules engine comparing billed vs. contracted rates (dim-weight recalculation from product dimensions the user enters), duplicate detection, dispute-deadline tracker, and auto-drafted dispute emails. Optional later: Shopify API (public app) to cross-check order counts against billed pick fees. Simple web app + DB; mockable data for development.",
+  "scout": "ecommerce-sellers",
+  "key": "threepl-audit",
+  "merged_from": [
+   22
+  ]
+ },
+ {
+  "title": "Flat-fee chargeback evidence automation for small Shopify/Stripe merchants (anti-Chargeflow)",
+  "customer": "Small and mid-size Shopify and Stripe merchants ($300K\u2013$10M GMV) fighting a rising tide of friendly-fraud disputes without a dedicated ops person \u2014 currently either ignoring disputes or paying success-fee vendors",
+  "pain_description": "Chargebacks are exploding \u2014 global costs of ~$33.8B in 2025, friendly fraud now ~80% of all chargebacks, and 62% of merchants report YoY increases in first-party disputes with ~$35 of operational cost per $100 contested. Shopify pegs typical losses at 0.47% of revenue (~$4,700/yr per $1M). The dominant SMB tool, Chargeflow, takes 25% of every recovered chargeback \u2014 the highest rate in the market \u2014 and merchants report being charged the 25% even on disputes where they compiled and submitted the evidence themselves, while Chargeflow's auto-generated responses read as generic copy-paste templates that lose ('when Chargeflow handled the cases, we lost basically 10 out of 10'; one merchant reported $4,000+ in fees). Writing a strong evidence pack manually takes 1-3 hours per dispute pulling order data, tracking, device/IP info, and policy screenshots.",
+  "evidence": [
+   {
+    "claim": "Global chargebacks expected to cost merchants $33.79B in 2025 rising to $41.69B by 2028; friendly fraud accounts for nearly 80% of chargebacks; 62% of merchants report YoY increase in first-party disputes with ~$35 operational cost per $100 contested",
+    "source_title": "Chargeback Statistics 2026: 25+ Facts on Fraud, Costs & Trends | chargeback.io",
+    "source_url": "https://www.chargeback.io/blog/chargeback-statistics"
+   },
+   {
+    "claim": "Shopify estimates annual chargeback losses at 0.47% of total revenue \u2014 roughly $4,700/yr for a $1M store",
+    "source_title": "What is a Chargeback? A Shopify Merchant's Guide | Shopify",
+    "source_url": "https://www.shopify.com/blog/what-is-a-chargeback"
+   },
+   {
+    "claim": "Chargeflow charges 25% of every recovered chargeback (its own pricing page), among the highest take rates in the market",
+    "source_title": "Chargeflow Pricing",
+    "source_url": "https://www.chargeflow.io/pricing"
+   },
+   {
+    "claim": "Merchant reviews report losing $4,000+ in Chargeflow fees, being charged 25% even when the merchant compiled and submitted the winning evidence themselves, and losing 'basically 10 out of 10' cases Chargeflow handled with generic copy-paste template responses",
+    "source_title": "Chargeflow Reviews | Shopify App Store",
+    "source_url": "https://apps.shopify.com/chargeflow/reviews"
+   },
+   {
+    "claim": "Independent vendor comparisons position rivals specifically against Chargeflow's success-fee model, confirming pricing resentment is a recognized wedge in this market",
+    "source_title": "Chargeblast vs Chargeflow | Chargeblast",
+    "source_url": "https://www.chargeblast.com/blog/chargeblast-vs-chargeflow"
+   }
+  ],
+  "existing_alternatives": "Chargeflow (25% success fee, automation quality complaints), Chargeblast (per-alert pricing, focused on pre-chargeback alerts rather than evidence), Disputifier, enterprise platforms (Chargebacks911, Verifi/Ethoca \u2014 enterprise sales and pricing), Stripe/Shopify's bare-bones native dispute forms, or manually assembling evidence in 1-3 hours per dispute.",
+  "why_underserved": "The SMB leader is actively resented on the two dimensions that matter \u2014 take-rate pricing (25% of recoveries, charged even for merchant-won cases) and evidence quality (template responses that lose). Enterprise vendors won't come down-market. That leaves a clear wedge: merchant-controlled, high-quality evidence generation at flat predictable pricing. Merchants explicitly say in reviews they'd rather do the work themselves than pay 25% \u2014 a tool that makes 'doing it yourself' take 5 minutes instead of 2 hours is exactly what the complaints ask for.",
+  "willingness_to_pay_signal": "Merchants demonstrably pay 25% of recovered funds today (one reviewer paid $4,000+); average dispute is worth ~$100-250 recovered, and a store losing 0.47% of revenue has direct, quantified pain. Flat $49-199/mo undercuts the incumbent's effective cost by 5-10x for any merchant recovering more than a few hundred dollars monthly, and the resentment in reviews shows urgency to switch.",
+  "buildability_notes": "Buildable by a non-specialist: Stripe's Disputes API is fully public (list disputes, upload structured evidence fields programmatically); Shopify public apps can read orders, fulfillments, tracking, and customer history. MVP = connect Stripe (API key/OAuth), detect new disputes, auto-assemble the reason-code-specific evidence pack (order details, delivery confirmation, customer history, ToS acceptance, LLM-drafted rebuttal narrative mapped to card-network reason codes, which are publicly documented), and submit via API with merchant one-click approval. No card-network gated access needed \u2014 everything goes through the merchant's own Stripe/Shopify account. PayPal disputes API is also public for later expansion.",
+  "scout": "ecommerce-sellers",
+  "key": "chargeback-evidence",
+  "merged_from": [
+   24
+  ]
+ },
+ {
+  "title": "Membership management for small clubs and associations fleeing Wild Apricot",
+  "customer": "Volunteer-run and small-staff membership organizations \u2014 hobby clubs, professional-association chapters, alumni groups, small nonprofits \u2014 with roughly 100-2,000 members, currently paying Wild Apricot $66-$420+/month",
+  "pain_description": "Wild Apricot (the category default for small-org membership management) was acquired by PE-backed Personify in 2017 and has since raised prices ~20% in 2021 and ~25% in 2023, bills by total contacts (including lapsed members and prospects) so orgs get pushed into higher tiers, charges a punitive 20% 'Payment System Servicing Fee' on the subscription if the org uses any payment processor other than its in-house AffiniPay (an extra ~$576/yr on the Professional plan), and has let support degrade to email-only with reported 3-week response times while shipping only two notable product updates in 27 months. Volunteer admins are stuck doing renewals, dues, event RSVPs and member emails on a stagnating, increasingly expensive platform.",
+  "evidence": [
+   {
+    "claim": "Wild Apricot applies a 20% Payment System Servicing Fee to the subscription for US/Canada orgs that use any payment system other than AffiniPay; users petitioned against it on Change.org",
+    "source_title": "Payment System Servicing Fee \u2013 Wild Apricot help center",
+    "source_url": "https://support.wildapricot.com/hc/en-us/articles/24303136407821-Payment-System-Servicing-Fee"
+   },
+   {
+    "claim": "Change.org petition 'Wild Apricot: Stop 20% Payment System Servicing Fee' created by nonprofit users",
+    "source_title": "Change.org petition",
+    "source_url": "https://www.change.org/p/palmeto-corp-wild-apricot-stop-20-payment-system-servicing-fee-on-4-2-19"
+   },
+   {
+    "claim": "2025 Capterra reviewer: since the Personify acquisition 'the support is HORRIBLE,' electronic communications only, with reports of three-week waits for email responses; contact-based pricing creates billing surprises",
+    "source_title": "WildApricot Reviews \u2013 Capterra",
+    "source_url": "https://www.capterra.com/p/76116/WildApricot/reviews/"
+   },
+   {
+    "claim": "Price hikes of 20% in 2021 and 25% in 2023; product development stagnant with only two notable updates in 27 months; orgs pay for lapsed/historical contacts",
+    "source_title": "Wild Apricot Is Getting Too Expensive \u2013 Somiti blog",
+    "source_url": "https://somiti.net/blog/wild-apricot-too-expensive"
+   },
+   {
+    "claim": "Competitors openly farm Wild Apricot churn; MembershipWorks positions $35/mo for 300 accounts vs Wild Apricot's $66/mo for only 100 contacts, confirming price-driven switching demand",
+    "source_title": "A WildApricot Alternative \u2013 MembershipWorks",
+    "source_url": "https://membershipworks.com/wildapricot-alternative/"
+   }
+  ],
+  "existing_alternatives": "Wild Apricot (hated incumbent), MembershipWorks, Join It, Raklet, TidyHQ, Somiti, Zeffy, or generic tools (Google Sheets + Mailchimp + PayPal). The alternatives list is long but fragmented and shallow \u2014 most are either dated UIs, generic community platforms, or missing one leg of the dues/renewals/events/member-directory/website-embed combo, which is why 'Wild Apricot alternatives' listicles keep proliferating without a consensus winner.",
+  "why_underserved": "The incumbent is a textbook PE acquire-and-milk (price hikes + 20% gateway penalty + support collapse + stagnant roadmap), yet no alternative has consolidated the exodus. Small orgs are too small for association-management suites (Personify, iMIS) and too structured for community tools (Circle, Mighty Networks). A focused product \u2014 e.g., per-active-member pricing, Stripe-native, one-click Wild Apricot CSV import \u2014 has a clear wedge.",
+  "market_size_estimate": "Wild Apricot alone claims tens of thousands of paying orgs; the US has ~1.5M nonprofits plus hundreds of thousands of clubs/chapters. Realistic serviceable niche: 50k-200k small orgs paying $30-100/mo, i.e., a $20-100M+ ARR category with room for a $10-30k MRR indie product quickly.",
+  "willingness_to_pay_signal": "Targets already pay $66-$420+/mo plus the 20% PSSF penalty and 2021/2023 price hikes; MembershipWorks/Join It charge $35-100/mo and win deals purely on price/fairness, showing budget exists and switching happens when import is easy.",
+  "buildability_notes": "Fully buildable by a non-specialist: members DB, recurring dues via Stripe Billing (public API), event RSVP, email (Postmark/Resend), embeddable member directory/join widget, CSV import from Wild Apricot's standard export. No licensing, no gated APIs, no scraping. Payments handled by Stripe as merchant of record patterns; the org's compliance burden, not yours.",
+  "scout": "hated-incumbents",
+  "key": "membership-refuge",
+  "merged_from": [
+   29
+  ]
+ }
+]

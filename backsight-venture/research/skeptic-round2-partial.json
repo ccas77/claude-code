@@ -1,0 +1,637 @@
+{
+  "summary": "Adversarial skeptics attack tournament ranks 5-8 after top-4 was seriously weakened",
+  "agentCount": 8,
+  "logs": [
+    "[skeptic-mkt:autorenewal-compliance] failed: You've hit your session limit · resets 11am (UTC)",
+    "Verdicts: eaa-accessibility/implementability=survives_with_fixes; eaa-accessibility/market=seriously_weakened; hvac-agreements/implementability=survives_with_fixes; hvac-agreements/market=seriously_weakened; membership-refuge/implementability=survives_with_fixes; membership-refuge/market=seriously_weakened; autorenewal-compliance/implementability=seriously_weakened; autorenewal-compliance/market=undefined"
+  ],
+  "result": {
+    "skeptics": [
+      {
+        "key": "eaa-accessibility",
+        "lens": "implementability",
+        "verdict": {
+          "verdict": "survives_with_fixes",
+          "fatal_flaws": [],
+          "weaknesses": [
+            "(duplicate-suppressed — see list above)"
+          ],
+          "evidence_checks": [
+            {
+              "claim": "FTC issued a $1M penalty against accessiBe (April 2025 final order) for misrepresenting that its AI overlay could make websites WCAG-compliant",
+              "result": "VERIFIED. FTC press releases confirm the January 2025 proposed order and April 2025 final approval; the order bars accessiBe from claiming its automated products can make or keep any website WCAG-compliant absent substantiation. This is both a market tailwind for anti-overlay positioning and a precise map of the claims Statement itself must never make.",
+              "source_url": "https://www.ftc.gov/news-events/news/press-releases/2025/04/ftc-approves-final-order-requiring-accessibe-pay-1-million"
+            },
+            {
+              "claim": "French disability groups sent formal notices to grocery retailers in July 2025 and filed the first EAA lawsuits in November 2025",
+              "result": "VERIFIED. On 12 November 2025 ApiDV and Droit Pluriel (with collective Intérêt à Agir) filed emergency injunctions against Auchan, Carrefour, E.Leclerc, and Picard after a 1 September 2025 remediation deadline lapsed. Note: targets are supermarket giants, not the 10-100-employee ICP — enforcement against SMBs remains hypothetical so far.",
+              "source_url": "https://eye-able.com/en/blog/supermarket-accessibility-lawsuit-france-2025"
+            },
+            {
+              "claim": "EAA enforcement began 28 June 2025 with no grace period for existing e-commerce sites",
+              "result": "VERIFIED with caveat. Legal consensus is that websites are not 'products' under Article 32, so existing e-commerce sites got no transitional relief — but the 2030 transitional provisions cause widespread confusion, and some French SME-facing content actively claims a 2030 deadline, which softens buyer urgency in the beachhead market.",
+              "source_url": "https://accessible.org/when-eaa-apply-compliance-timelines/"
+            },
+            {
+              "claim": "Concept assumes automated scanning catches ~30-40% of WCAG failures",
+              "result": "PARTIALLY VERIFIED / conservative. Deque's own coverage report claims axe-core detects ~57% of real-world accessibility defects by volume; the ~30% figure applies to the share of RGAA/WCAG *criteria* that are automatable. Either way, roughly half of what human testers find is invisible to the product — consistent with the concept's own risk framing.",
+              "source_url": "https://www.deque.com/automated-accessibility-coverage-report/"
+            },
+            {
+              "claim": "Nobody at SMB price does continuous scanning plus the accessibility statement/paperwork",
+              "result": "REFUTED. Equalize Digital Accessibility Checker (WordPress/Woo) offers full-site scanning + accessibility statement generator from $144/yr; Shopify App Store apps WCAG Guard, AccessibilityPro, Avada Accessibility already advertise daily EAA/WCAG audits, monitoring, 'compliance certificates,' and 'auto-update audit statements' at app-store prices. Depth/quality may be poor, but the category is occupied.",
+              "source_url": "https://equalizedigital.com/accessibility-checker/pricing/"
+            },
+            {
+              "claim": "Statement generation in French statutory format can be automated from scan data",
+              "result": "REFUTED as pitched for France. Official RGAA guidance requires the déclaration d'accessibilité to result from an effective conformity evaluation on a representative page sample with a computed conformity rate across 106 criteria, ~70% of which need manual testing; automated tools cover only ~30% of criteria. An axe-only auto-statement can honestly express only non-/partial conformity with caveats — legitimate as good-faith evidence, but weaker than the 'always-current statement' promise implies. EAA Annex V (T&Cs disclosure) for private SMBs is less prescriptive, so a defensible product exists, but per-member-state legal templating needs real legal review, not just content work.",
+              "source_url": "https://accessibilite.numerique.gouv.fr/obligations/evaluation-conformite/"
+            },
+            {
+              "claim": "Crawling the merchant's own public store with Playwright is friction-free (no gated APIs, no fragile scraping)",
+              "result": "PARTIALLY REFUTED. No gated APIs is true and scanning one's own store with consent has no scraping-legality exposure, but Shopify fronts all storefronts with Cloudflare bot management that 403s/429s unauthenticated crawlers; Shopify introduced Web Bot Auth crawler access keys specifically so merchants can authorize accessibility/SEO audit tools. Workable, but adds onboarding steps and chronic scan-flakiness ops. Shopify checkout pages are effectively out of reach and out of the merchant's control entirely.",
+              "source_url": "https://changelog.shopify.com/posts/authorize-custom-crawlers-and-tools-with-new-crawler-access-keys"
+            },
+            {
+              "claim": "French EAA transposition penalties can reach six figures",
+              "result": "VERIFIED for France: sources cite sanctions up to €300,000 plus €3,000/day astreinte under the French transposition (arrêté of 9 October 2023, applicable 28 June 2025), and up to €50,000 Arcom fines under the pre-existing RGAA regime. Supports the insurance-pricing pitch.",
+              "source_url": "https://www.indexel.com/marketing-digital/amendes-et-sanctions-pour-non-conformite-a-laccessibilite-numerique-ce-que-les-entreprises-doivent-savoir"
+            }
+          ],
+          "improvements": [
+            "Rename the promise, not the product mechanics: sell 'compliance monitoring + evidence of good-faith effort,' never 'continuous compliance.' The FTC's accessiBe order is a literal checklist of banned claims — have the landing page and statement templates reviewed against it once by an EU/US lawyer (a one-time, few-thousand-euro cost that removes the biggest tail risk).",
+            "Redesign the statement engine around honesty-as-feature: generate 'partially conformant' statements that enumerate known issues, remediation status, and scan-scope limitations (explicitly noting Shopify-controlled checkout is outside merchant control — this is genuinely useful defensive language for the merchant's lawyer). For France, offer a paid add-on path to a real RGAA sample audit via partner auditors, whose conformity rate then feeds the auto-maintained declaration — this converts the automation ceiling into a marketplace upsell instead of a lie.",
+            "Build Shopify onboarding on Web Bot Auth crawler access keys from day one (guided setup screen), with a low-rate stealth-Playwright fallback and scan-health alerting, so Cloudflare 403s surface as 'authorize our crawler' prompts rather than silent broken scans.",
+            "Lead with the agency white-label tier rather than direct SMB fear-purchase: direct buyers can't distinguish Statement from $10/mo app-store scanners, but agencies answering 30 clients' 'are we EAA compliant?' emails can evaluate quality and multiply distribution — and they absorb the fix-instruction work the merchant ICP can't actually execute.",
+            "Differentiate on the one thing the app-store incumbents demonstrably lack: per-member-state legal depth (FR déclaration + schéma pluriannuel awareness, DE BFSG, NL) in statutory language, with lawyer-reviewed templates. That is defensible content IP; generic axe-scan-plus-statement is not.",
+            "Add a documented position on the microenterprise exemption and Article 32 confusion in onboarding — qualifying out sub-threshold stores builds trust and reduces churn from buyers who discover they were never obligated."
+          ],
+          "notes": "Skeptic's honest bottom line: I could not kill this on implementability. The stack (Playwright + axe-core + Postgres + cron + PDF + templated statements) is squarely within a solo Claude-Code-assisted developer's reach; there are no gated APIs, no third-party scraping, and scanning a consenting customer's own storefront carries no data-licensing exposure. All headline evidence claims (FTC order, French lawsuits, June 2025 applicability, six-figure French penalties) verified against primary or strong secondary sources. What the pitch gets wrong: (1) the category is NOT empty at SMB price — Equalize Digital and several Shopify apps already ship scan+statement+monitoring cheaply, so this is a quality/depth play in a noisy market, not a wedge into whitespace; (2) the flagship artifact — an auto-maintained statutory-format statement — cannot be honestly automated in the French beachhead, where the expected declaration requires a manual-audit-derived conformity rate; the product survives only by embracing 'partial conformity + remediation evidence' framing and selling human audits as an add-on; (3) Shopify's Cloudflare layer and unfixable checkout create real but manageable runtime and promise-scope gaps. Liability is containable with disciplined wording precisely because the FTC has published the boundary — but the current tagline ('Continuous EAA Compliance') is on the wrong side of it. Research performed: 8 web searches + 2 fetches (one 403'd, replaced with corroborating search)."
+        }
+      },
+      {
+        "key": "eaa-accessibility",
+        "lens": "market",
+        "verdict": {
+          "verdict": "seriously_weakened",
+          "fatal_flaws": [
+            "The wedge is already shipped, repeatedly, at or below the proposed price. The pitch's core claim — 'every competitor scans; nobody at SMB price does the legal paperwork' — is false. Eye-Able (German, DACH-focused) offers an accessibility statement generator that is 'automatically kept up to date based on your audit reports' (eye-able.com/accessibility-statement-generator). Shopify App Store already lists WCAG Guard ('automated EAA audits, daily scans, visual history logs, generate legal compliance statements' — i.e., the evidence file), Avada Accessibility (AI scanner + auto-updating audit statements), Accessify AI (scan + EAA compliance reports), Accessibility Spark (daily monitoring + monthly audit reports), Wawsome, Isonomy, EA Accessibility, Accessibly — a saturated category at typical $10-40/mo app pricing. eaascanner.com is literally the described MVP (25-page EAA scan + statement draft) already live, alongside scanluma.com, auditsu.com, getwcag.com, web-accessibility-checker.com. Free statement generators from W3C WAI, WebYes, siteboard.io, and Eye-Able commoditize the statement itself as a lead magnet.",
+            "The differentiation vs. enterprise vendors is factually wrong: AudioEye sells self-serve at $49/mo with continuous monitoring and an accessibility statement/help desk included — the exact price point and buyer this concept claims the 'honest players' ignore. On WooCommerce, Equalize Digital's Accessibility Checker is a free WordPress plugin (40+ WCAG 2.2 checks, auto-fixes, statement generator built in) with a Pro tier for full-site scans — the WooCommerce half of the ICP is served for $0.",
+            "The urgency premise is decaying in real time and the pitch's own evidence is stale. The first EAA court ruling (Auchan, Tribunal judiciaire de Paris, May 2026) went to the DEFENDANT — the case was dismissed. The Carrefour ruling (June 2026) ordered remediation within six months under daily penalty — an injunction against a €90B retailer, not a fine, and not an SMB. One year post-deadline there is no documented enforcement against any 10-100-employee merchant anywhere in the EU. Meanwhile the 'no grace period' claim is contradicted by the EAA's widely documented transitional period to 28 June 2030 for pre-existing services/service contracts in most member-state implementations — the scared-buyer window the go-to-market depends on is both softer and more contested than pitched."
+          ],
+          "weaknesses": [
+            "Legal-basis mismatch in the wedge: for private e-commerce the EAA (Annex V) requires accessibility information in the service's general terms and conditions; the hosted, WAD-style EN 301 549 statement at a stable URL is the PUBLIC-SECTOR format. A merchant's lawyer may tell them the hosted statement is neither necessary nor sufficient, deflating the retention hook ('canceling means your statement stops being true').",
+            "Beachhead platform mismatch: French SMB e-commerce is dominated by PrestaShop and WooCommerce, not Shopify; 'French Shopify merchants' is a thin intersection, and the actual French litigation targets are national grocery giants, not DTC brands.",
+            "Behavioral economics favor the 'dishonest' competitor: a scared owner with no developer is offered (a) a $490/yr widget that claims to fix everything with one line of code, or (b) a $588-948/yr tool that emails them homework requiring a freelancer at $75/hr on top. The anti-overlay message wins applause from accessibility advocates (non-buyers) while overlays keep winning the checkout — accessiBe/UserWay still rank top of the Shopify accessibility category post-FTC fine.",
+            "SEO channel already contested: the panic queries ('EAA compliance Shopify', 'accessibility statement generator', 'accessiBe alternative') are blanketed by TestParty, Eye-Able, Silktide, Level Access, accessibility.works, law firms, and a dozen post-2025 micro-SaaS running the identical content-marketing playbook; a solo entrant ranks slowly on a decaying panic curve.",
+            "Churn structurally high: fear-purchased compliance insurance churns when the feared event never arrives; with the first EAA ruling favoring the defendant and axe-core catching only ~30-40% of WCAG failures (per the pitch's own admission), the product can neither promise safety nor demonstrate averted harm — the two classic retention anchors for insurance-like SaaS.",
+            "The agency tier ('the real revenue engine') competes against Eye-Able, Silktide, Pope Tech and AudioEye partner/agency programs that already offer white-label monitoring and statements with more brand credibility."
+          ],
+          "evidence_checks": [
+            {
+              "claim": "FTC hit accessiBe with a $1 million penalty in April 2025 for misrepresenting its AI overlay",
+              "result": "CONFIRMED, minor date nuance: FTC announced the order 3 Jan 2025 and approved the final order in April 2025 requiring accessiBe to pay $1M and stop claiming its overlay makes any website WCAG-compliant. Primary source is FTC.gov, not vendor marketing.",
+              "source_url": "https://www.ftc.gov/news-events/news/press-releases/2025/04/ftc-approves-final-order-requiring-accessibe-pay-1-million"
+            },
+            {
+              "claim": "French disability organizations sent formal notices July 2025 and filed the first EAA lawsuits in November 2025",
+              "result": "CONFIRMED as events (ApiDV and Droit Pluriel, mises en demeure July 2025; référés filed 12 Nov 2025 against Auchan, Carrefour, E.Leclerc, Picard) — but the cited source is TestParty vendor content-marketing, and fresh research shows the outcome undercuts the fear narrative: the Auchan case was DISMISSED (May 2026, first-ever EAA ruling, for the defendant) and Carrefour (June 2026) received only a remediation injunction with 6 months to comply — no €100k fine, and all targets were multi-billion-euro retailers, not SMBs.",
+              "source_url": "https://silktide.com/blog/eaa-auchan-court-ruling/"
+            },
+            {
+              "claim": "EAA enforcement began 28 June 2025 with no grace period for existing e-commerce services",
+              "result": "CONTRADICTED / overstated. Multiple independent guides (European Commission materials, Squire Patton Boggs, Equalize Digital, Usercentrics) document a transitional period to 28 June 2030 for services provided via pre-existing contracts/products, and member-state implementations vary; 'no grace period' is the vendor (TestParty) framing designed to sell urgency. Sole source for this claim in the research is vendor content-marketing — flagged.",
+              "source_url": "https://commission.europa.eu/strategy-and-policy/policies/justice-and-fundamental-rights/disability/union-equality-strategy-rights-persons-disabilities-2021-2030/european-accessibility-act_en"
+            },
+            {
+              "claim": "800+ businesses using overlay widgets were sued in 2023-2024, ~25% of all digital accessibility lawsuits",
+              "result": "CONFIRMED in substance via independent primary data: UsableNet's 2024 report counts 1,023 lawsuits (25% of cases) against companies using accessibility widgets in 2024 alone. The TestParty citation is vendor marketing but the underlying UsableNet data is independent and if anything stronger than claimed.",
+              "source_url": "https://info.usablenet.com/2024-year-end-report"
+            },
+            {
+              "claim": "Manual accessibility audits for small business sites run $1,500-$5,500, remediation $5,000-$20,000 more",
+              "result": "PLAUSIBLE BUT ONLY BLOG-SOURCED: DigitalA11Y is an accessibility content/affiliate site, not primary data; ranges in the market vary from free automated reports to $50k+ hybrid engagements (accessibility.works cites $49/mo tools through $5K-$50K+ programs). Directionally reasonable, but the 'repeats every theme tweak' framing is sales copy — no independent pricing survey verifies it.",
+              "source_url": "https://www.digitala11y.com/how-much-does-a-web-accessibility-audit-cost/"
+            }
+          ],
+          "improvements": [
+            "Drop 'nobody does the paperwork at SMB price' as positioning — it is checkably false. If pursued, differentiate on genuine member-state legal depth: correct Annex V T&C accessibility information (not a WAD-style statement), German BFSG-specific wording, French RGAA references — the one place the Shopify-app widget vendors are demonstrably sloppy. Validate with 2-3 EU e-commerce lawyers that the artifact is what they'd actually request.",
+            "Re-anchor demand away from fear toward procurement: B2B buyers and marketplaces increasingly require accessibility conformance documentation in vendor questionnaires; that demand survives enforcement decay, where panic-driven demand does not.",
+            "Fix the beachhead: if France, build for PrestaShop/WooCommerce (dominant there) or pick Germany, where BFSG has a defined enforcement authority and the Sofortkontrolle culture makes SMB fear more credible — but note Eye-Able already owns that ground.",
+            "Make agencies the PRIMARY wedge from day one (white-label monitoring + per-client statements), since the direct-to-merchant channel is saturated; the pitch itself concedes agencies are 'the multiplier' yet sequences them second.",
+            "Before building, run the falsification test cheaply: buy the top 5 Shopify accessibility apps ($100), audit their statement/evidence output quality, and cold-pitch 20 French/German agencies; if agencies say existing white-label options suffice, kill it."
+          ],
+          "notes": "Honest bottom line: the regulatory tailwind is real (EAA is in force, French litigation happened, FTC did discredit overlays) and the market's spawn rate of lookalike tools proves demand exists. But that same spawn rate is the problem — in the 12 months since the June 2025 deadline, the exact product described (weekly axe-core scans + plain-language fixes + auto-maintained statement + evidence log, $10-80/mo) has been built many times over: as Shopify apps (WCAG Guard, Accessify AI, Avada, Accessibility Spark), as EU-native platforms (Eye-Able with auto-updating statements), as standalone micro-SaaS (eaascanner.com, scanluma, auditsu), as a free WooCommerce plugin (Equalize Digital), and as self-serve $49/mo monitoring from a public company (AudioEye). The concept is roughly 12-18 months late to its own wedge, its two sharpest evidence claims trace solely to one vendor's (TestParty) content marketing with the 'no grace period' claim contradicted by primary sources, and the first EAA court ruling going to the defendant (Auchan, May 2026) means the fear engine is sputtering just as the entrant would launch. Not a categorical kill — a founder with genuine EU legal depth and an agency-first channel could still carve a niche — but the opportunity as written rests on a differentiation claim that fails a one-hour competitor search."
+        }
+      },
+      {
+        "key": "hvac-agreements",
+        "lens": "implementability",
+        "verdict": {
+          "verdict": "survives_with_fixes",
+          "fatal_flaws": [],
+          "weaknesses": [
+            "SMS turns the founder into a regulated messaging ISV, not just a Twilio API user. Under A2P 10DLC, every HVAC shop customer must be registered as its OWN brand and campaign with The Campaign Registry via the platform (carriers allow no ISV exceptions): the founder must collect each shop's legal name/EIN/address, pay pass-through fees ($4.41-$48.51 brand, ~$16.54 campaign vetting plus a recurring ~$1.50-$10/mo campaign fee per shop), and wait days to ~7 business days per campaign, with rejections requiring resubmission. Since carriers now block unregistered 10DLC traffic outright, the 'one-click SMS nudge' silently fails at runtime for any shop whose registration isn't approved. This directly contradicts 'self-onboarded in an afternoon' — SMS onboarding is a 1-2 week, paperwork-heavy step per customer.",
+            "TCPA exposure is real and a disclaimer does not fix the product gap. Visit-booking nudges for a paid plan are plausibly 'informational' (prior express consent, lower bar), but the automated 60/30/7 RENEWAL sequences are solicitation — requiring prior express written consent, with $500-$1,500 statutory damages per text and a private right of action (no FCC involvement needed; class actions scale to millions). The concept's core onboarding flow — CSV-import phone numbers of members whose consent status is unknown, then blast templated SMS — is precisely the pattern that generates TCPA claims. The MVP spec contains no consent capture, no consent records (5-year retention expected), no STOP/opt-out handling, no quiet-hours logic. Liability lands primarily on the shop, but the platform composing, templating, and sending the messages is the deep-pocket co-defendant plaintiffs' firms name, and shops burned by it churn and badmouth.",
+            "The payments-migration cliff is verified to be worse than the concept admits. QuickBooks explicitly cannot export stored card data (only last-4 is visible), and Stripe's PAN-import path requires the losing processor's cooperation — which QuickBooks Payments and Housecall Pro do not provide. So EVERY existing member of EVERY shop must re-enter card details before auto-billing (the stickiness mechanism) works. For a 500-agreement shop that is a months-long re-collection campaign with inevitable member attrition; many shops will stall at 'tracker without billing,' undercutting both the $99/mo value story and the payment-rails moat.",
+            "The headline evidence is weak. The $30k/yr renewal-loss math, 2:1 pull-through ratio, and '#1 contract killer' claim all trace to help.simplyconnectedsystems.com — which turns out to be a programmatic-SEO pain-page farm (hundreds of near-identical industry-by-state pages) published by a small custom-prototype dev shop selling into this exact niche, not industry research. FieldCamp (source for two more claims) is an SEO review site that 403s direct fetches. The pain is probably real, but the concept's quantified justification is marketing arithmetic repeated from vendors with an incentive to inflate it.",
+            "The Housecall Pro '$1,200/yr for Service Plans' anchor could not be verified. Current HCP pricing pages and 2026 third-party breakdowns document add-on creep generally (sales proposals ~$40/mo, flat-rate price book ~$149/mo, GPS ~$20/vehicle) but do not list a Service Plans add-on price; the claim rests on one unverifiable user anecdote via FieldCamp. If Service Plans is now bundled into mid tiers, a chunk of the differentiation copy is wrong.",
+            "The QuickBooks Online integration that the concept itself admits retention 'likely eventually demands' is not friction-free: production keys require completing Intuit's app assessment questionnaire and passing review (days to weeks), and the free Builder tier caps API calls. Doable for an indie, but it is a gated review process, not a self-serve toggle — and until it ships, the double-entry problem the concept flags as risk #1 is unmitigated.",
+            "Runtime operational surface is larger than 'CRUD + cron': Stripe webhook/dunning edge cases, email deliverability for renewal sequences from a new SendGrid domain (shared-IP reputation), carrier content filtering even on approved campaigns, and seasonal all-at-once load (every shop's spring list fires the same weeks). None fatal, all real support burden for a solo non-specialist."
+          ],
+          "evidence_checks": [
+            {
+              "claim": "ServiceTitan costs $250-$500/tech/mo with $5,000-$50,000 implementation and long onboarding; too heavy for small shops",
+              "result": "CORROBORATED by multiple independent 2026 sources (projul, myquoteiq, tooleduppro, procured): $245-$500/tech/mo across tiers, implementation $5k-$50k (typically $10k-$25k for 5-20 techs), 2-12 month rollout; ServiceTitan itself stated in a BBB response the platform is 'not optimized for a company with 3 or fewer technicians.' This leg of the thesis is solid.",
+              "source_url": "https://myquoteiq.com/servicetitan-pricing/"
+            },
+            {
+              "claim": "Renewal slide 80%→60% on 500 agreements = $30k/yr lost; ~2:1 pull-through; #1 contract killer is selling plans and never scheduling visits (Simply Connected Systems)",
+              "result": "SOURCE EXISTS BUT IS LOW QUALITY: help.simplyconnectedsystems.com is a programmatic-SEO content farm (near-identical 'pain' pages generated per trade per state) run by a small custom-dev shop selling prototypes into this niche. The figures are illustrative vendor arithmetic, not research. Direct fetch returned 403. Pain is directionally plausible but the quantification should not be treated as evidence.",
+              "source_url": "https://help.simplyconnectedsystems.com/pain/service-contracts"
+            },
+            {
+              "claim": "Housecall Pro users churn over add-on creep; Service Plans add-on cost one user +$1,200/yr",
+              "result": "PARTIALLY CORROBORATED: add-on creep is well documented in 2026 pricing breakdowns (sales proposals ~$40/mo, price book ~$149/mo, GPS ~$20/vehicle, HCP Assist variable), but no current source lists a Service Plans add-on price; the $1,200/yr figure rests on a single anecdote via FieldCamp (site 403s direct fetch). Treat the specific number as unverified.",
+              "source_url": "https://tooleduppro.com/guides/housecall-pro-pricing/"
+            },
+            {
+              "claim": "SMS sending is simple 'Twilio behind an adapter'; A2P 10DLC is just 'setup friction'",
+              "result": "UNDERSTATED: verified via Twilio Help Center and Telgorithm that an ISV must register EACH end-customer shop as its own TCR brand + campaign ($4.41-$48.51 brand fee, ~$16.54 campaign vetting fee then recurring monthly campaign fees, pass-through per shop), with approval taking up to ~7 business days and manual vetting up to 7 more; carriers now block unregistered 10DLC traffic, so SMS features are dead at runtime until each shop's registration clears. Per-customer compliance ops, not one-time setup.",
+              "source_url": "https://help.twilio.com/articles/1260800720410-What-is-A2P-10DLC-"
+            },
+            {
+              "claim": "Automated SMS renewal/booking outreach carries no special legal exposure a small disclaimer can't handle",
+              "result": "REFUTED IN PART: TCPA statutory damages are $500/violation ($1,500 willful) with a private right of action and no cap; marketing texts (renewal solicitations) require prior express written consent, and consent for service reminders does not extend to promotional content. CSV-imported phone lists with unknown consent are the classic class-action fact pattern. The product must build consent records, STOP handling, and quiet hours — a disclaimer shifts nothing.",
+              "source_url": "https://activeprospect.com/blog/tcpa-text-messages/"
+            },
+            {
+              "claim": "Moving auto-billing to Stripe 'requires re-collecting card details' — mitigable with an update-card link campaign",
+              "result": "CONFIRMED AND WORSE: QuickBooks explicitly will not export stored card data (last-4 only, for data protection), and Stripe's PCI-compliant PAN import requires the previous processor to cooperate — QuickBooks Payments and Housecall Pro do not offer merchant card-data export. 100% of existing members must manually re-enter payment details; there is no technical workaround.",
+              "source_url": "https://docs.stripe.com/get-started/data-migrations/pan-import"
+            },
+            {
+              "claim": "QuickBooks Online API is a public, credential-accessible API an indie can add later",
+              "result": "MOSTLY CONFIRMED WITH FRICTION: the API is public and free (Builder tier, 500k CorePlus calls/mo), but production keys require completing Intuit's app assessment questionnaire and passing a review that takes days to weeks. Gated review, not pure self-serve — feasible for an indie but a real schedule item.",
+              "source_url": "https://help.developer.intuit.com/s/topic/0TOG00000004r1SOAQ/production-keys"
+            },
+            {
+              "claim": "No gated APIs, no licensing exposure, no scraping needed; core data model is simple",
+              "result": "LARGELY CONFIRMED: core data arrives via customer CSV upload (no scraping), Stripe/SendGrid/Twilio are self-serve credentialed APIs, and no evidence surfaced that maintenance-plan software vendors need state service-contract/home-warranty registration — contractor licensing obligations sit with the shop, not the tool. The two genuine compliance surfaces are A2P 10DLC and TCPA (above), plus routine PCI offload to Stripe.",
+              "source_url": "https://www.contractscounsel.com/t/us/hvac-contract"
+            }
+          ],
+          "improvements": [
+            "Ship email-first, SMS-later: make the booking nudge and renewal sequences email-default in MVP, and gate SMS behind a guided A2P wizard (collect EIN, auto-register brand/campaign via Twilio TrustHub API, show 'pending carrier approval' state). Consider verified toll-free numbers per shop as a simpler low-volume alternative to 10DLC. Set expectations: texting goes live in week 2, not hour 2.",
+            "Build consent infrastructure into the data model from day one: per-contact consent type (informational vs. marketing written consent), consent source/timestamp records retained 5+ years, automatic STOP/opt-out handling, quiet-hours enforcement, and a hard block on SMS to CSV-imported numbers lacking a consent record. Keep renewal solicitations on email unless written SMS consent exists.",
+            "Defuse the card-recollection cliff by decoupling the wedge from the billing rails: launch as 'tracker + nudges + renewal chasing' that works with billing wherever it lives (mark payments recorded in QB/HCP), and make Stripe auto-billing an opt-in phase with a first-class hosted 'update your card' campaign (progress dashboard, member-by-member status). Do not make Stripe migration a prerequisite for value.",
+            "Re-verify the marketing math before publishing it: drop or re-source the $30k/2:1 figures (currently vendor SEO copy) in favor of numbers you can defend — e.g., compute each shop's own leakage from their imported CSV in the 'free agreement audit,' which is both honest and a better demo.",
+            "Confirm current Housecall Pro Service Plans packaging (it may now be bundled in mid tiers) before anchoring positioning and SEO pages on the '$1,200/yr add-on' claim.",
+            "Start the Intuit app-assessment process early (even for a read-only QBO customer sync) since review takes days-to-weeks and the concept's own risk analysis says retention depends on it; a QBO customer-list read sync also kills most double-entry pain cheaply.",
+            "Plan for seasonal load and deliverability: warm the sending domain before spring, per-shop sending subdomains or verified from-addresses, and monitoring for Stripe webhook/dunning failures — these are the runtime things that break silently while the founder is doing support."
+          ],
+          "notes": "Bottom line as skeptic: I could not kill this on implementability. The build is genuinely indie-scale — CRUD + Postgres + CSV import + Stripe Billing + cron, no gated data, no scraping, and the software vendor carries no contractor-licensing or service-contract-registration burden (that sits with the shops). What the concept understates are the two compliance-shaped operational loads: (1) A2P 10DLC makes the founder a per-customer registration bureau and delays the wedge feature's SMS channel by 1-2 weeks per shop, and (2) TCPA makes consent tracking a required product surface, not a terms-of-service footnote — renewal texts are marketing and carry $500-$1,500/message class-action exposure. Both are solvable with scope changes (email-first, consent model, guided registration), which is why this is 'survives_with_fixes' rather than 'seriously_weakened.' Separately, the evidence base is softer than presented: the quantified pain claims come from an SEO content farm and an SEO review site (one 403s, one is programmatic), though the ServiceTitan-is-too-expensive-for-small-shops leg is independently well corroborated, including by ServiceTitan's own BBB statements. The single biggest commercial (not buildability) risk verified: stored card data cannot leave QuickBooks/HCP, so the payments moat requires every member of every shop to re-enter a card — design the product so it delivers value before that happens."
+        }
+      },
+      {
+        "key": "hvac-agreements",
+        "lens": "market",
+        "verdict": {
+          "verdict": "seriously_weakened",
+          "fatal_flaws": [
+            "The standalone architecture contradicts the wedge feature. The 'Unscheduled Visit' alarm can only know whether a visit is booked if someone tells it — but the schedule lives in Jobber/Housecall Pro/Google Calendar. Every booking must be manually mirrored into TuneUp Keeper by the same overloaded office manager the product claims to save. The headline promise ('never lets an included visit go unscheduled') depends on data the product structurally does not have; a stale TuneUp Keeper is exactly the stale spreadsheet tab it replaces. This is listed as risk #1 in the concept but it is not a risk — it is the design, and it hits the demo-to-retention gap directly.",
+            "The wedge is not unique to any meaningful degree. Jobber Core ($39/mo) already auto-schedules recurring visits when an agreement is set up as a recurring job, and Jobber Connect ($119/mo — cheaper than TuneUp Keeper's mid tier) adds automatic payments, all inside the system of record with zero double entry. QuoteIQ's entry tier ($29.99/mo) advertises recurring billing, autopay, renewal reminders, expired-card dunning, and tune-up scheduling outreach with two-way QuickBooks sync. Smart Service is an existing QuickBooks add-on with automated 90/60/30-day agreement renewal reminders. The claim that 'no spreadsheet, QuickBooks memorized transaction, or FSM base tier does this' is false as stated.",
+            "Payments migration blocks the biggest accounts. Moving 100-800 members' auto-billing onto Stripe requires re-collecting card/ACH details from every member — the concept admits this is 'the single hardest onboarding step' for a buyer defined as low-tech and time-starved, whose entire admin staff is one spouse. The value of the product scales with agreement count, but so does migration pain, so conversion is worst precisely where LTV is highest. Shops on Housecall Pro/Jobber payments also face split-ledger accounting (agreement revenue in Stripe, everything else in the FSM/QBO), which their bookkeeper will veto.",
+            "Every single piece of cited evidence is competitor content marketing, and the anchor source is a programmatic SEO farm. The Simply Connected Systems 'pain' page that supplies the $30k/yr loss figure and the '#1 contract killer' claim is one of hundreds of templated /pain/service-contracts/{industry}/{state} pages (directional boring, pressure washing, pool & spa...) generated by a custom-integrations vendor. FieldCamp (two citations) is a competing AI field-service product; QuoteIQ (one citation) is a direct competitor selling the exact recurring-billing feature set; Velappity is a vendor blog. Zero primary evidence — no owner interviews, no forum threads, no independent data — supports the demand thesis."
+          ],
+          "weaknesses": [
+            "Graduation churn is structural: the customers for whom the product works best (growing agreement books) are exactly the ones who outgrow the 2-10 tech segment and consolidate onto FieldEdge, FieldPulse (~$99/mo small team, maintenance agreements included), Successware, or ServiceTitan — all of which bundle agreement management. Success selects customers out of the product.",
+            "Suite gravity is live, not hypothetical: agreement/membership features are a known upsell battleground; Jobber has been pushing recurring-work automation downmarket and Housecall Pro repackages Service Plans across tiers regularly. A base-tier feature release by either vendor erases the standalone's reason to exist overnight.",
+            "Contractor Commerce already occupies the 'bolt-on membership revenue alongside your existing stack' positioning (sell and renew maintenance plans online, automated monthly payments, notification-to-schedule workflow) with distribution through HVAC marketing agencies — the research's claim of an empty standalone niche missed it.",
+            "The buying trigger is seasonal and episodic (spring/fall tune-up panic), making pipeline lumpy; the buyer lives in Facebook groups and trade shows, not in software-review channels, so founder-led distribution is a slow grind with high-touch onboarding against a $99/mo price point — CAC/LTV math is tight at plausible SMB churn (3-5%/mo).",
+            "A2P 10DLC registration, STOP/opt-out compliance, and deliverability for the SMS nudges — the wedge's delivery mechanism — add setup friction and ongoing cost that the flat 'no add-ons ever' pricing must absorb.",
+            "Price ceiling problem: at $129/mo for up to 1,000 agreements, TuneUp Keeper costs more than Jobber Connect ($119/mo), which includes an entire FSM plus recurring jobs and automatic payments. The 'cheap standalone' story only works against ServiceTitan, not against the tools the ICP actually uses.",
+            "The 55%-of-revenue and 2:1 pull-through industry statistics circulate almost exclusively through vendor blogs citing each other; the true addressable count of US shops with 100-800 agreements AND 2-10 techs AND a cheap software stack AND willingness to run a second system is unvalidated and plausibly small."
+          ],
+          "evidence_checks": [
+            {
+              "claim": "Renewal slide 80%→60% on 500 agreements at $300 = $30k/yr lost; ~2:1 pull-through; #1 contract killer is selling the plan and never scheduling visits (Simply Connected Systems)",
+              "result": "SOURCE FLAGGED, NUMBERS PARTIALLY CORROBORATED. The cited page could not be fetched directly (network gateway denies the domain), but search confirms it is part of a large programmatic SEO network of templated /pain/service-contracts/{industry}/{state} pages from a custom-integration vendor — pure content marketing, no cited data. The $30k figure is just arithmetic. The 2:1 pull-through ratio, however, IS a widely repeated industry benchmark (appears in ACCA-referencing material and a BuildOps interview with Mike Rosone, with ranges of $1-$3 pull-through per $1 of contract). The '#1 contract killer' claim is unsourced vendor assertion found nowhere independent.",
+              "source_url": "https://help.simplyconnectedsystems.com/pain/service-contracts"
+            },
+            {
+              "claim": "ServiceTitan costs $250-$500/tech/mo, $5k-$50k implementation, 6-12 month onboarding, too heavy for <10-tech shops (FieldCamp)",
+              "result": "DIRECTIONALLY CORROBORATED, SOURCE FLAGGED. FieldCamp is itself a competing AI field-service product, so this is competitor content marketing. But multiple independent-of-each-other pricing guides (Projul, Procured, myquoteiq, Capterra summaries) converge on ~$245-$500+/tech/mo, $10k-$50k+ implementation, and ServiceTitan itself states the platform is 'not optimized' for companies with 3 or fewer technicians and works best at 20+. Note ServiceTitan publishes no pricing, so every figure in circulation is secondhand; some sources put the Starter tier lower (~$125-$150/user/mo).",
+              "source_url": "https://fieldcamp.ai/reviews/servicetitan/"
+            },
+            {
+              "claim": "Housecall Pro gates Service Plans behind an add-on/higher tier costing ~$1,200/yr extra; add-on creep is the #1 churn reason (FieldCamp)",
+              "result": "TIER-GATING CORROBORATED, CHURN CLAIM UNVERIFIABLE. Multiple 2026 pricing guides (costbench, tooleduppro, serviceagent) confirm recurring Service Plans is available only on the MAX (custom-priced) tier or as a paid add-on, not on Basic/Essentials — consistent with a ~$100/mo (+$1,200/yr) upcharge. However, 'add-on creep is the single most common churn reason' is FieldCamp's own unsourced assertion in a competitor review; no independent churn data exists. Importantly, this cuts both ways: HCP demonstrably monetizes this exact feature, proving the incumbent sees it as an upsell to defend, not an abandoned niche.",
+              "source_url": "https://fieldcamp.ai/reviews/housecall-pro/"
+            },
+            {
+              "claim": "Jobber's per-employee pricing and add-ons squeeze small shops between cheap-but-limited and bloated-but-expensive (QuoteIQ)",
+              "result": "SOURCE HEAVILY FLAGGED AND CLAIM UNDERMINED BY FACTS. QuoteIQ is a direct competitor whose own product ($29.99-$149.99/mo) includes recurring invoice subscriptions, autopay, renewal/dunning automation, and tune-up outreach — the article is attack marketing, and QuoteIQ itself is an unlisted competitor to TuneUp Keeper. Independent checks show Jobber Core ($39/mo) already includes recurring job scheduling (visits auto-populate the calendar) and Jobber Connect ($119/mo) adds automatic payments — meaning Jobber's own mid tier substantially covers TuneUp Keeper's core loop for less than TuneUp Keeper's $129 tier, inside the system of record.",
+              "source_url": "https://myquoteiq.com/jobbers-biggest-problem-exposed/"
+            }
+          ],
+          "improvements": [
+            "Invert the architecture: launch as a read-only 'agreement radar' that syncs FROM QuickBooks Online (public API) and Jobber (API) rather than as a second system of record. Do not touch billing at v1 — 'keep billing exactly where it is; we watch for paid-but-unserved members and chase renewals.' This kills the double-entry and payments-migration objections simultaneously and makes the free 'agreement audit' the actual product.",
+            "Rebuild the evidence base with primary research before writing code: 20-30 recorded interviews with owners/office managers recruited from the named Facebook groups, asking specifically how visits get booked today and whether they would ever enter data in a second system. Every current evidence citation is vendor marketing and would not survive investor or founder-gut diligence.",
+            "Reprice against the real alternative, Jobber Connect at $119/mo, not against ServiceTitan: a $49-$79 flat sidecar is credible; $129-$199 for a tracker that does less than an FSM is not.",
+            "Attack the payments problem as a wedge instead of a tax: a first-class 'card refresh campaign' product (hosted update links, member-by-member progress tracking) is genuinely painful and unowned — but sell it as a tool that works with the shop's existing HCP/Jobber/QBO payment rails, not as forced Stripe migration.",
+            "Plan for graduation churn explicitly: build the Jobber/HCP integration deep enough that TuneUp Keeper rides along when the shop upgrades tiers, or accept a 18-24 month customer lifetime in the model and price CAC accordingly.",
+            "Differentiate against the specific competitors the research missed — QuoteIQ, Smart Service, Contractor Commerce, FieldPulse — in positioning material; 'no one does this' will be falsified in the first sales call with a buyer who has Googled alternatives."
+          ],
+          "notes": "Honest summary: the pain is real and monetizable — recurring agreements genuinely drive small-shop economics, the 2:1 pull-through benchmark has legitimate industry circulation, ServiceTitan genuinely abandons the ≤10-tech segment, and I found no dominant, well-loved STANDALONE membership manager (the closest are Contractor Commerce, Smart Service, and QuoteIQ, each covering part of the surface). So this is not a kill. But the concept as specified is seriously weakened on three independent axes: (1) its factual premise ('no FSM base tier does this') is false — Jobber Core/Connect and QuoteIQ's entry tier cover most of the loop cheaper and without double entry; (2) its architecture (standalone system of record + Stripe rebilling) structurally undermines both its headline feature and its onboarding for the largest accounts; (3) its entire evidence base is competitor content marketing, anchored by a programmatic SEO page farm, with zero primary demand evidence. Research caveats: the network gateway policy-blocked direct fetches of help.simplyconnectedsystems.com and fieldcamp.ai, so those two sources were characterized via search-index snippets and cross-referencing rather than full page reads; all ServiceTitan pricing figures in circulation are secondhand because ServiceTitan publishes no pricing; QuoteIQ feature/pricing claims come from QuoteIQ's own content and should be verified in-product before treating it as a proven competitor. A pivoted version — integration-first, read-only radar at ~$49-79/mo with a card-refresh campaign tool — could plausibly reach survives_with_fixes, but that is a different product than the one specified."
+        }
+      },
+      {
+        "key": "membership-refuge",
+        "lens": "implementability",
+        "verdict": {
+          "verdict": "survives_with_fixes",
+          "fatal_flaws": [],
+          "weaknesses": [
+            "The 'never breaks renewals' promise is materially overstated: Wild Apricot's own documentation confirms saved card data cannot be exported (it is tokenized at AffiniPay), so switching payment systems requires cancelling every recurring payment and having each auto-renewing member re-enter card details. The scariest part of migration — breaking auto-renew — is NOT solved by the Escape Pod; it is physically unsolvable by any competitor. The wedge still works for roster/renewal-date migration, but the marketing claim as written will blow up trust with exactly the risk-averse ICP it targets.",
+            "'One-click import of event history' from standard exports is overstated: Wild Apricot only exports registrants per-event (one file per event); the event list itself is only available via the admin API. A real importer needs the API path (org admin generates an API key) or must accept many files — feasible, but not the advertised single-CSV flow, and Personify could tighten API access for departing customers at any time.",
+            "Hidden regulatory tripwire (AB 488): if the product ever adds a donation field for 501(c)(3) clients reaching California donors, it becomes a 'Solicitation Type E' charitable fundraising platform under California's AB 488 (final regs effective June 2024), requiring Attorney General registration (Form PL-1), charity good-standing verification, and annual reporting. Dues/events/tickets-only scope avoids this, but 'let members add a donation at checkout' will be a top-3 feature request from the 501(c) segment, and a non-specialist indie dev would walk into it blind. A disclaimer does not fix it — it is a registration regime, not a liability question.",
+            "Stripe onboarding friction for the ICP: many small clubs are unincorporated associations without an EIN or bank account in the org's name; Stripe Standard account KYC (business type, EIN, representative verification) can stall or reject them. 'Bring your own Stripe' pushes real compliance/verification work onto a 65-year-old volunteer — this is onboarding drop-off the concept doesn't budget for, and support tickets land on the founder.",
+            "Email blast deliverability and setup: sending marketing blasts on behalf of hundreds of small orgs requires per-org domain verification (DKIM/SPF DNS records) — a task many volunteer admins cannot do — or sending from a shared platform domain, where one club's stale, consent-dubious list can damage deliverability for all tenants. Postmark restricts marketing to a separate broadcast stream; Resend has no enforced stream isolation. Canadian clubs add CASL exposure (implied consent via club membership mostly covers them, but the platform 'facilitates' sends under CASL s.9). Manageable, but it is ongoing operational work, not a fire-and-forget feature.",
+            "Runtime payment edge cases are the real long tail: renewal-date-anchored Stripe subscriptions across N connected accounts, webhook fan-in per account, failed-card dunning, disputes, refunds, prorations, comp memberships, and checks-by-mail reconciliation. All buildable with public APIs, but this is where a solo non-specialist accumulates months of unglamorous work and where a bug charges a real member's card wrongly — reputational risk in a referral-driven niche.",
+            "The savings calculator and 'Wild Apricot bill audit' depend on Wild Apricot's current pricing/PSSF structure; Personify can (and historically does, on odd years) change pricing, making the wedge content a maintenance treadmill and the pre-computed 'savings report' potentially inaccurate — inaccuracy in a document pasted into a board packet is a credibility risk, though not a legal one."
+          ],
+          "evidence_checks": [
+            {
+              "claim": "Wild Apricot charges a 20% Payment System Servicing Fee on the subscription for US/Canada orgs using PayPal, Stripe, or Authorize.Net instead of AffiniPay",
+              "result": "CONFIRMED via Wild Apricot's own help pages (gethelp.wildapricot.com article 1661) and third-party coverage (Kessler Freedman). Fee is 20% of the current billing plan, applied at subscription renewal.",
+              "source_url": "https://gethelp.wildapricot.com/en/articles/1661-payment-system-servicing-fee-pssf"
+            },
+            {
+              "claim": "Wild Apricot members can be exported to CSV/XLS/XML including membership level, renewal due date, member since, membership status, and custom fields — no scraping needed",
+              "result": "CONFIRMED. Official help docs describe Export/Export-all with field selection including Membership level, Renewal due, Membership status (Active/Lapsed), and custom fields. Core importer data is credential-accessible by the org admin.",
+              "source_url": "https://gethelp.wildapricot.com/en/articles/152-exporting-members-and-contacts"
+            },
+            {
+              "claim": "Recurring payment profiles / saved cards can be migrated out of Wild Apricot to the new platform",
+              "result": "REFUTED. Wild Apricot's support article states switching to any payment system other than WildApricot Payments requires cancelling all recurring payments and re-setting them up per member; card data is tokenized at AffiniPay and cannot be exported. Every auto-renew member must re-enter payment details.",
+              "source_url": "https://support.wildapricot.com/hc/en-us/articles/360054085394-Switching-recurring-members-to-a-different-payment-system"
+            },
+            {
+              "claim": "Wild Apricot has a public admin API a migration tool can use with an org-generated API key",
+              "result": "CONFIRMED. Admin API v2 exists (api.wildapricot.org/v2/accounts/{id}/contacts etc.), authorized per-account with an API key; retrieves all contact fields when authenticated as admin. Gives the importer a robust non-scraping path, including the event list that CSV export lacks.",
+              "source_url": "https://gethelp.wildapricot.com/en/articles/182-using-wildapricot-s-api"
+            },
+            {
+              "claim": "Event history can be pulled from standard CSV/Excel exports",
+              "result": "PARTIALLY REFUTED. Forums/docs indicate only per-event registrant exports exist; the events list itself is available only via the API, and registration-to-invoice linkage is weak. 'One-click CSV import of event history' overstates what the standard export delivers.",
+              "source_url": "https://forums.wildapricot.com/forums/308932-wishlist/suggestions/18402460-ability-to-export-detailed-list-of-all-events"
+            },
+            {
+              "claim": "An indie developer can let each club process dues through its own Stripe account with subscriptions, without special approval or money-transmitter exposure",
+              "result": "CONFIRMED. Stripe Connect Standard accounts + direct charges are the documented pattern 'best suited for platforms providing Software as a Service'; Stripe Billing subscriptions on connected accounts are supported; platform profile is self-serve. Funds flow to the org's own Stripe account, so no money transmission by the platform; PCI scope is minimal with Checkout/Elements.",
+              "source_url": "https://docs.stripe.com/connect/subscriptions"
+            },
+            {
+              "claim": "Price hikes of 20% (2021) and 25% (2023) plus post-Personify support degradation",
+              "result": "CONFIRMED. Kessler Freedman documents both hikes with ~60 days notice; recent Capterra/aggregator reviews corroborate 'support is HORRIBLE,' electronic-only, multi-week responses. The anger the distribution strategy parasitizes is real and current.",
+              "source_url": "https://www.kesslerfreedman.com/2023/02/another-odd-numbered-year-another-wild-apricot-price-increase/"
+            },
+            {
+              "claim": "Change.org petition against the 20% PSSF exists",
+              "result": "PARTIALLY CONFIRMED. The petition URL surfaces as a live indexed page in search results ('Petition · Wild Apricot: Stop 20% Payment System Servicing Fee on 4/2/19'); direct fetch was blocked (403) so signature count/activity could not be verified. Note it dates to 2019 — it is evidence of durable anger, not a fresh audience.",
+              "source_url": "https://www.change.org/p/palmeto-corp-wild-apricot-stop-20-payment-system-servicing-fee-on-4-2-19"
+            },
+            {
+              "claim": "'No licensing, no gated APIs, no scraping' — no hidden regulatory exposure",
+              "result": "MOSTLY CONFIRMED, WITH ONE TRIPWIRE. Core scope (dues, renewals, events, directory, email) has no licensing regime. But California AB 488's 'Solicitation Type E' explicitly covers white-labeled SaaS that lets charitable organizations solicit donations — adding any donation feature for 501(c)(3) clients triggers AG registration and reporting obligations that a disclaimer cannot waive.",
+              "source_url": "https://www.adlercolvin.com/blog/2024/05/07/california-issues-final-regulations-to-charitable-fundraising-platform-law-five-things-you-need-to-know/"
+            },
+            {
+              "claim": "Email blasts via Resend/Postmark are a simple public-API integration for multi-tenant marketing sends",
+              "result": "CONFIRMED WITH CAVEATS. Both support sending on behalf of customers; Postmark requires per-customer domain/sender verification (DKIM DNS records) and confines marketing to a separate broadcast stream; Resend lacks enforced stream isolation. API access is open, but per-club DNS setup and shared-reputation management are real operational burdens for this low-tech ICP.",
+              "source_url": "https://postmarkapp.com/guides/best-practices-for-sending-on-behalf-of-your-users"
+            }
+          ],
+          "improvements": [
+            "Reposition the renewals promise honestly: 'we preserve every renewal date and automate the re-consent campaign' instead of implying payment continuity. Build a first-class 'card re-entry drive' feature (pre-written member emails, magic-link update-payment pages, progress dashboard showing % of auto-renewers re-enrolled) — this turns the unavoidable weakness into a differentiator, since MembershipWorks/Join It face the identical constraint and don't productize it.",
+            "Make the importer API-first, CSV-fallback: have the club admin generate a Wild Apricot API key (documented, self-serve) so the importer can pull contacts, membership levels, event list, and registrations reliably; treat CSV upload as the degraded path. Drop 'event history via CSV' from marketing copy.",
+            "Draw a hard, documented line at donations: dues, event tickets, and offline-payment recording only at launch. Before shipping any 'add a donation' field for 501(c)(3)s, either register under AB 488 as a Type E platform (Form PL-1, charity good-standing checks, annual report) or gate the feature off for California-reachable orgs. Get one fixed-fee consult with a charitable-solicitation attorney before that feature, not after.",
+            "Budget for Stripe onboarding friction: build a guided 'get your club a Stripe account' flow (entity type decision helper: unincorporated association vs. nonprofit corp, EIN instructions), and support 'record offline payment' from day one as the fallback so clubs blocked on Stripe KYC can still migrate the roster and go live.",
+            "Default email blasts to a shared platform sending domain (blasts from clubname@mail.clubhousehq.com with reply-to the admin) with strict per-tenant list hygiene enforcement (import-consent attestation, bounce/complaint auto-throttling), offering custom-domain DKIM as an opt-in for the few clubs with a webmaster. Use Postmark's separated broadcast stream rather than Resend's unsegmented model.",
+            "Add a CASL/CAN-SPAM guardrail in-product (auto-appended unsubscribe + org mailing address, suppression list enforcement) — cheap to build, and it shifts the platform from 'facilitator of violations' to 'compliance-enforcing tool' posture for the Canadian half of the ICP.",
+            "Version-stamp the savings calculator ('based on Wild Apricot pricing as of <date>, verify against your invoice') and make the 'bill audit' work from the customer's actual invoice rather than assumed tier tables, insulating the board-packet artifact from Personify pricing changes."
+          ],
+          "notes": "Bottom line as the assigned skeptic: I tried to kill this on implementability and could not. Every load-bearing integration is public and credential-accessible — Wild Apricot CSV export and admin API v2 (customer-authorized, no scraping), Stripe Connect Standard + Billing (self-serve, documented SaaS pattern, no money-transmitter exposure since funds go to the org's own Stripe account, SAQ-A PCI scope), Postmark/Resend for email. The pain evidence (20% PSSF, 2021/2023 hikes, support collapse) checks out against primary and secondary sources. The genuine hits: (1) the headline promise 'never breaks renewals' is falsified by Wild Apricot's own docs — stored cards cannot migrate, every auto-renewer must re-enter payment details, so the wedge must be reframed around renewal-date preservation plus a productized re-consent campaign; (2) event-history import needs the API, not one CSV; (3) one real hidden regulatory tripwire (California AB 488 Type E) that only fires if donation features ship — avoidable by scoping, not by disclaimer; (4) unbudgeted friction in Stripe KYC for unincorporated clubs and per-club email DNS. None of these is fatal for a solo builder with Claude Code; all are scope and copy fixes plus one lawyer consult. Residual risks are demand-side (migration inertia amplified by the card re-entry problem) and support-load economics, not buildability."
+        }
+      },
+      {
+        "key": "membership-refuge",
+        "lens": "market",
+        "verdict": {
+          "verdict": "seriously_weakened",
+          "fatal_flaws": [
+            "The core differentiation claim — 'none of them owns the migration moment' — is factually false. MemberDay (memberday.com/compare/wild-apricot-alternative) is already a near-clone of this exact concept: $29/mo flat, unlimited members AND contacts (beating Clubhouse HQ's 250-member cap at the same price), free team-done Wild Apricot data migration within a week, a 45-day trial explicitly framed around 'run real club work before your board decides.' The wedge, the price point, the board-packet positioning, and the migration concierge all already exist under one competitor's roof, plus Somiti, Memberlytic, and Communal are additional fresh entrants farming the same exodus with the same content playbook.",
+            "The distribution plan's foundational assumption — 'Wild Apricot alternative' is high-intent, LOW-competition SEO — is wrong. Those SERPs are already saturated by funded and established players with dedicated comparison pages: Zeffy (VC-backed, multiple 'vs WildApricot' pages), Mighty Networks, Join It, MembershipWorks, Somiti, MemberDay, Jotform, FatLab, plus Wild Apricot's own 'vs competitors' counter-pages. A bootstrapped entrant is unlikely to rank for the exact queries the go-to-market depends on, and there is no proposed channel B of comparable strength."
+          ],
+          "weaknesses": [
+            "ClubExpress (established ~20 years) already bills by ACTIVE members only — the concept's 'direct strike' at the contact-count trap — at $0.42/member/mo up to 200 members (a 150-member club pays ~$63/mo), with ALL modules included, no per-transaction platform fee, unlimited live technical support, and full website hosting. It commoditizes three of the concept's four differentiators (active-member billing, no payment penalty, responsive support) and covers the exact segment the concept concedes it can't serve: orgs whose whole site lives on Wild Apricot.",
+            "Zeffy offers membership management, payments, events, and email at literally $0 (no subscription, no transaction fees, funded by voluntary donor tips) and aggressively targets Wild Apricot switchers with comparison SEO. For a price-motivated volunteer treasurer taking a savings report to the board, 'free' beats '$29/mo' in the board packet; Clubhouse HQ's whole pitch is savings, so it is unusually exposed to a free competitor.",
+            "Join It already starts at $29/mo with flat tiers — the price band is proven but also fully occupied; MembershipWorks at $35/mo has farmed this churn for years. Price/fairness is not available as a durable differentiator; the concept itself admits it must win on migration UX, which MemberDay has already claimed.",
+            "Website hosting lock-in shrinks the addressable wedge more than the concept admits: Wild Apricot bundles the org's entire public website, and third-party accounts (FatLab, Kessler Freedman) show migrations are website-rebuild projects, not CSV imports. Restricting to orgs with existing WordPress/Squarespace sites cuts out a large share of the angriest, most-locked-in customers.",
+            "Switching-inertia evidence cuts against the thesis: the PSSF and the petition date to April 2019 — seven years ago — and Wild Apricot has since pushed through 20% (2021) and 25% (2023) hikes while retaining tens of thousands of orgs and still marketing '#1 membership software 6 years running.' Seven years of documented anger without a consolidated exodus is evidence that volunteer boards mostly don't move, and Wild Apricot now advertises free guided migration/onboarding to switchers in the other direction.",
+            "Buyer dynamics are hostile: the champion is an unpaid volunteer with ~1-year officer terms and board-approval friction, so deals die when officers rotate, and a successor board can churn you the same way the concept expects them to churn Wild Apricot. Combined with a support-hungry, low-tech ICP at $29-99/mo and free white-glove migration for the first 100 orgs, unit economics on the low tier are thin against ClubExpress's staffed unlimited support at comparable effective prices.",
+            "The market-size framing (50k-200k orgs) ignores that the realistically reachable segment is the intersection of: currently on Wild Apricot AND angry enough to act AND site not hosted on Wild Apricot AND board willing to approve a no-name vendor over free (Zeffy) or established (ClubExpress, MembershipWorks) alternatives — plausibly a few thousand orgs contested by at least six named competitors."
+          ],
+          "evidence_checks": [
+            {
+              "claim": "Wild Apricot applies a 20% Payment System Servicing Fee to the subscription for US/Canada orgs using any payment system other than AffiniPay",
+              "result": "CONFIRMED via Wild Apricot's own official help center (both gethelp.wildapricot.com article 1661 and support.wildapricot.com article 24303136407821): 20% of the billing plan applies to accounts using PayPal, Stripe, or Authorize.net, still in force as of 2026. Strongest claim in the research; primary source, not vendor marketing.",
+              "source_url": "https://support.wildapricot.com/hc/en-us/articles/24303136407821-Payment-System-Servicing-Fee"
+            },
+            {
+              "claim": "Change.org petition 'Wild Apricot: Stop 20% Payment System Servicing Fee' created by nonprofit users",
+              "result": "CONFIRMED the petition exists at the cited URL, directed at then-parent Palmeto Corp — but it dates to February 2019, seven years ago. Signature count could not be verified (page returns 403 to fetchers) and no source reports it as large. As evidence of CURRENT switching momentum it is weak-to-misleading: the anger is documented, but seven subsequent years of customer retention through two more price hikes argues inertia wins.",
+              "source_url": "https://www.change.org/p/palmeto-corp-wild-apricot-stop-20-payment-system-servicing-fee-on-4-2-19"
+            },
+            {
+              "claim": "Price hikes of ~20% in 2021 and ~25% in 2023; product development stagnant with only two notable updates in 27 months (sourced to Somiti blog)",
+              "result": "PARTIALLY CONFIRMED, WITH A FLAG. The 2021 (~20%) and 2023 (25%) increases are independently corroborated by Kessler Freedman, a third-party web-development firm with no membership-software product ('Another Odd-Numbered Year, Another Wild Apricot Price Increase', Feb 2023), including customer anger at the 60-day notice. However, the 'only two notable updates in 27 months' stagnation claim traces ONLY to Somiti's blog — and Somiti is itself a competing Wild Apricot alternative, so that specific figure is vendor content-marketing and should not be treated as verified.",
+              "source_url": "https://www.kesslerfreedman.com/2023/02/another-odd-numbered-year-another-wild-apricot-price-increase/"
+            },
+            {
+              "claim": "2025 Capterra reviewer: support is 'HORRIBLE' since the Personify acquisition, email-only, with three-week waits",
+              "result": "DIRECTIONALLY CONFIRMED but on a different platform than cited: matching complaints appear on Trustpilot ('email support has taken up to 3 weeks to get a response', service decline since Personify), and general review-site sentiment corroborates support degradation. The specific Capterra review could not be independently retrieved, so treat the exact quote as unverified while accepting the underlying pattern as real.",
+              "source_url": "https://www.trustpilot.com/review/wildapricot.com"
+            },
+            {
+              "claim": "MembershipWorks positions $35/mo for 300 accounts vs Wild Apricot's $66/mo for 100 contacts, confirming price-driven switching demand",
+              "result": "FLAGGED: the sole source is MembershipWorks' own 'WildApricot Alternative' comparison page — pure vendor content-marketing. The pricing itself is broadly corroborated, and MembershipWorks does publish a WildApricot-to-MembershipWorks migration guide. But note the double edge the research missed: this same evidence proves the churn is already being actively farmed by MembershipWorks, Join It ($29/mo), Zeffy (free), Somiti, and MemberDay — crowding, not white space.",
+              "source_url": "https://membershipworks.com/wildapricot-alternative/"
+            }
+          ],
+          "improvements": [
+            "Before building anything, do a competitive teardown of MemberDay and Somiti (sign up, run their Wild Apricot imports with a real export). If MemberDay's migration is genuinely one-week concierge rather than a self-serve 15-minute importer, the only surviving edge is a truly automated instant importer — validate that this UX difference actually matters to a 60-year-old volunteer treasurer, who may PREFER a human doing it for them.",
+            "Attack the lock-in nobody solves cheaply instead of the lock-in everyone solves: the Wild-Apricot-hosted WEBSITE. A migration product that also auto-generates simple hosted pages (about/join/events/directory) from the WA site would address the largest trapped segment, which every listicle competitor (including MemberDay) currently punts on.",
+            "Replace SEO-first distribution with the chapter-network channel as the primary motion: land one national body's chapters (professional societies, garden club federations) via the parent org's leadership conference, since the SERP channel is demonstrably occupied by Zeffy, Mighty Networks, Join It, and MemberDay.",
+            "Neutralize Zeffy explicitly in positioning and in the savings calculator ('why not free?'): lean on Zeffy's donor-tip friction at dues checkout and its shallow membership database — otherwise every board packet containing your savings report invites the question the concept never answers.",
+            "Rebase the evidence file on primary sources: keep the WA help-center PSSF article and Kessler Freedman for price hikes; drop or caveat Somiti's 'two updates in 27 months' and MembershipWorks' comparison math, both vendor marketing; and replace the 2019 petition with recent (2025-2026) first-person switching reports if they exist — if they don't exist, that absence is itself the answer about demand."
+          ],
+          "notes": "The underlying pain is real and mostly verified from primary/third-party sources: the 20% PSSF is live on Wild Apricot's own help center, the 2021/2023 price hikes are corroborated by a non-competitor third party, and support-decay complaints are visible on Trustpilot. What fails is the OPPORTUNITY claim, not the pain claim. The 'why underserved' thesis ('no alternative has consolidated the exodus... a focused product with per-active-member pricing, Stripe-native, one-click WA import has a clear wedge') describes a product that already exists several times over: MemberDay is a near-exact implementation ($29 flat, unlimited contacts, free concierge WA migration, board-trial framing), ClubExpress has billed by active members only with unlimited support and included hosting for two decades, Join It occupies the $29 flat price point, Zeffy occupies $0, and Somiti/Memberlytic/Communal are fresh entrants running the identical content play. Seven years elapsed between the PSSF outrage (2019) and today with the incumbent retaining tens of thousands of orgs through two further hikes — strong evidence that volunteer-board switching inertia, officer turnover, and WA-hosted-website lock-in beat price anger for most of the ICP. A competent indie could still extract a modest business from this large fragmented market, but the concept as written rests on a differentiation claim that is false and a distribution assumption (low-competition high-intent SEO) that is false, so it needs a fundamentally different edge (website migration, chapter-network distribution, or vertical focus) rather than fixes at the margin."
+        }
+      },
+      {
+        "key": "autorenewal-compliance",
+        "lens": "implementability",
+        "verdict": {
+          "verdict": "seriously_weakened",
+          "fatal_flaws": [
+            "The differentiation claim that 'neither churn tools nor platforms send the mandated reminders' is factually false for the core ICP: Recharge already natively sends 1+ year upcoming-charge notifications with AB 2863-updated default template language, Stripe Billing has built-in 'upcoming renewal' emails and near one-click cancellation, and Loop has shipped a 'United States ARL compliance' setting covering all states. The Operate tier ($299/mo, explicitly named the sticky tier and the churn defense) duplicates features the merchant's existing platform provides free — the incumbent-ships-a-checkbox risk the concept lists as hypothetical has already materialized before launch.",
+            "The recurring core deliverable is not software — it is legal judgment a non-specialist cannot self-verify. Red/yellow/green verdicts applied to a specific merchant's specific flows, plus 'copy-paste compliant disclosure language,' is applying law to particular facts (the classic UPL line that standardized self-help products like LegalZoom stay behind), and the concept's own pitch contains an apparent statutory misstatement: it says 'Maryland demands 14 days notice before a trial converts,' while Maryland's 2025 law (HB 107, per Wiley and Subscription Insider summaries) actually requires notice not less than 3 and not more than 21 days before renewal for trials longer than 14 days. If the pitch itself gets its flagship example wrong, a solo non-lawyer maintaining verdict-grade rules for 20+ amending states is not credible — and the concept admits one error is 'reputationally fatal.'"
+          ],
+          "weaknesses": [
+            "Marketing exposure a disclaimer cannot fix: FTC v. DoNotPay (final order Feb 2025, $193K + consumer notice) establishes that claims a product can substitute for lawyer review must be substantiated. RenewGuard's planned positioning — 'compliant' generated copy, 'your defense exhibit if sued,' demand-letter-adjacent fear marketing — is exactly the unsubstantiated-capability claim pattern the FTC acted on. Gutting that language to be safe also guts the fear-driven wedge that drives conversion.",
+            "Operating the legally mandated sends transfers statutory liability to the vendor at runtime: Klaviyo transactional email designation requires manual review by Klaviyo Customer Success and the flow lives in the merchant's account, so a merchant who edits or disables the flow silently breaks compliance while RenewGuard's evidence vault logs 'sent'; a missed webhook or 2-day outage inside Utah's 3-day trial-notice window or the 15-45/30-60-day renewal windows produces violations across the subscriber base that the tool caused. A sued merchant ($2,500/violation CA penalties) will implead the vendor; B2B liability caps help but E&O insurance for a product that operationalizes legal notices is a real cost/underwriting hurdle for a solo founder.",
+            "State-of-subscriber determination (which state's rules apply per send) depends on billing address data that is stale or absent for many Stripe/Shopify records, making the per-state scheduler correct in the demo and fuzzy in production.",
+            "Shopify App Store distribution requires protected customer data approval (Level 2 fields like email/name need per-field justification, encrypted backups, data-protection review) plus app review — achievable but weeks-to-months of overhead and ongoing obligations, not a listing you flip on.",
+            "FTC restarted negative-option rulemaking (ANPRM to OIRA Jan 30, 2026, comments due April 13, 2026); a finalized federal rule in ~2027 could flatten the state-matrix complexity that is the product's main selling point, exactly as the concept concedes.",
+            "Fear-driven demand with platform-native alternatives means the residual safe product (audit checklist + change alerts, no sending, attorney-reviewed content) is thinner, churnier, and closer to $49-99/mo content subscription than a $299/mo operations layer."
+          ],
+          "evidence_checks": [
+            {
+              "claim": "HelloFresh $7.5M settlement over California automatic renewal violations by CART prosecutors",
+              "result": "CONFIRMED. Approved Aug 14, 2025 by Santa Clara Superior Court: $6.38M civil penalties + $1M restitution + $120K costs; brought by CART members (Santa Monica CA, LA/San Diego/Santa Barbara/Santa Clara/Santa Cruz DAs).",
+              "source_url": "https://da.lacounty.gov/media/news/hellofresh-pay-75-million-deceptive-subscription-practices-consumer-protection-lawsuit"
+            },
+            {
+              "claim": "California AB 2863 effective July 1, 2025 requires same-medium cancellation, expanded consent, and annual renewal reminders regardless of renewal period",
+              "result": "CONFIRMED. Cooley, Fenwick, and Benesch alerts confirm the July 1, 2025 effective date and the new annual reminder requirement for all autorenewals.",
+              "source_url": "https://www.cooley.com/news/insight/2025/2025-06-04-california-automatic-renewal-law-amendments-take-effect-on-july-1-2025"
+            },
+            {
+              "claim": "FTC click-to-cancel rule vacated by Eighth Circuit July 2025; FTC restarted rulemaking January 2026",
+              "result": "CONFIRMED. Vacated July 8, 2025 (procedural failure to issue preliminary regulatory analysis); FTC submitted new ANPRM to OIRA Jan 30, 2026, comments due April 13, 2026. New rule is years out, so state-law complexity persists near-term but federal preemption/simplification risk is live.",
+              "source_url": "https://www.gibsondunn.com/ftc-restarts-negative-option-rulemaking-after-eighth-circuit-vacatur-enforcement-under-rosca-continues/"
+            },
+            {
+              "claim": "Concept's statutory examples: 'Maryland 14-day trial notice, Utah 3-day'",
+              "result": "PARTIALLY REFUTED / IMPRECISE. Utah's 3-day pre-trial-end notice is confirmed (Utah also requires 30-60 day renewal reminders for terms over 45 days). But Maryland's rule per Wiley/Subscription Insider is notice 3-21 days before renewal when the trial exceeds 14 days — not '14 days notice before conversion.' The pitch's own flagship statute citation appears wrong, demonstrating the matrix-correctness risk.",
+              "source_url": "https://www.wiley.law/alert-Automatic-Renewals-and-Risks-State-Negative-Option-Legislation-and-Enforcement-is-Trending"
+            },
+            {
+              "claim": "Differentiation: no platform or churn tool audits against statutes or sends mandated reminders",
+              "result": "REFUTED IN KEY PART. Recharge natively sends 1+ year upcoming-charge notifications with AB 2863-updated default language; Stripe Billing has configurable upcoming-renewal emails and near one-click cancel; Loop shipped an all-states 'United States ARL compliance' cancellation setting. The audit gap is real; the reminder-engine gap largely is not for the stated ICP.",
+              "source_url": "https://getrecharge.com/blog/what-subscription-merchants-should-know-about-californias-updated-automatic-renewal-law/"
+            },
+            {
+              "claim": "A 'not legal advice' disclaimer suffices for an AI/software product giving compliance verdicts and 'compliant' copy",
+              "result": "CHALLENGED. FTC v. DoNotPay (final order Feb 2025): $193K monetary relief, mandatory consumer notice, and prohibition on unsubstantiated claims that a legal-adjacent AI service performs like a lawyer. Disclaimers did not protect DoNotPay; substantiation of compliance-capability marketing claims is the exposure, and UPL remains a separate state-level risk for fact-specific legal application.",
+              "source_url": "https://www.ftc.gov/news-events/news/press-releases/2025/02/ftc-finalizes-order-donotpay-prohibits-deceptive-ai-lawyer-claims-imposes-monetary-relief-requires"
+            },
+            {
+              "claim": "Required APIs (Stripe, Shopify, Recharge, Klaviyo) are public and merchant-credential-accessible; no scraping needed",
+              "result": "CONFIRMED WITH CAVEATS. All APIs are public with merchant credentials/OAuth; no fragile scraping — the 'data' is legal content, not feeds. Caveats: Klaviyo transactional-email designation requires manual review by Klaviyo Customer Success and merchant-side flow configuration (silent-failure risk for legally required sends); Shopify App Store listing requires protected customer data approval with per-field justification and security requirements.",
+              "source_url": "https://developers.klaviyo.com/en/docs/guide_to_setting_up_api_based_transactional_events"
+            },
+            {
+              "claim": "Legal matrix maintainable from free public sources",
+              "result": "PARTIALLY CONFIRMED. Statutes are public and firms (Kelley Drye roundups, Mayer Brown/Faegre 50-state charts, Wiley, ZwillGen) publish free trackers — no paywalled data dependency. But converting them into operational verdicts requires legal interpretation the founder cannot validate, and wholesale reuse of firm charts raises copyright questions; ongoing multi-state monitoring is unbounded solo labor with product-fatal error consequences.",
+              "source_url": "https://www.kelleydrye.com/viewpoints/blogs/ad-law-access/auto-renewal-laws-2025-round-up"
+            }
+          ],
+          "improvements": [
+            "Cut the Operate tier as the flagship. Reposition sending as 'verification, not delivery': monitor whether the merchant's existing Recharge/Stripe/Klaviyo reminders actually fired inside each state's window (read-only API checks) and alarm on gaps. Monitoring platform-native features avoids duplicating them, avoids causing violations, and is genuinely absent from the market.",
+            "Put a named reviewing attorney (of counsel arrangement or boutique-firm partnership with revenue share) behind every matrix release before launch, not as a later mitigation — it is the only credible answer to both UPL exposure and the correctness problem, and the Agency tier partners are the natural source.",
+            "Strip 'compliant copy' and 'defense exhibit' language from all marketing; sell 'requirement checklists mapped to primary statute citations' and 'documentation workspace.' Have the DoNotPay order reviewed as the negative template for every claim on the landing page.",
+            "Launch off-platform (direct web app with CSV/screenshot input) before pursuing Shopify App Store listing, deferring protected-customer-data review until revenue justifies it; the audit wedge needs no customer PII at all.",
+            "Fix the matrix before the pitch: re-derive every state example (starting with Maryland) from primary statutory text with citations, and version the matrix publicly so errors are correctable and dated — the transparency itself is a trust feature law-firm competitors lack.",
+            "Price the audit as a one-time $499-999 product with a $49-99/mo change-alert subscription rather than pretending audit value recurs monthly; align pricing with the actual spiky, fear-driven demand curve."
+          ],
+          "notes": "The pure software build (wizard, matrix DB, PDF report, scheduler, evidence log) is squarely within a Claude Code-assisted indie developer's reach, and no fragile scraping or gated data is involved — the demand evidence (HelloFresh, CART, AB 2863 class-action wave, active plaintiff-firm solicitation) all verified as real and current. What fails the implementability test is the claim that a NON-SPECIALIST can RUN it: the recurring deliverable is verdict-grade legal interpretation across 20+ amending statutes, the sticky revenue tier duplicates features Recharge/Stripe/Loop already ship natively, and the planned positioning walks directly into the FTC's post-DoNotPay substantiation standard. A descoped version — attorney-reviewed audit checklist + statute-change alerts + reminder-verification monitoring — survives, but it is a smaller, spikier business than the one pitched, and it requires a lawyer in the loop from day one, which is precisely what the 'non-specialist indie developer' framing excludes."
+        }
+      },
+      {
+        "key": "autorenewal-compliance",
+        "lens": "market",
+        "verdict": null
+      }
+    ]
+  },
+  "workflowProgress": [
+    {
+      "type": "workflow_phase",
+      "index": 1,
+      "title": "Skeptic"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 1,
+      "label": "skeptic-impl:eaa-accessibility",
+      "phaseIndex": 1,
+      "phaseTitle": "Skeptic",
+      "agentId": "ae4519ee07070572e",
+      "model": "claude-fable-5",
+      "state": "done",
+      "startedAt": 1783677074223,
+      "queuedAt": 1783677074196,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "lastToolSummary": "survives_with_fixes",
+      "promptPreview": "You are a ruthless IMPLEMENTABILITY skeptic. Your job is to REFUTE the claim that a non-specialist indie developer can build and run this SaaS with Claude Code and ordinary tools. Investigate with real web research (5-10 searches/fetches): Are required APIs/data actually public and credential-accessible? Hidden regulatory/licensing exposure? Is core data only obtainable via fragile scraping? What …",
+      "lastProgressAt": 1783677355764,
+      "tokens": 56720,
+      "toolCalls": 14,
+      "durationMs": 281541,
+      "resultPreview": "{\"verdict\":\"survives_with_fixes\",\"fatal_flaws\":[],\"weaknesses\":[\"(duplicate-suppressed — see list above)\"],\"evidence_checks\":[{\"claim\":\"FTC issued a $1M penalty against accessiBe (April 2025 final order) for misrepresenting that its AI overlay could make websites WCAG-compliant\",\"result\":\"VERIFIED. FTC press releases confirm the January 2025 proposed order and April 2025 final approval; the order …"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 2,
+      "label": "skeptic-mkt:eaa-accessibility",
+      "phaseIndex": 1,
+      "phaseTitle": "Skeptic",
+      "agentId": "a93aacc2629ee947a",
+      "model": "claude-fable-5",
+      "state": "done",
+      "startedAt": 1783677074243,
+      "queuedAt": 1783677074196,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "lastToolSummary": "seriously_weakened",
+      "promptPreview": "You are a ruthless MARKET skeptic. Your job is to REFUTE this SaaS opportunity: find well-executed competitors the research missed (search app stores, G2, Capterra, ProductHunt, Reddit), including FREE tiers and native platform features that commoditize the wedge; evidence the pain is already solved or not worth paying for; reasons the buyer is unreachable or churns; and spot-check 3-4 cited evide…",
+      "lastProgressAt": 1783677339847,
+      "tokens": 53833,
+      "toolCalls": 12,
+      "durationMs": 265604,
+      "resultPreview": "{\"verdict\":\"seriously_weakened\",\"fatal_flaws\":[\"The wedge is already shipped, repeatedly, at or below the proposed price. The pitch's core claim — 'every competitor scans; nobody at SMB price does the legal paperwork' — is false. Eye-Able (German, DACH-focused) offers an accessibility statement generator that is 'automatically kept up to date based on your audit reports' (eye-able.com/accessibilit…"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 3,
+      "label": "skeptic-impl:hvac-agreements",
+      "phaseIndex": 1,
+      "phaseTitle": "Skeptic",
+      "agentId": "ad3d491eaa6c1e979",
+      "model": "claude-fable-5",
+      "state": "done",
+      "startedAt": 1783677339855,
+      "queuedAt": 1783677074196,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "lastToolSummary": "survives_with_fixes",
+      "promptPreview": "You are a ruthless IMPLEMENTABILITY skeptic. Your job is to REFUTE the claim that a non-specialist indie developer can build and run this SaaS with Claude Code and ordinary tools. Investigate with real web research (5-10 searches/fetches): Are required APIs/data actually public and credential-accessible? Hidden regulatory/licensing exposure? Is core data only obtainable via fragile scraping? What …",
+      "lastProgressAt": 1783677579708,
+      "tokens": 50402,
+      "toolCalls": 13,
+      "durationMs": 239853,
+      "resultPreview": "{\"verdict\":\"survives_with_fixes\",\"fatal_flaws\":[],\"weaknesses\":[\"SMS turns the founder into a regulated messaging ISV, not just a Twilio API user. Under A2P 10DLC, every HVAC shop customer must be registered as its OWN brand and campaign with The Campaign Registry via the platform (carriers allow no ISV exceptions): the founder must collect each shop's legal name/EIN/address, pay pass-through fees…"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 4,
+      "label": "skeptic-mkt:hvac-agreements",
+      "phaseIndex": 1,
+      "phaseTitle": "Skeptic",
+      "agentId": "a7e1f4b503142d7e6",
+      "model": "claude-fable-5",
+      "state": "done",
+      "startedAt": 1783677355773,
+      "queuedAt": 1783677074197,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "lastToolSummary": "seriously_weakened",
+      "promptPreview": "You are a ruthless MARKET skeptic. Your job is to REFUTE this SaaS opportunity: find well-executed competitors the research missed (search app stores, G2, Capterra, ProductHunt, Reddit), including FREE tiers and native platform features that commoditize the wedge; evidence the pain is already solved or not worth paying for; reasons the buyer is unreachable or churns; and spot-check 3-4 cited evide…",
+      "lastProgressAt": 1783677724606,
+      "tokens": 66056,
+      "toolCalls": 27,
+      "durationMs": 368832,
+      "resultPreview": "{\"verdict\":\"seriously_weakened\",\"fatal_flaws\":[\"The standalone architecture contradicts the wedge feature. The 'Unscheduled Visit' alarm can only know whether a visit is booked if someone tells it — but the schedule lives in Jobber/Housecall Pro/Google Calendar. Every booking must be manually mirrored into TuneUp Keeper by the same overloaded office manager the product claims to save. The headline…"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 5,
+      "label": "skeptic-impl:membership-refuge",
+      "phaseIndex": 1,
+      "phaseTitle": "Skeptic",
+      "agentId": "a0940693affe1c006",
+      "model": "claude-fable-5",
+      "state": "done",
+      "startedAt": 1783677579716,
+      "queuedAt": 1783677074197,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "lastToolSummary": "survives_with_fixes",
+      "promptPreview": "You are a ruthless IMPLEMENTABILITY skeptic. Your job is to REFUTE the claim that a non-specialist indie developer can build and run this SaaS with Claude Code and ordinary tools. Investigate with real web research (5-10 searches/fetches): Are required APIs/data actually public and credential-accessible? Hidden regulatory/licensing exposure? Is core data only obtainable via fragile scraping? What …",
+      "lastProgressAt": 1783677824915,
+      "tokens": 50900,
+      "toolCalls": 14,
+      "durationMs": 245199,
+      "resultPreview": "{\"verdict\":\"survives_with_fixes\",\"fatal_flaws\":[],\"weaknesses\":[\"The 'never breaks renewals' promise is materially overstated: Wild Apricot's own documentation confirms saved card data cannot be exported (it is tokenized at AffiniPay), so switching payment systems requires cancelling every recurring payment and having each auto-renewing member re-enter card details. The scariest part of migration …"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 6,
+      "label": "skeptic-mkt:membership-refuge",
+      "phaseIndex": 1,
+      "phaseTitle": "Skeptic",
+      "agentId": "a4a2c0b4a6657cb1e",
+      "model": "claude-fable-5",
+      "state": "done",
+      "startedAt": 1783677724613,
+      "queuedAt": 1783677074197,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "lastToolSummary": "seriously_weakened",
+      "promptPreview": "You are a ruthless MARKET skeptic. Your job is to REFUTE this SaaS opportunity: find well-executed competitors the research missed (search app stores, G2, Capterra, ProductHunt, Reddit), including FREE tiers and native platform features that commoditize the wedge; evidence the pain is already solved or not worth paying for; reasons the buyer is unreachable or churns; and spot-check 3-4 cited evide…",
+      "lastProgressAt": 1783677949245,
+      "tokens": 51521,
+      "toolCalls": 16,
+      "durationMs": 224631,
+      "resultPreview": "{\"verdict\":\"seriously_weakened\",\"fatal_flaws\":[\"The core differentiation claim — 'none of them owns the migration moment' — is factually false. MemberDay (memberday.com/compare/wild-apricot-alternative) is already a near-clone of this exact concept: $29/mo flat, unlimited members AND contacts (beating Clubhouse HQ's 250-member cap at the same price), free team-done Wild Apricot data migration with…"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 7,
+      "label": "skeptic-impl:autorenewal-compliance",
+      "phaseIndex": 1,
+      "phaseTitle": "Skeptic",
+      "agentId": "a0264ca7046f77954",
+      "model": "claude-fable-5",
+      "state": "done",
+      "startedAt": 1783677824923,
+      "queuedAt": 1783677074197,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "lastToolSummary": "seriously_weakened",
+      "promptPreview": "You are a ruthless IMPLEMENTABILITY skeptic. Your job is to REFUTE the claim that a non-specialist indie developer can build and run this SaaS with Claude Code and ordinary tools. Investigate with real web research (5-10 searches/fetches): Are required APIs/data actually public and credential-accessible? Hidden regulatory/licensing exposure? Is core data only obtainable via fragile scraping? What …",
+      "lastProgressAt": 1783678067140,
+      "tokens": 54592,
+      "toolCalls": 13,
+      "durationMs": 242217,
+      "resultPreview": "{\"verdict\":\"seriously_weakened\",\"fatal_flaws\":[\"The differentiation claim that 'neither churn tools nor platforms send the mandated reminders' is factually false for the core ICP: Recharge already natively sends 1+ year upcoming-charge notifications with AB 2863-updated default template language, Stripe Billing has built-in 'upcoming renewal' emails and near one-click cancellation, and Loop has sh…"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 8,
+      "label": "skeptic-mkt:autorenewal-compliance",
+      "phaseIndex": 1,
+      "phaseTitle": "Skeptic",
+      "agentId": "accf9d76629409e38",
+      "model": "claude-fable-5",
+      "state": "error",
+      "startedAt": 1783677949252,
+      "queuedAt": 1783677074197,
+      "attempt": 1,
+      "lastToolName": "WebSearch",
+      "lastToolSummary": "HelloFresh $7.5 million settlement CART California Automati…",
+      "promptPreview": "You are a ruthless MARKET skeptic. Your job is to REFUTE this SaaS opportunity: find well-executed competitors the research missed (search app stores, G2, Capterra, ProductHunt, Reddit), including FREE tiers and native platform features that commoditize the wedge; evidence the pain is already solved or not worth paying for; reasons the buyer is unreachable or churns; and spot-check 3-4 cited evide…",
+      "lastProgressAt": 1783678039492,
+      "error": "You've hit your session limit · resets 11am (UTC)",
+      "tokens": 44281,
+      "toolCalls": 9,
+      "durationMs": 90239
+    }
+  ],
+  "totalTokens": 428305,
+  "totalToolCalls": 118
+}

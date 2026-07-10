@@ -1,0 +1,814 @@
+{
+  "summary": "Ideate 4 kill-taxonomy-aware concepts and put each through dual skeptics",
+  "agentCount": 12,
+  "logs": [
+    "4/4 concepts designed",
+    "Verdicts: str-eu-compliance/implementability=seriously_weakened; str-eu-compliance/market=seriously_weakened; surveyor-jobtrack/implementability=survives_with_fixes; surveyor-jobtrack/market=seriously_weakened; interpreter-backoffice/implementability=seriously_weakened; interpreter-backoffice/market=kill; hvac-radar-pivot/implementability=survives_with_fixes; hvac-radar-pivot/market=seriously_weakened"
+  ],
+  "result": {
+    "concepts": [
+      {
+        "name": "Registry Radar",
+        "one_liner": "The host-side compliance system of record for EU short-term rental portfolios: a curated, citation-backed registry-requirements database mapped to each property, with renewal deadlines, rule-change alerts, and a document vault — so a missed registration never gets a listing auto-delisted.",
+        "icp": "Professional STR property managers and co-hosting agencies running 5–100 units across two or more EU jurisdictions (Italy CIN, Spain NRU, Greece AMA, Portugal AL, France, plus city layers like Athens/Barcelona/Amsterdam), who already pay $20–50/unit/month for a PMS and now face Regulation (EU) 2024/1028's platform-enforced delisting (in force 20 May 2026) plus national fines of €800–€600,000. Secondary: single-market hosts with 2+ units in high-fine countries, and US permit-city hosts as a later expansion.",
+        "wedge_feature": "The 10-minute \"Delisting Risk Audit\": enter property addresses (or paste public Airbnb/Booking listing URLs), and the app maps each unit to its exact applicable registry stack — national scheme, regional layer, city extras (night caps, minimum stays, tax registrations) — from a hand-curated database where every requirement links to the official government source (EUR-Lex, ministry portals, municipal ordinances). Output: a per-property traffic-light report (registered / number-format invalid / renewal due / unregistered) and an auto-generated deadline calendar. This is verifiable end-to-end locally: the rules data is public, the matching is deterministic, and listing-number presence checks read public listing pages (mockable in demo). The curation itself — 27 national systems plus regional/city layers, maintained as schemes go live through 2026-2027 — is the moat, not scraping or gated APIs.",
+        "core_loop": "(1) Add properties once; each is auto-matched to its jurisdiction requirement set. (2) Record registration numbers, application statuses, and upload supporting documents (permits, tax registrations, energy certificates) to the vault. (3) The app continuously generates obligations: renewal deadlines, display requirements per platform, new-scheme go-live dates as more EU registries launch through 2026-27. (4) Email/Slack alerts fire at 90/30/7 days; the weekly portfolio compliance digest (green/amber/red per unit) is the retention ritual agencies forward to property owners as proof of service. (5) Every jurisdiction rule change (curated by the founder, Claude-assisted monitoring of official sources) pushes a targeted alert only to affected properties — the product gets more valuable the longer the subscription runs, because the regulatory landscape keeps moving.",
+        "pricing": "Per-unit SaaS, anchored to existing per-unit PMS spend and fine exposure: Solo €19/mo (up to 3 units, 1 jurisdiction); Portfolio €6/unit/mo, min €49/mo (unlimited jurisdictions, document vault, Slack alerts); Agency €149/mo + €4/unit (client workspaces, white-label owner digests, audit-trail export). 14-day trial with the Delisting Risk Audit as the aha moment; no permanent free tier (no VC-funded free floor exists in this category to force one). A 20-unit manager pays ~€120/mo against €3,000–€600,000 fine exposure and overnight delisting revenue loss.",
+        "differentiation": "Every incumbent sells to the other side of the table: Deckard, Granicus Host Compliance, GovOS, and Localgov are enforcement tools sold to city governments; Avalara MyLodgeTax covers lodging taxes only. Platforms (Airbnb/Booking) will ship a registration-number field and per-platform reminders because the regulation forces them to — but they have zero incentive to track a manager's cross-platform, cross-jurisdiction portfolio, renewals for registries they don't operate, or city-layer extras like night caps; their obligation ends at verify-and-remove. PMS incumbents (Guesty, Hostaway) treat compliance as blog content because a requirements database is ops-heavy editorial work with perceived liability, not software — the exact kind of curation moat an indie can own. Crucially, Registry Radar never generates legal language or verdicts: it is a tracker over primary sources, every requirement hyperlinked to the official regulation or portal, with 'not legal advice' framing — dodging UPL exposure by design. Alerts are email/Slack only, no SMS.",
+        "mvp_scope": "6-week Claude Code build: (1) Requirements database seeded with 5 national schemes already in force (Italy CIN, Spain NRU, Greece AMA, Portugal AL, France) plus 10 major city layers, each rule stored with official-source citation and effective date — schema: jurisdiction → requirement → deadline logic → source URL; (2) property CRUD with address-to-jurisdiction matcher; (3) registration/renewal status tracking with computed deadline calendar; (4) email + Slack alert scheduler; (5) document vault (object storage + metadata); (6) listing-number presence check by fetching public listing pages (mocked in demo, feature-flagged in prod); (7) portfolio dashboard and weekly owner-ready digest. Standard web stack, simple Postgres, no gated APIs, no payment-instrument migration, no SMS. Post-MVP: remaining EU schemes as they go live, Hostaway/Guesty marketplace integrations, US permit cities.",
+        "main_risks": "(1) Curation accuracy: a wrong renewal date is the product failing at its one job — mitigated by citing and linking every rule to its official source, dating every entry, and a jurisdiction-review cadence; scope launch to schemes actually in force rather than all 27. (2) PMS incumbents waking up post-May-2026: mitigate by being the data layer they'd rather license/integrate than build (marketplace apps, API), and by owning the cross-PMS/co-host segment they can't. (3) National registries could add their own reminder emails — but only per-registry, never cross-jurisdiction portfolio view, which is the actual job. (4) Fragmented rollout risk: some member states delay schemes, shrinking the urgent surface — mitigated because Italy/Spain/Greece/Portugal/France already enforce with fines today, independent of the EU deadline. (5) Perceived legal-advice liability: strictly a tracker with disclaimers and source links, no generated compliance language.",
+        "distribution": "Non-SEO-dependent channels: (1) property manager associations and events (VRMA Europe, national host federations, Scale Rentals / Book Direct communities); (2) co-hosting and host communities where the panic is live and first-person (Facebook co-host groups, r/airbnb_hosts, host Slack/Discord groups) — the free public 'EU STR Registry Directory' (one page per jurisdiction, citation-linked) earns links and long-tail non-panic queries that funded comparison pages don't blanket; (3) PMS app marketplaces (Hostaway, Guesty) once integrations ship; (4) accountants and STR consultants serving managers, via a partner/referral tier.",
+        "key": "str-eu-compliance"
+      },
+      {
+        "name": "Backsight",
+        "one_liner": "Job tracking built for land surveying firms: a pipeline that speaks surveying (fieldwork → drafting → licensed review → delivery), a client status link that kills \"where's my survey?\" calls, and a prior-work archive searchable by Section-Township-Range so every new request instantly shows what the firm already knows about that ground.",
+        "icp": "Owner/licensed surveyor of a US firm with 1-5 field crews and 3-25 staff ($300K-$5M revenue), running 20-80 concurrent small jobs (boundary, ALTA, topo at $500-$5K each) on a whiteboard plus email, who personally fields status calls from title companies and builders and personally remembers \"we shot that section in 2019.\" Secondary user: the office manager/drafter who chases field notes and invoices.",
+        "wedge_feature": "Prior-Work Radar: import the firm's historical job list (spreadsheet/CSV), and Backsight parses legal descriptions (Section-Township-Range via free public BLM PLSS shapefiles, plus subdivision/lot-block and address fallback for metes-and-bounds states) and indexes every job spatially. When a new request arrives, one search shows every past job in or adjacent to that section or subdivision — control points, prior plats, research already paid for — turning the owner's memory into a quotable asset. Demo is fully verifiable locally: PLSS data is public-domain, the parse-and-match runs end-to-end on a sample sheet in minutes. This is the value no platform will build: Jobber/monday have no concept of legal descriptions, and Trimble/Leica/Carlson sell hardware and CAD, not small-firm practice management.",
+        "core_loop": "Request comes in → create job (address or legal description) → Prior-Work Radar surfaces adjacent past jobs to sharpen the quote → quote sent → crew dispatched, updates stage from a phone browser (field notes/photos attached) → drafting → licensed review → delivered → invoice pushed to QuickBooks Online. Every stage change auto-updates a tokenized, read-only client status link (no login, no SMS), so title companies stop calling. A weekly \"stuck jobs\" email flags anything idle >N days per stage — delivered-but-uninvoiced jobs first. Every completed job enriches the searchable archive, so the product gets more valuable (and stickier) with each month of use.",
+        "pricing": "Flat firm pricing, not per-seat (field crews must never count against a license): Solo $79/mo (1 crew), Firm $149/mo (up to 3 crews), Practice $249/mo (unlimited crews + QuickBooks sync + client-branded status pages). 14-day free trial with historical-import concierge, no free tier. Anchored below BQE Core's effective cost for a 10-person firm and justified by recovering one delayed invoice or lost repeat job per month; annual discount 2 months free.",
+        "differentiation": "(1) Surveying-native semantics generic tools can't fake: legal-description search, deliverable types (plat, ALTA, elevation cert), a licensed-review gate before delivery, research/recorded-document stage — none of which Jobber, monday, or ServiceTitan model. (2) The archive is a compounding data moat: after a year, the firm's institutional memory lives in Backsight and switching means losing spatial search over 500 past jobs. (3) No platform-native threat: CAD/GNSS vendors monetize hardware and have ignored small-firm ops for decades; horizontal FSM tools won't ingest PLSS shapefiles for a 25,000-establishment niche. (4) No VC free tier exists in this vertical — SurveyOps is a new paid entrant, which validates demand without flooring price. (5) Flat pricing vs BQE's per-user model fits how surveying firms actually staff.",
+        "mvp_scope": "In: job pipeline CRUD with surveying-specific stages and per-stage assignee; CSV import of historical jobs; legal-description parser + PLSS section lookup (public BLM data bundled) with subdivision/address fallback; map + adjacency search; tokenized client status page (email notifications only, no SMS); file attachments for field notes/photos; stuck-job weekly digest; QuickBooks Online invoice push (public OAuth API, mockable in dev). Out for v1: native mobile apps (responsive web only), GPS crew tracking, scheduling optimization, CAD/data-collector integration, payments/estimating math, county-recorder data enrichment. Buildable by one dev with Claude Code in 6-8 weeks: standard web app, Postgres + PostGIS, one public API integration.",
+        "main_risks": "(1) SurveyOps has a head start in the same wedge — mitigate by leading with Prior-Work Radar (they lead with generic job management) and shipping the historical-import concierge that makes day-one value real. (2) Whiteboard inertia: owners are field people, not software adopters — the client status link must show ROI (fewer calls) within the trial. (3) PLSS doesn't cover Texas and colonial-metes-and-bounds states, weakening the wedge there — subdivision/address search must be genuinely good, and initial GTM should target PLSS states (Midwest/West). (4) Niche TAM (~25K establishments) caps this at a strong indie business, not a venture outcome — acceptable by design. (5) Import friction: messy historical spreadsheets could stall onboarding; the parser must degrade gracefully to manual pin-drop.",
+        "distribution": "No panic-SEO plays. Reach owners where licensed surveyors actually congregate: state society newsletters and conferences under NSPS (every state has one, cheap sponsorships), r/Surveying and RPLS Today forums via genuine participation, surveying podcasts (e.g. gear-and-practice shows), and a free lead-magnet tool — a public Section-Township-Range lookup/map that surveyors bookmark and share, which doubles as the wedge demo. Partner-channel: GNSS equipment dealers and survey-supply houses who talk to every small firm and have nothing to sell them for the office. Referral loop: every client-facing status page footer reads \"Tracked with Backsight,\" seen by title companies who work with dozens of surveyors.",
+        "key": "surveyor-jobtrack"
+      },
+      {
+        "name": "TerpDesk",
+        "one_liner": "The scheduling and dual-rate billing back office for small onsite interpreter agencies — match the right credentialed interpreter to every job, confirm both sides, and generate client invoices and interpreter pay statements that always reconcile, at 1/5th the price of the telephony-bundled incumbents.",
+        "icp": "Owner-operators and lead schedulers of small US language service providers (2–50 contract interpreters) doing onsite/community interpreting for courts, hospitals, schools, and social services — currently running dispatch on spreadsheets, Google Calendar, and phone calls, holding court/hospital contracts that impose credential-documentation and confirmation requirements, and priced out of Boostlingo (~$500/mo) and Interpreter Intelligence (~$499/mo) whose VRI/OPI call platforms they don't need.",
+        "wedge_feature": "The Dual-Rate Assignment Ledger: every job carries two independent rate cards — what the client is billed and what the interpreter is paid — each with per-job minimums (e.g. 2-hour court minimum), mileage, after-hours/overtime multipliers, and cancellation-window fees. Close out a month and one click emits a client invoice batch (PDF/CSV) and per-interpreter remittance statements that reconcile to the penny against the same job records, replacing the hours of weekly spreadsheet gymnastics that is the single most-hated task in the segment. Paired with a credential vault (court certification, medical certification, background check, with expiry alerts and an exportable audit trail) that satisfies contract documentation requirements spreadsheets can't. This wedge is fully demoable end-to-end locally with mock agency data — no carrier black boxes, no gated APIs, no legal language generation.",
+        "core_loop": "1) Job intake: scheduler (or client via a branded request portal) enters date, location, language, required credential, expected duration. 2) Match: engine ranks available interpreters by language, credential validity, distance, and rate, with hard double-booking and travel-conflict detection. 3) Offer: interpreter receives an email with a magic-link accept/decline page (no app install, no SMS); first-accept or scheduler-pick wins. 4) Confirm: both client and interpreter get confirmation emails and live iCal feeds; reminders fire automatically; cancellations re-open the job and apply the correct cancellation fee to both rate cards. 5) Close-out: interpreter confirms actual start/end time via magic link; rate engine computes billable vs payable. 6) Reconcile: month-end invoice batch + pay statements + compliance export. Every completed job feeds the ledger, so daily use compounds into the monthly payoff — the loop runs every single business day an agency operates.",
+        "pricing": "Flat monthly tiers by active interpreter roster, no per-minute or per-job fees (a pointed contrast with incumbents' usage pricing): $79/mo up to 15 interpreters, $149/mo up to 50, $249/mo unlimited + multi-scheduler seats. 14-day free trial with a pre-loaded demo agency; annual plan at 2 months free. This sits squarely in the evidenced $50–200 gap — an agency billing $60–150/hr per assignment recovers the fee by preventing one missed or double-booked job per month.",
+        "differentiation": "vs Boostlingo/Interpreter Intelligence: they monetize VRI/OPI telephony minutes and price for enterprise; a lean scheduling/back-office tool cannibalizes nothing they care about, so they have no incentive to ship it down-market (dodges kill pattern 1) — and there is no VC-funded free tier anywhere in interpreter dispatch (dodges 2; the roundups' 'budget option' is literally generic Homebase). vs spreadsheets/Homebase/Calendar: none can do credential matching, conflict detection across travel time, or two-sided rate math — the ledger is the uncopyable-by-generic-tools core. The compounding moat is data curation: a maintained rules library of per-state court interpreter rate schedules, certification registries, and standard cancellation/minimum conventions (all from official public sources — state judiciary fee schedules, certification body lists), which makes setup instant and generic tools permanently unfit. Evidence base is primary-source-friendly: state court interpreter program pages and contract terms document the credential and confirmation requirements directly (dodges 4). No SMS at core, no payments processing, no legal-language generation (dodges 5).",
+        "mvp_scope": "In: interpreter directory (languages, credentials with expiry dates + document upload, home base, rate cards); job intake form + minimal client request portal; matching/ranking with double-booking and travel-conflict checks; email offer/accept/decline via magic links (SendGrid); confirmations, reminders, iCal feeds; the dual-rate engine (minimums, mileage via a public distance API or manual entry, after-hours, cancellation windows); month-end invoice PDFs + interpreter pay statements + CSV export to QuickBooks; credential-expiry alerts and audit-trail export; seed rules library for 5–10 launch states. Out (v1): telephony/VRI/OPI, native SMS, payment processing/payroll money movement (statements only — QuickBooks/Gusto handle the actual dollars), mobile apps, AI matching. Buildable by one dev with Claude Code in 6–8 weeks: pure CRUD + rules engine + email, all first-party data, fully mockable demo.",
+        "main_risks": "1) Incumbent down-market move: Boostlingo could ship a cheap scheduling-only tier; mitigated by their minute-revenue incentive structure but not eliminated — speed and the small-agency community brand are the defense. 2) Small, fragmented TAM with relationship-driven sales: thousands of agencies but no single watering hole; requires patient community distribution, not viral growth. 3) Switching inertia: spreadsheet workflows are free and familiar; onboarding must import an agency's existing interpreter roster and rate rules in under an hour or trials die. 4) Usked and other micro-competitors are circling the same gap — differentiation must stay concrete (rate-rules library, compliance exports) rather than 'simpler and cheaper.' 5) Rate-rules library maintenance is real ongoing curation work across states; it is the moat but also a standing cost. 6) Some agencies will demand SMS notifications; the email/iCal/magic-link flow must demonstrably match SMS confirmation rates or A2P-compliant SMS becomes an unavoidable roadmap item.",
+        "distribution": "Community-led, not SEO (dodges kill pattern 6): sponsor and exhibit at NAJIT (court interpreters), ATA, IMIA/NCIHC (medical interpreting) conferences; contribute practical content (rate-schedule cheat sheets, contract-compliance checklists built from the public-source rules library) to interpreter-agency Facebook/LinkedIn owner groups; partner with state court interpreter program coordinators whose public vendor lists name the small agencies; referral program where interpreters themselves (who love magic-link accept + accurate pay statements) pull their other agencies onto the tool — the two-sided network of contract interpreters working for multiple agencies is a built-in cross-pollination channel.",
+        "key": "interpreter-backoffice"
+      },
+      {
+        "name": "PlanPatrol — Maintenance Agreement Leak Radar",
+        "one_liner": "A read-only \"profit-leak radar\" that ingests the CSV exports a small HVAC/plumbing shop already produces (Jobber, Housecall Pro, QuickBooks) and every week flags exactly which maintenance-plan members were sold but never scheduled, are owed a seasonal visit, or are about to lapse — with a ready-to-send outreach list, no double-entry, no new system of record.",
+        "icp": "The office manager or owner-operator of a residential HVAC/plumbing/electrical shop with 2–10 technicians that actively sells annual maintenance plans (50–800 agreements) but runs on Jobber Core, Housecall Pro basic, or QuickBooks + spreadsheets — i.e., shops whose FSM tier structurally lacks agreement management and who refuse to pay ServiceTitan-class pricing ($250–$500/tech/mo plus $5k+ implementation, per ServiceTitan's publicly reported pricing) or Housecall Pro's Service Plans add-on to get it. The buyer already pays $59–$349/mo for FSM software, so budget demonstrably exists; the daily user is the office manager who opens it Monday morning like a bank statement.",
+        "wedge_feature": "The \"Sold-But-Never-Scheduled\" detector: cross-reconciles plan revenue (QuickBooks/FSM invoice export) against job history (Jobber/HCP job export) and surfaces every customer who paid for a membership but has zero booked or completed included visits — the single most damaging and most invisible failure mode, because it lives in the GAP BETWEEN two systems (billing in QuickBooks, scheduling in the FSM) that no single platform vendor will ever reconcile across a competitor's data. Bonus reverse-leak in the same pass: members still receiving plan-priced service after their agreement expired. Demo is verifiable end-to-end locally with two mock CSVs and a rules engine — no gated API, no carrier/black-box dependency.",
+        "core_loop": "1) Weekly, the office manager forwards or drags in the same CSV exports they already know how to produce (Jobber/HCP customers+jobs, QuickBooks invoices); a saved mapping makes re-import a 2-minute habit. 2) PlanPatrol re-runs reconciliation and updates four leak queues: paid-never-scheduled, visit due <45 days and unbooked, renewal lapsing <60 days, expired-but-still-serviced. 3) Each flagged member gets a one-click mailto/copy-paste outreach template sent from the shop's own mailbox (BYO SMTP optional; zero SMS). 4) Next week's import automatically verifies which leaks closed (visit booked, renewal invoiced) and increments a running \"revenue protected this year\" tally — the number the owner sees on the Monday digest email, which is what renews the subscription. Fresh leaks appear every single week because agreements roll continuously, so the radar never \"finishes.\"",
+        "pricing": "Flat $79/mo or $790/yr per shop, unlimited agreements, unlimited users, no per-technician math — explicitly marketed against Jobber/HCP/ServiceTitan per-seat and add-on creep (\"one price, every tech, every plan\"). 14-day trial that runs on the shop's first real CSV upload so the trial itself performs the audit and shows named customers with dollar amounts leaking. No free tier (the audit output IS the value; giving it away kills the wedge), but a free downloadable \"membership leak self-audit checklist\" as the community lead magnet.",
+        "differentiation": "(1) Cross-vendor reconciliation is structurally unbuildable by the platforms: Jobber will never ingest Housecall Pro or QuickBooks data to audit a shop that half-lives elsewhere, and their commercial incentive is to upsell the shop INTO their gated agreement tier ($199+ Grow / paid Service Plans add-on), not to give a radar away at Core — this dodges kill patterns 1 and 2 (no platform-native substitute, no free-tier floor; no VC player gives agreement auditing away free). (2) Read-only + no billing means zero switching cost and zero payment-migration risk — it sits beside the stack instead of replacing it, which is exactly why the standalone predecessor died and this doesn't. (3) The moat compounds as curated import adapters: field-tested column mappings and plan-template libraries for every export quirk of Jobber, HCP, QuickBooks, FieldEdge, and raw spreadsheets — unglamorous data-curation work an indie can grind out and a suite vendor won't. (4) Evidence discipline baked into marketing: sell only verifiable facts — public tier pricing and the structural absence of agreement radars in base-tier FSM plans — never vendor-blog loss statistics.",
+        "mvp_scope": "4–6 weeks with Claude Code: standard web app (Next.js + Postgres). In: CSV upload + column-mapping wizard with saved mappings for Jobber, Housecall Pro, and QuickBooks export formats plus a generic spreadsheet mapper; plan definitions (price, term, included visits/season); the four-rule leak engine; leak queues with per-customer dollar-at-risk; mailto/copy-paste outreach templates; weekly digest email; revenue-protected tally; demo workspace pre-loaded with realistic mock shop data for the sales demo. Out (deliberately): any payment processing, SMS, two-way API writes, scheduling actions, becoming the system of record. Later: read-only Jobber GraphQL API sync (public API) to replace manual CSV upload, and a Jobber App Marketplace listing as a distribution channel.",
+        "main_risks": "(1) Habit decay on manual CSV upload — if the weekly import lapses, the radar goes stale and churns; mitigate with email-in ingestion, staleness nags, and prioritizing the read-only Jobber API sync fast. (2) Jobber/HCP could push agreement features down into base tiers, shrinking the gap — though their add-on-monetization history and the cross-vendor QuickBooks reconciliation angle blunt this. (3) Messy real-world data: shops with plans recorded as free-text invoice memos may defeat the mapper; the curated-adapter grind is the moat but also the tax. (4) Read-only can feel incomplete — buyers may ask \"why doesn't it just book the visit?\"; positioning must hold the audit-and-radar line or scope creep drags it back into the killed standalone-platform concept. (5) Small, community-gated TAM: distribution runs through HVAC-Talk, r/HVAC, Facebook owner groups, ACCA chapters, and trade podcasts rather than SEO (the obvious queries are blanketed by funded FSM comparison pages), so growth is slower and founder-effort-heavy.",
+        "distribution": "Founder-led presence in trade-owner communities (HVAC-Talk business forum, r/HVAC and r/Plumbing owner threads, HVAC/plumbing business-owner Facebook groups, ACCA and PHCC local chapters), guesting on trades-business podcasts with the \"run this free self-audit on your membership base\" hook, a free leak-self-audit spreadsheet as lead magnet, and later a Jobber App Marketplace listing for warm in-platform discovery — explicitly NOT panic-query SEO, which is saturated by funded FSM comparison content.",
+        "key": "hvac-radar-pivot"
+      }
+    ],
+    "skeptics": [
+      {
+        "key": "str-eu-compliance",
+        "lens": "implementability",
+        "verdict": {
+          "verdict": "seriously_weakened",
+          "fatal_flaws": [
+            "The concept's flagship retention engine — renewal deadlines — largely does not exist in the five launch markets. Italy's CIN has no expiry/renewal; Portugal abolished the AL 5-year renewal and auto-expiry rules; Greece's AMA does not expire (recurring obligations are annual income declarations to AADE — tax territory, i.e., Avalara/Chekin turf); France's declaration numbers don't renew on a cycle; and Spain's annual NRUA revalidation was annulled in May 2026. 'A missed renewal never gets a listing auto-delisted' is a wedge built on an obligation type that is marginal in exactly the jurisdictions chosen for launch. What actually recurs is rule churn — which converts the product from software into a hand-run editorial monitoring service.",
+            "The core evidence is already dead: Spain's Supreme Court (judgment 620/2026, 21 May 2026 — one day after the EU regulation took full effect) annulled the national Registro Único/NRUA as ultra vires, returning competence to the 17 autonomous communities. The concept's biggest scare number ('Spain NRU since July 2025, fines €3,000–€600,000') no longer describes reality, and 'Spain = one national scheme' becomes 'Spain = 17 regional regimes + city layers.' This simultaneously invalidates the pitch as written and demonstrates the killer ops problem: a non-specialist solo founder must catch constitutional-court-level upheavals in five languages within days, or the product confidently tells customers to comply with an annulled registry — the product failing at its one job.",
+            "The whitespace claim ('no host-side incumbent, incumbents all sell to governments') is false as of July 2026. Conforme (conforme.info) is live with near-identical positioning — literally 'the regulatory system of record for European STR operators' — tracking NRUA/RNAL/CIN/Declaloc registrations and renewals, paste-a-listing-URL registration checks validated against actual registries, audit trails, at €29–69/property/month, launched in Portugal/Spain with Italy/France next. guestadmin.io and Your.Rentals compliance also occupy the space, Chekin (50+ PMS integrations, host-side compliance since 2016) is one product decision away. The May 2026 forcing function that makes the idea attractive also predictably spawned these competitors before this build would even start."
+          ],
+          "weaknesses": [
+            "The 'listing-number presence check reads public listing pages' feature is not implementable as described. Airbnb is rated Hard (4/5) to scrape as of April 2026: Cloudflare Enterprise blocks datacenter IPs, raw GETs return an empty React shell, TLS fingerprinting and behavioral analysis defeat naive automation, and hashed CSS classes break parsers on every deploy. Doing it for real means paid residential-proxy/scraper APIs (Bright Data, ScrapingBee, Apify) — recurring cost, ToS breach against the very platforms whose ecosystem you serve, and perpetual breakage. 'Mocked in demo, feature-flagged in prod' is an honest tell that the wedge's most demoable claim doesn't survive contact with production.",
+            "The moat is precisely the work a non-specialist indie is worst positioned to do: continuous multilingual legal monitoring of national + regional + municipal sources (Italian regional CIR layers, 17 Spanish autonomous-community regimes post-annulment, Greek AADE circulars, French communes' changement d'usage rules, city ordinances in Catalan/Greek). Claude-assisted monitoring helps find changes but cannot certify correctness, and a single wrong effective date or missed judgment is existential for a product whose only promise is accuracy. Competitors (Chekin, Conforme) staff compliance functions for this.",
+            "Address-to-jurisdiction matching is harder than 'CRUD + matcher' implies at the layer where rules actually bite: Barcelona zoning by neighborhood, Paris arrondissement-level authorization, Athens district moratorium. Sub-municipal applicability cannot be resolved by geocoding alone and needs per-property manual verification — more ops load on the solo founder.",
+            "Liability is manageable but not free: this is not US-style UPL exposure (a tracker over cited primary sources is not legal advice, and B2B liability caps/disclaimers are broadly enforceable in EU commercial contracts), but a customer delisted or fined after a green light will churn loudly in the small, well-networked PM community; E&O insurance and lawyer-drafted multi-jurisdiction B2B terms are real costs the plan doesn't budget.",
+            "Pricing is anchored against a competitor that already exists: Conforme at €29–69/unit/month with registry-validated checks makes Registry Radar's €4–6/unit look cheap but also means the segment will be contested on curation depth — a fight decided by ops capacity, not code.",
+            "Fragmented rollout cuts the urgency surface: as of July 2026 several member states still lack operational registries/SDEPs, and the Spanish annulment shows even 'live' schemes can evaporate — the TAM of enforceable, trackable schemes is smaller and less stable than '27 systems' marketing suggests."
+          ],
+          "evidence_checks": [
+            {
+              "claim": "Spain's NRU mandatory since July 2025 with fines €3,000–€600,000 (core evidence and seed scheme #2)",
+              "result": "OUTDATED/REFUTED as stated. Spanish Supreme Court judgment 620/2026 of 21 May 2026 annulled the Registro Único/NRUA procedure under RD 1312/2024 for lack of state competence; registration reverts to 17 autonomous-community registries. The ventanilla única digital and platform data-sharing obligations survive, but the national registration number and its annual revalidation no longer apply. Corroborated by the Supreme Court's own press office (poderjudicial.es), Garrigues, Idealista, Araoz & Rueda.",
+              "source_url": "https://www.poderjudicial.es/cgpj/es/Poder-Judicial/Tribunal-Supremo/Oficina-de-Comunicacion/Notas-de-prensa/El-Tribunal-Supremo-anula-el-Registro-Unico-de-arrendamientos-de-corta-duracion-por-considerar-que-el-Estado-carece-de-competencia-para-su-creacion"
+            },
+            {
+              "claim": "Renewal deadlines are a core recurring obligation in the launch jurisdictions (the product's retention engine)",
+              "result": "SUBSTANTIALLY REFUTED. Italy's CIN has no documented expiry/renewal cycle; Portugal's AL registration no longer requires renewal (5-year renewal and inactivity-expiry rules abolished, only 10-day change notifications); Greece's AMA does not expire — recurring duties are annual income declarations and insurance/safety upkeep; Spain's 12-month NRUA revalidation was annulled. Recurring value must come from rule-change monitoring, not renewal calendars.",
+              "source_url": "https://www2.gov.pt/en/fichas-de-enquadramento/alojamento-local"
+            },
+            {
+              "claim": "No host-side incumbent exists; compliance software all sells to governments",
+              "result": "REFUTED as of July 2026. Conforme (conforme.info) markets itself as 'the regulatory system of record for European STR operators' — tracks NRUA, RNAL, CIN, Declaloc registrations and renewals, paste-a-listing-URL checks validated against registries, inspection-ready audit trails, €29–69/property/month, live in Portugal/Spain with Italy/France next. guestadmin.io and Your.Rentals also sell host-side EU compliance; Chekin (host-side, 50+ PMS integrations) is adjacent. Deckard/Granicus/GovOS remain gov-side as claimed, but the host side is no longer empty.",
+              "source_url": "https://conforme.info/"
+            },
+            {
+              "claim": "Listing-number presence checks can read public Airbnb/Booking listing pages (wedge feature)",
+              "result": "REFUTED for plain fetching. Independent 2026 scraping guides rate Airbnb Hard (4/5): Cloudflare Enterprise edge blocking, TLS fingerprinting, behavioral analysis, React SPA returning empty HTML without JS execution, continuously churning DOM. Viable only via paid residential-proxy scraper services (Bright Data ~98% benchmark) — ongoing cost, ToS violation, chronic breakage. Buildable as a mocked demo, fragile as a production feature.",
+              "source_url": "https://scraperly.com/scrape/airbnb"
+            },
+            {
+              "claim": "Regulation (EU) 2024/1028 in application from 20 May 2026: registration numbers on listings, platform verification against national databases, removal of non-compliant listings",
+              "result": "CONFIRMED. Regulation and deadline verified on EUR-Lex and multiple industry sources; platforms must run random checks against national registries via the Single Digital Entry Point and delist invalid numbers; regulation has been in force ~7 weeks as of today. The forcing function and panic demand are real.",
+              "source_url": "https://eur-lex.europa.eu/eli/reg/2024/1028/oj/eng"
+            },
+            {
+              "claim": "Italy's CIN mandatory since Jan 2025 with fines €800–€8,000; Greece AMA regime with fines and 2026 Athens restrictions",
+              "result": "CONFIRMED. CIN mandatory nationally since 1 Jan 2025 via the BDSR portal with the cited fine range; Greece's AMA display requirement and Athens moratorium corroborated by multiple 2026 guides. These markets remain live and enforceable.",
+              "source_url": "https://italianbusinesslawyers.com/cin-compliance-for-italys-tourist-accommodations/"
+            },
+            {
+              "claim": "Core rules data is public (EUR-Lex, ministry portals) and the MVP needs no gated APIs or credentials",
+              "result": "CONFIRMED. All requirement sources checked (EUR-Lex, mivau.gob.es, gov.pt, Italian BDSR/comune pages, AADE guidance) are public web pages; the CRUD/alerts/vault MVP is a standard-stack build with hosts entering their own data. The software itself is genuinely indie-buildable with Claude Code in roughly the stated scope — the constraint is the curation labor and its error cost, not the code.",
+              "source_url": "https://www.mivau.gob.es/vivienda/ventanilla-unica/alquiler-de-alojamientos-de-corta-duracion"
+            }
+          ],
+          "improvements": [
+            "Rewrite the wedge around what actually recurs: rule-change intelligence and audit-ready compliance status (owner-facing proof-of-service digests, inspection audit trails, new-scheme go-live tracking), plus the recurring obligations that do exist (Greek annual AADE declarations, insurance/safety renewals, Spanish regional renewals where individual communities impose them) — and stop claiming renewal calendars as the core loop.",
+            "Fix the Spain story before any outreach: drop all NRUA claims, model Spain as 17 autonomous-community regimes, and turn the Supreme Court annulment into the sales narrative ('the rules changed the day after the EU deadline — that's why you need monitoring'). Anything shipped with the July-2025 NRUA framing will be visibly wrong to every Spanish prospect.",
+            "Replace 'fetch public listing pages' with registry-side validation where public lookups exist (Portugal's RNAL public search; Italy's BDSR; regional Spanish registries) — the check competitors already do — and treat any OTA-page checking as a paid-scraper-API line item (~budget it) with explicit ToS risk, or cut it.",
+            "Do a real competitive teardown of Conforme, guestadmin.io, and Chekin before writing code; differentiate on the multi-PMS agency workflow (client workspaces, white-label digests, cross-jurisdiction portfolio view) rather than on the requirements database itself, which is now contested ground.",
+            "Budget the curation honestly: a per-country freelance legal reviewer network (even a few hours/month per jurisdiction) reviewing Claude-drafted change summaries, every rule entry date-stamped, versioned, and linked to its primary source, with a published 'last verified' date per jurisdiction as a trust feature.",
+            "Get lawyer-drafted B2B terms with liability caps and E&O insurance quoted for a compliance-information product before charging money; make the UX force verification against the linked official source for any red/amber status so the product is procedurally a pointer to primary sources, not an oracle."
+          ],
+          "notes": "Honest bottom line: the software is the easy part and genuinely indie-buildable — public data sources, no gated APIs, standard CRUD/alerts/vault stack, 6 weeks with Claude Code is plausible. What refutes the claim as pitched is everything around the code: the renewal-deadline engine mostly doesn't exist in the launch markets, the concept's Spanish evidence was annulled by the Supreme Court seven weeks ago (proving both the demand for monitoring and the impossibility of a solo non-specialist keeping up), the 'no host-side incumbent' premise is already false (Conforme is a near-clone that shipped first), and the one demoable technical wedge (reading OTA listing pages) hits enterprise-grade anti-bot walls. The concept survives only as a repositioned rule-change-intelligence and agency-workflow product with paid legal review baked into COGS — a small editorial/legal-ops business with a SaaS front end, not a pure software play. Not a kill: demand is real, live, and paid for; but the spec as written would ship a product that is wrong about Spain on day one."
+        }
+      },
+      {
+        "key": "str-eu-compliance",
+        "lens": "market",
+        "verdict": {
+          "verdict": "seriously_weakened",
+          "fatal_flaws": [
+            "The core recurring engine — 'renewal deadlines' — largely does not exist in the five launch markets. Italy's CIN and Greece's AMA are one-time registrations with no periodic renewal; Portugal repealed the AL licence's 5-year renewal in Decree-Law 76/2024 (Nov 2024), making AL registrations permanent; and Spain's national NRUA was annulled outright. A tracker whose retention ritual is a deadline calendar has almost nothing to put on that calendar after month one, which converts the product into a one-time audit plus a newsletter — a churn machine at €49–149/mo.",
+            "A near-identical, already-shipping competitor exists: Conforme (conforme.info) markets itself with the same phrase — 'the regulatory system of record for European STR operators' — with the same wedge (a free no-account compliance audit of listings), 24-hour automated OTA listing re-checks for registration-number drift, PMS integrations (Hostaway, Smoobu, Lodgify, Beds24), €29–69/property/mo, live in Portugal and Spain with Italy and France next. The concept's differentiation section ('every incumbent sells to the other side of the table') is factually wrong: Conforme, GuestAdmin (€48/property/YEAR across all 27 member states), BnCheck (free tier; validates a registration number from a pasted public listing URL in under 60 seconds — literally the wedge feature, free), Your.Rentals' compliance module (flags listings missing licence numbers), Lodge Compliance (host-side licensing and renewals at 100–100,000 property scale), and Chekin all sell to the host side today.",
+            "The concept's own evidence base was falsified by events within weeks — demonstrating the curation-liability problem it claims as a moat. Spain's Supreme Court (judgment 620/2026, 21 May 2026, one day after the EU regulation's application date) struck down the NRUA national registry created by RD 1312/2024 as unconstitutional; the national registration number and annual declaration no longer apply (regional licences remain). The pitch's second-largest fine anchor ('Spain NRU, €3,000–€600,000') is dead as stated, and the €600k figure was never an NRU fine anyway — it comes from regional tourism law (e.g., Andalusia's bill). If the founder's pitch deck couldn't stay accurate through May 2026, a solo-curated 27-country database carries exactly the wrong-renewal-date liability the concept names as risk #1."
+          ],
+          "weaknesses": [
+            "Platform-native coverage eats the headline fear: the delisting risk lives inside Airbnb's and Booking.com's own host dashboards, where the platforms — legally obligated to collect, verify, and display registration numbers — prompt hosts field-by-field for free. The residual job ('cross-platform, cross-jurisdiction portfolio view') is real but much smaller than 'never get auto-delisted,' and Conforme's 24h cross-OTA listing re-check already targets it.",
+            "ICP is a thin niche and shrinking: professional managers with 5–100 units across TWO OR MORE EU countries are a small subset of an already small population, and the regulated markets are contracting (AirROI: Paris listings -22.9%, Madrid -15.3%, Barcelona -11.6% pre-deadline; Barcelona plans to phase out tourist flats by 2028; Athens has a new-licence moratorium in central districts; Thessaloniki restrictions from July 2026). Every delisted or exited unit is lost MRR.",
+            "Willingness-to-pay is undermined from below: BnCheck has a permanent free plan (the pitch explicitly claims 'no VC-funded free floor exists in this category' — false), GuestAdmin prices at ~€4/property/month (€48/yr) including actual guest-data submission work, and Your.Rentals bundles compliance flags into its channel manager. Registry Radar's €6/unit/mo for tracking-only sits above competitors who also DO the filings.",
+            "The jobs hosts demonstrably pay for are transactional, not tracking: getting the registration done (lawyers, Chekin's one-stop-shop automation, Lodge Compliance's done-for-you licensing) and automated guest-data/police reporting (Chekin, GuestAdmin) — recurring by nature. A read-only tracker over public data is the least defensible, least painful slice of the stack.",
+            "Buyer reachability is expensive for the stated ICP: multi-country agencies are reached through PMS marketplaces (Hostaway/Guesty), where the PMS controls distribution and can clone or acquire the feature the moment it proves demand; the concept's own post-May-2026 PMS-wake-up risk is understated given Hostaway and Avantio already publish country-by-country compliance guides and hold the customer relationship.",
+            "Regulatory fragmentation cuts against a pan-EU database's value near-term: the EU regulation does not force member states to create registration schemes; several will be late or partial, and where schemes are regional (Spain post-annulment is now 17 autonomous-community regimes), the curation burden explodes while the addressable urgency stays local — favoring in-country specialists (Chekin in Spain, EazyAL-type players in Portugal) over a thin pan-EU layer.",
+            "Genuine recurring compliance surface exists but is mis-targeted: Greece's Law 5170/2025 (safety, insurance, inspections, effective Oct 2025) and city-layer rules (night caps, Athens moratorium zones) do recur/change — but that is a rule-change alerting job closer to a €10/mo newsletter or a free PMS blog than a per-unit system of record."
+          ],
+          "evidence_checks": [
+            {
+              "claim": "From 20 May 2026, hosts must display registration numbers on listings, platforms must verify against national databases and remove non-compliant listings (ShortTermRentalz)",
+              "result": "VERIFIED with a caveat. EUR-Lex, the European Parliament, and multiple law firms (Wolf Theiss, Andersen) confirm Regulation (EU) 2024/1028 applies from 20 May 2026 with registration-number display, platform verification ('reasonable efforts' at random checks), and removal on authority orders within 10 working days. Caveat: obligations apply only WHERE a member state/area operates a registration scheme — the regulation does not mandate schemes exist, so the addressable urgency is patchier than the pitch implies. Source is trade press, not vendor marketing, and checks out.",
+              "source_url": "https://eur-lex.europa.eu/EN/legal-content/summary/online-short-term-accommodation-rental-services-data-collection-and-sharing.html"
+            },
+            {
+              "claim": "Spain's NRU mandatory since July 1, 2025 with fines €3,000–€600,000 (StriveStays vendor blog)",
+              "result": "FALSIFIED BY EVENTS + SOURCE FLAGGED. Spain's Supreme Court (judgment 620/2026, 21 May 2026) annulled the national NRUA registry created by RD 1312/2024 as an unconstitutional intrusion on regional competences — the national number and annual declaration no longer apply (regional tourist licences remain). Confirmed by idealista, Skift, Spanish Property Insight, and Spanish law firms (Araoz & Rueda, Hay Derecho). Separately, the €600,000 ceiling traces to regional tourism law (e.g., Andalusia), not the NRU. The cited source, StriveStays, is STR-vendor content marketing and is now materially wrong.",
+              "source_url": "https://skift.com/2026/05/22/spains-top-court-voids-national-short-term-rental-registry/"
+            },
+            {
+              "claim": "Italy's CIN mandatory since Jan 2025 with fines €800–€8,000; Greece AMA fines €5,000–€20,000",
+              "result": "VERIFIED via multiple independent legal/tax sources (Taxing.It, Lawzana, italianbusinesslawyers.com): CIN obligatory from 1 Jan 2025, €800–€8,000 for lacking a CIN, €500–€5,000 for failing to display it. Greece: AMA required via AADE; fines €5,000 escalating to €20,000 confirmed (GTP, legal guides), plus Law 5170/2025 safety rules. However — both CIN and AMA are one-time registrations with no periodic renewal, which undercuts the product's renewal-tracking core even though the fine figures are accurate.",
+              "source_url": "https://taxing.it/national-identification-code-cin-for-short-term-rentals/"
+            },
+            {
+              "claim": "The regulation affects '27 systems, 116,000 listings' and operators must act now (AirROI)",
+              "result": "MISLEADING VENDOR CONTENT-MARKETING. The 116,000 figure is merely the subset of AirROI's OWN tracked Airbnb dataset across five/six markets (~124,500 as of April 2026) — not the affected listing population, which is in the millions EU-wide. AirROI is an STR analytics vendor; the post is SEO content with an urgency CTA. Using it as market-size evidence is a category error in the pitch (and ironically understates the market while overstating the source's authority).",
+              "source_url": "https://www.airroi.com/blog/eu-str-regulation-may-20-deadline-2026"
+            },
+            {
+              "claim": "Existing STR compliance software (Deckard, Granicus Host Compliance, GovOS, Localgov) is built for and sold to local governments — not to help hosts comply",
+              "result": "TRUE AS STATED, BUT THE INFERENCE DRAWN FROM IT IS FALSE. Those four are indeed govtech. But the pitch's conclusion — 'no well-loved host-side incumbent / every incumbent sells to the other side of the table' — fails fresh research: Conforme (identical positioning and wedge, live in Spain/Portugal), GuestAdmin (all 27 member states, €48/property/yr), BnCheck (free tier, listing-URL registration check), Your.Rentals compliance module, Lodge Compliance (host-side licensing/renewals, OTA-trusted), and Chekin (registration automation, huge EU footprint) all serve hosts today.",
+              "source_url": "https://conforme.info/"
+            }
+          ],
+          "improvements": [
+            "Kill the renewal-calendar framing and rebuild around what actually recurs: (a) cross-OTA listing-drift monitoring (number present/valid/correct format per platform per listing — but note Conforme already re-checks every 24h, so you'd need to win on coverage or price), and (b) genuinely periodic obligations — Greece Law 5170/2025 insurance/safety renewals, tourist-tax filings, regional Spanish regimes — rather than one-time registration numbers.",
+            "Consider the services-led model the market is actually paying for: done-for-you registration filing and remediation in enforcement-live jurisdictions (Lodge Compliance / Chekin model), with software as the wrapper. A tracker over public data is the free tier of this category (BnCheck proves it), not the paid product.",
+            "Sell the curated rules database as a B2B data/API layer to PMSs (Hostaway, Guesty, Avantio marketplaces) and to Chekin-type compliance vendors expanding beyond guest registration, instead of competing for 5–100-unit managers directly — that converts the 'PMS wakes up' risk into the distribution channel and matches the one-founder curation capacity.",
+            "Before building, count the real ICP: interview 20+ managers operating in 2+ EU countries and test whether they'd pay €120/mo for tracking alone when their PMS, their platform dashboards, and BnCheck's free check already cover the delisting fear; if the honest answer is single-country dominance, the wedge must be country-deep (e.g., own post-NRUA-annulment Spain's 17 regional regimes) not EU-wide-shallow.",
+            "If proceeding anyway, differentiate on the one thing the Spain annulment proves matters: speed and correctness of change detection with official-source citations, marketed via the free public jurisdiction directory — and publish a visible correction log as trust collateral, since competitors' content (and this pitch) went stale within weeks."
+          ],
+          "notes": "Honest read: this is not a kill. The regulatory tailwind is real and verified (EU Reg 2024/1028 live since 20 May 2026; Italy/Greece fines accurate; enforcement genuine), and the fact that Conforme, GuestAdmin, and BnCheck all launched into this exact gap in the last ~18 months validates demand. But the specific concept as designed is seriously weakened on three independent axes: the recurring-value mechanism (renewals) is mostly absent in its own launch markets (CIN/AMA one-time, Portugal AL renewal repealed, Spain NRUA annulled); the claimed white space ('every incumbent sells to governments') is factually wrong with at least six host-side competitors including a near-clone (Conforme) and a free tier (BnCheck); and its evidence base contains one falsified-by-events pillar (Spain NRU) and one misleading vendor statistic (AirROI 116k). Research constraints: guestadmin.io, bncheck.com, conforme.info, and lodgecompliance.com blocked direct fetch (403 via proxy), so their feature/pricing details come from search-index snippets and their own indexed pages rather than full page reads — pricing figures (Conforme €29–69/property/mo, GuestAdmin €48/property/yr) should be re-confirmed by a human before being load-bearing. The Spain Supreme Court annulment is corroborated by Skift, idealista, and multiple Spanish law firms and is high-confidence."
+        }
+      },
+      {
+        "key": "surveyor-jobtrack",
+        "lens": "implementability",
+        "verdict": {
+          "verdict": "survives_with_fixes",
+          "fatal_flaws": [],
+          "weaknesses": [
+            "The only ready-made legal-description parser (pyTRS) is NOT usable: its Modified Academic Public License explicitly prohibits any commercial or for-profit use ('pyTRS is NOT licensed for ANY commercial or for-profit use'). The wedge's hardest component must be licensed from a single hobbyist maintainer, clean-room reimplemented, or replaced with LLM parsing plus human verification — and pyTRS's own docs warn that even a mature parser misses edge cases in real-world descriptions and requires proofreading. This alone breaks the '6-8 weeks' estimate for a wedge-quality parser.",
+            "Principal-meridian ambiguity is unmodeled: 'T2N R3W Sec 14' repeats across 37 principal meridians, and firm spreadsheets essentially never record the meridian. The parser must disambiguate via state/county context; without that, adjacency search silently matches the wrong ground — the worst possible failure mode for a tool selling 'trust our spatial memory of your archive.'",
+            "The 'demo runs on a sample sheet in minutes' claim assumes historical spreadsheets contain legal descriptions. In many small firms the spreadsheet has client name + street address; the legal description lives in the deliverable PDF/CAD file. Prior-Work Radar then degrades to address geocoding and manual pin-drop for a large fraction of the archive — still useful, but the 'instant institutional memory' demo overpromises, and the concierge import becomes heavy founder labor at $79-249/mo price points.",
+            "The differentiation claim that SurveyOps 'leads with generic job management' is contradicted by the concept's own cited evidence: SurveyOps's marketing page explicitly lists searching jobs by Section, Township, and Range as a need it addresses, and it already ships an iOS field app (Backsight is responsive-web-only in v1). SurveyOps blocks automated fetching so I could not verify feature depth, but the wedge is not uncontested. This is a competition weakness, not an implementability one.",
+            "The free STR-lookup lead magnet already exists and ranks: Township America offers a free Township/Range-to-GPS converter plus a paid PLSS geocoding API covering 30+ states and all 37 meridians. The distribution play of 'a public STR tool surveyors bookmark' is entering an occupied SEO slot (though the existence of that API also proves the geocoding component is buyable if building it stalls).",
+            "PLSS wedge excludes 20 states including Texas — one of the largest US surveying markets — per Wikipedia/BLM sources (original 13 colonies plus TX, HI, KY, TN, VT, ME, WV use metes-and-bounds or the Texas Land Survey System with abstract/survey-name grants that BLM PLSS data does not cover). The concept acknowledges this, but it roughly halves the addressable wedge and makes the flagship demo worthless to a Texas or East Coast firm; subdivision/address fallback must carry those markets alone.",
+            "Becoming the firm's archive-of-record for plats, field notes, and control-point research creates real (contractual, not regulatory) data-loss exposure: a surveying firm that loses 500 jobs of institutional memory has a business-ending grievance. Standard ToS limits plus disciplined backups handle it, but an indie must actually run backups/DR, not just disclaim.",
+            "6-8 week estimate is optimistic even setting the parser aside: 30 states of CadNSDI ingest with per-state publication quirks, PostGIS adjacency queries, tokenized client pages, file attachments, CSV import UX with graceful degradation, weekly digests, and a QBO OAuth integration with 100-day refresh-token lifecycle is realistically 3-4 months to a sellable v1 for one developer, Claude Code or not."
+          ],
+          "evidence_checks": [
+            {
+              "claim": "BLM PLSS section/township data is public-domain and downloadable in bulk (shapefile/geodatabase) without credentials",
+              "result": "VERIFIED. BLM publishes National PLSS CadNSDI data (township, range, first-division/section polygons) annually in geodatabase and shapefile formats, NAD83, via the BLM GBP ArcGIS Hub, state offices, and open REST services (gis.blm.gov). No API key, no license fee, no scraping needed. National section layer (~2.6M polygons) fits comfortably in PostGIS on commodity hosting.",
+              "source_url": "https://gbp-blm-egis.hub.arcgis.com/datasets/BLM-EGIS::blm-national-plss-public-land-survey-system-polygons"
+            },
+            {
+              "claim": "QuickBooks Online invoice push is a public API an indie can get production access to",
+              "result": "VERIFIED with a manageable hurdle. OAuth2 API is public, but ALL apps touching production data (including private/unlisted ones) must complete Intuit's app assessment questionnaire covering security, data handling, and error handling before production keys are issued. Per Intuit's FAQ it takes ~30 minutes to complete and approval status shows '(almost) immediately' — a form, not a gatekeeping review. Ongoing burden: refresh-token rotation and Intuit compliance questions, ordinary for an indie.",
+              "source_url": "https://help.developer.intuit.com/s/article/New-app-assessment-process-FAQ"
+            },
+            {
+              "claim": "Legal-description (STR) parsing is a solved problem the developer can drop in",
+              "result": "REFUTED AS STATED. The one mature open-source library, pyTRS (834 commits, v2.2.1 Sep 2025), explicitly prohibits all commercial use under a Modified Academic Public License and is single-maintainer. Its docs also warn results need human proofreading and that edge cases escape even correct-looking parses. Parsing is demonstrably tractable (pyTRS proves it; Township America sells an API doing STR-to-GPS across 37 meridians), but Backsight must license, buy, or rebuild this component — it is not free-and-ready as implied.",
+              "source_url": "https://github.com/JamesPImes/pyTRS"
+            },
+            {
+              "claim": "PLSS does not cover Texas and colonial metes-and-bounds states (concept's own risk #3)",
+              "result": "VERIFIED and slightly worse than framed: 20 states are outside PLSS (original 13 colonies plus Texas, Hawaii, Kentucky, Tennessee, Vermont, Maine, West Virginia); Texas uses its own abstract/block-section/survey-name system administered by the Texas GLO, for which BLM data is useless. The wedge demo is dead in roughly 40% of states including a top surveying market.",
+              "source_url": "https://en.wikipedia.org/wiki/Texas_land_survey_system"
+            },
+            {
+              "claim": "SurveyOps is a new, generic-leading entrant that Backsight can out-position on STR search",
+              "result": "PARTIALLY REFUTED. SurveyOps is real, live, has tiered pricing and a shipped iOS field app; its own marketing page — the same one the concept cites as evidence — names Section/Township/Range job search as a core need it addresses, contradicting 'they lead with generic job management.' Site returns 403 to automated fetchers so feature depth is unverified; founder should demo it manually.",
+              "source_url": "https://survey-ops.com/land-surveying-job-management-software"
+            },
+            {
+              "claim": "No regulatory or licensing exposure — the tool tracks work, it doesn't perform surveying",
+              "result": "VERIFIED by absence (moderate confidence). No state board regime found that touches practice-management software; the 'licensed review' stage is a workflow label, not a professional act by the vendor. No scraping, no consumer PII beyond B2B contacts, no payments processing in v1. Residual exposure is contractual data-loss liability as archive-of-record, addressable by ToS + backups, not a disclaimer-proof regulatory problem.",
+              "source_url": ""
+            },
+            {
+              "claim": "Free public STR lookup tool is an available, novel lead magnet",
+              "result": "PARTIALLY REFUTED. Township America already operates a free Township/Range-to-GPS lookup tool and a commercial PLSS geocoding API covering 30+ states and all 37 principal meridians — the lead-magnet slot is occupied, though its existence confirms the technical approach works and offers a buy-vs-build option for geocoding.",
+              "source_url": "https://townshipamerica.com/"
+            }
+          ],
+          "improvements": [
+            "Do not touch pyTRS in a commercial product. Either email the maintainer for a commercial license (he invites inquiries) before writing a line of code, or plan a clean-room STR parser — scope it realistically at 2-3 weeks including meridian disambiguation and a test corpus of real firm spreadsheets. An LLM-parse-with-confirmation-UI is a legitimate v1 shortcut if every parse is human-confirmed on a map before indexing.",
+            "Make principal-meridian resolution explicit: require state (and ideally county) on every imported row, resolve T/R/S against CadNSDI within that jurisdiction, and surface ambiguous matches for confirmation instead of silently picking one. A wrong-section match discovered by a customer kills the product's credibility permanently.",
+            "Design import assuming legal descriptions are absent: primary path = address geocoding (free US Census Geocoder) + one-click map pin-drop with a section snap; treat STR text parsing as the bonus path, not the demo's load-bearing wall. Re-cut the demo script accordingly.",
+            "Manually demo SurveyOps (site blocks bots) before finalizing positioning; since they already claim STR search, differentiate on archive depth (adjacency radius, control points, prior-plat attachments surfaced at quote time) and on flat non-per-crew pricing, not on the existence of legal-description search.",
+            "Submit the Intuit app assessment questionnaire in week 1 — it's a 30-minute form with near-instant approval, so there is no reason to mock QBO for two months and discover integration friction at the end.",
+            "Replan the schedule to 12-16 weeks for a sellable v1 and start GTM only in PLSS states (Midwest/Mountain West), with subdivision/lot-block search built as a first-class citizen so Texas can be a phase-2 market via GLO abstract data rather than a permanently weakened one.",
+            "Set up automated offsite backups and a documented restore drill before the first paying customer, and put an explicit data-export (full CSV + files) feature in v1 — it both mitigates archive-of-record liability and disarms the 'lock-in' objection during sales."
+          ],
+          "notes": "Investigation used 9 live searches/fetches. The core implementability claim survives: every required dataset and API is genuinely public and credential-accessible (BLM CadNSDI is public-domain bulk data; QBO is a public OAuth API with a fast, form-based production gate), nothing in the core loop depends on scraping, and no regulatory/licensing regime touches a job-tracking vendor. What does NOT survive scrutiny: the implied 'parser is nearly free' assumption (the only OSS parser bans commercial use; meridian ambiguity and messy CSVs make this the real engineering risk), the 6-8 week timeline, the claim that SurveyOps leads with generic job management, and the novelty of the STR-lookup lead magnet. SurveyOps' site 403s automated fetchers, so its feature depth and pricing tiers were confirmed to exist but not enumerated — flagging that as the one verification gap. Net: buildable by one competent indie with Claude Code, but at 2x the stated timeline and with the wedge's hardest part (trustworthy legal-description parsing) owned in-house rather than borrowed."
+        }
+      },
+      {
+        "key": "surveyor-jobtrack",
+        "lens": "market",
+        "verdict": {
+          "verdict": "seriously_weakened",
+          "fatal_flaws": [],
+          "weaknesses": [
+            "The 'no dominant vertical solution exists' premise is false: fresh search surfaced at least SIX vertical land-surveying practice-management products the research missed or understated — Qfactor (ex-BizWatt, founded 2016, i.e. ~10 years in market, rebranded June 2026 claiming 'leading software for land surveying firms'), KudurruStone (Idaho-built, client portal, mobile crew apps), Cyanic Job Book (getjobbook.com, surveyor-specific PM listed on SoftwareAdvice/GetApp), Info-Retriever by AGT (long-standing office management incl. survey-control tracking), CQ (surveyor business management), and SurveyOps. The concept names only SurveyOps and BQE Core.",
+            "The wedge feature is not unique: Qfactor's Map View shows 'the location and status of all your current and PAST survey projects' — a spatial prior-work archive; Cyanic Job Book offers 'searching jobs by legal address information and map-based job searching'; SurveyOps organizes jobs 'by Section, Township, Range — not just addresses.' The claim 'this is the value no platform will build' is contradicted three times over inside the vertical itself. The residual differentiator shrinks to automated PLSS parsing of imported historical CSVs — a real but thin onboarding convenience, not a moat.",
+            "Pricing is positioned above, not below, the real vertical competition. KudurruStone charges $25/$15/$5 per user/month by role (their site: a 10-person firm ≈ $100/mo, vs Backsight Firm $149 / Practice $249) with no onboarding/import/training fees and a free trial. The concept anchors only against BQE Core, the most expensive comparator, and asserts 'no VC free tier exists' while ignoring that surveyors on the RPLS forum report happily running their firms on ClickUp at ~$3/user/mo — near-free generic tooling that evidently satisfices.",
+            "TAM is overstated roughly 3x: the concept claims '~25,000 establishments'; Census/industry data for NAICS 541370 (Surveying and Mapping except Geophysical) shows ~7,000 firms / ~7,400 establishments (2020 CBP), with another source verifying ~6,200 active companies. Filter to 1–5-crew firms in PLSS states (the wedge excludes Texas and colonial metes-and-bounds states by the concept's own admission) and the serviceable market is plausibly 2,000–4,000 firms being chased by 6+ vertical vendors plus horizontal tools.",
+            "The proposed lead magnet (free Section-Township-Range lookup map) is a saturated space: randymajors.org's free Township-Range-on-Google-Maps tool, Earth Point's township/range search suite (~85,000 townships, 3M sections, searchable by description/lat-lon), MapScaping's free PLSS viewer, and BLM's own ArcGIS PLSS viewers are already the bookmarked defaults among surveyors. A new entrant's S-T-R map earns no distribution edge.",
+            "Adoption/churn evidence cuts against the ICP: on the RPLS.com forum thread about PM software, one surveyor tried KudurruStone (a purpose-built vertical tool) and abandoned it as 'too slow,' others defaulted to ClickUp or asked about MS Project. Qfactor has been selling into this exact buyer since 2016 and remains obscure (near-zero review footprint on Capterra/G2). That pattern — a decade-old vertical vendor still tiny — suggests slow sales cycles, whiteboard inertia, and a buyer who is genuinely hard and expensive to reach relative to a $79–249/mo price point, exactly as the concept's own risk #2 fears.",
+            "SurveyOps is executing aggressive programmatic SEO on the exact keywords Backsight would need ('survey job tracking software', 'land surveying job management software', 'field-to-office workflow'), has a live iOS field app, and offers guided onboarding at no extra cost — the 'historical-import concierge' counter-positioning is easy for them to copy.",
+            "Client status portal is also not unique: KudurruStone already ships a Client Portal where clients submit and track requests, and SurveyOps markets elimination of status phone calls as a core benefit."
+          ],
+          "evidence_checks": [
+            {
+              "claim": "Evidence #1: whiteboard/email job tracking causes missed statuses, idle drafters, delayed invoices (source: CQ 'Best Business Management Software for Surveyors 2025' blog)",
+              "result": "FLAGGED — vendor content marketing. CQ (cq-business-management-software.com) sells its own 'Business Management Software for Surveyors'; the cited article is its SEO blog whose job is to manufacture this exact pain narrative and rank CQ first. The pain is plausible but this citation is not independent evidence.",
+              "source_url": "https://www.cq-business-management-software.com/blog/best-business-management-software-for-surveyors-2025-complete-practice-management-guide/"
+            },
+            {
+              "claim": "Evidence #2: purpose-built survey job management must handle field-to-office coordination, S-T-R search, deliverable lifecycle, crew dispatch; SurveyOps built on this gap (source: SurveyOps landing page)",
+              "result": "FLAGGED — the source is the competitor's own programmatic-SEO landing page (one of many: /survey-job-tracking-software, /survey-crew-scheduling-software, /field-to-office-workflow...). It validates that SurveyOps exists and already ships S-T-R job organization and field-to-office workflow — which weakens rather than supports Backsight's differentiation. No independent corroboration of demand volume.",
+              "source_url": "https://survey-ops.com/land-surveying-job-management-software"
+            },
+            {
+              "claim": "Evidence #3: roundups recommend adapting generic tools because no dominant vertical solution exists (source: QuoteIQ 'Top 8 Softwares' blog)",
+              "result": "FLAGGED and substantively CONTRADICTED — QuoteIQ is itself a generic quoting/field-service SaaS ranking itself in its own listicle (pure content marketing). More importantly, the underlying claim is wrong: vertical solutions exist in numbers — Qfactor (since 2016), KudurruStone, Cyanic Job Book, Info-Retriever, CQ, SurveyOps — they are just fragmented and small. 'No dominant player' is true; 'no vertical solution' is false.",
+              "source_url": "https://myquoteiq.com/top-8-softwares-for-land-surveying-businesses-in-2026/"
+            },
+            {
+              "claim": "'About 25,000+ small surveying establishments in the US' (why_underserved / TAM)",
+              "result": "REFUTED — Census County Business Patterns for NAICS 541370 shows ~7,000 firms and ~7,382 establishments (2020); a second directory source verifies ~6,191 active companies. The 25,000 figure appears to conflate establishments with licensed individual surveyors. Real establishment count is roughly one-third of claimed, before excluding non-PLSS states the wedge doesn't cover.",
+              "source_url": "https://siccode.com/naics-code/541370/surveying-mapping"
+            },
+            {
+              "claim": "Distribution assumption: a free S-T-R lookup/map tool would be a bookmarkable lead magnet",
+              "result": "WEAKENED — randymajors.org, Earth Point (earthpoint.us Townships tools), MapScaping's free PLSS viewer, and BLM ArcGIS PLSS viewers already occupy this niche and are the tools surveyors actually bookmark and cite; Earth Point alone covers search by legal description, lat/lon, and address.",
+              "source_url": "https://www.earthpoint.us/Townships.aspx"
+            }
+          ],
+          "improvements": [
+            "Rebuild the competitive analysis around the real vertical field — Qfactor, KudurruStone, Cyanic Job Book, Info-Retriever, CQ, SurveyOps — and identify a verified gap. The most defensible residual claim found: none of them advertise automated parsing of legal descriptions from a firm's messy historical spreadsheet (they map jobs going forward or require manual entry). Validate by demoing each competitor before writing another line of positioning.",
+            "Reprice against reality: KudurruStone is ~$100/mo for a 10-person firm and ClickUp is ~$3/user. Either justify the premium with a concrete recovered-revenue calculator in the trial (e.g., surfacing delivered-but-uninvoiced jobs from the imported history on day one) or drop the Practice tier anchor.",
+            "Recompute TAM from Census NAICS 541370 (~7,400 establishments), then segment by PLSS states and 3-25 staff; present the honest serviceable number (likely 2,000-4,000 firms) and the revenue ceiling that implies at realistic 2-5% penetration.",
+            "Replace all three vendor-marketing citations with primary evidence: the RPLS.com PM-software threads, r/Surveying posts, and 10-15 recorded owner interviews asking what they use today, what they pay, and why they abandoned tools like KudurruStone ('too slow' per one RPLS user — latency and simplicity may matter more than features).",
+            "Stress-test the wedge on real data before building: obtain 3-5 actual firm job spreadsheets and measure what fraction of rows contain a parseable legal description at all — if most rows are '123 Main St, Smith survey', the Prior-Work Radar degrades to a geocoded pin map that Qfactor already offers.",
+            "Drop the S-T-R lookup lead magnet (randymajors/Earth Point own it) in favor of a distribution asset competitors lack — e.g., a free 'import your job history, get a map of everything your firm has ever surveyed' one-shot tool that is itself the onboarding funnel."
+          ],
+          "notes": "Verification constraints: survey-ops.com, qfactor-llc.com, kudurrustone.com, agtcad.com, rpls.com and apps.apple.com all blocked direct fetch (403 via the session proxy), so competitor details come from search-index snippets, their indexed subpages, press releases (Morningstar/Newswire for Qfactor), and third-party directories (SoftwareAdvice, GetApp, Slashdot) — feature claims are directionally solid but exact SurveyOps/Qfactor/Cyanic price points could not be confirmed. Why not 'kill': the pain itself is corroborated by six independent vendors betting on it, the market is genuinely fragmented with no winner (all incumbents have near-zero review footprints), and flat-fee pricing plus historical-import automation is a coherent angle no incumbent leads with. Why not 'survives_with_fixes': the concept's three load-bearing differentiation claims (no vertical solution, archive no one will build, no cheap alternative) are each factually wrong, the TAM is ~3x overstated, and every cited evidence item is vendor content marketing — the thesis needs to be re-derived from scratch against the real competitive set, not patched."
+        }
+      },
+      {
+        "key": "interpreter-backoffice",
+        "lens": "implementability",
+        "verdict": {
+          "verdict": "seriously_weakened",
+          "fatal_flaws": [
+            "The 'empty $50-200 gap' premise the whole business case rests on is factually false: Eclipse Scheduling (interpreterscheduling.com) is an established, purpose-built interpreter-agency platform starting at $125/month, all plans including the full suite with no per-user fees — scheduling, provider payroll, client billing/invoicing, interpreter screening/onboarding, feedback and reports — built by professional interpreters, marketed to healthcare LSPs, and advertising SOC 2 and HIPAA frameworks. It is essentially TerpDesk's entire MVP feature list, already shipped, in the exact price band. Usked (assignment-based pricing, unlimited users), ScheduleInterpreter, Caretap, and Anolla also crowd the same niche. The concept's claim that the segment's only budget option is generic Homebase came from AI-generated listicle roundups (Gitnux/ZipDo) and does not survive contact with the actual market.",
+            "The MVP architecture as specified is unsellable to the hospital/medical half of the ICP as designed, because of HIPAA subcontractor-business-associate status the concept never mentions. Scheduling records for medical interpreting jobs routinely contain PHI (patient name, appointment date/time, facility, language, sometimes medical context). Hospital contracts force the LSP to sign a BAA, and the LSP's scheduling SaaS becomes a subcontractor business associate that must itself sign a BAA and meet the Security Rule (access controls, audit logs, breach notification). Two named MVP components are directly disqualified: (a) SendGrid — Twilio explicitly states SendGrid is not a HIPAA Eligible Service, will not sign a BAA, and its ToS prohibits using it for PHI, yet SendGrid magic-link emails carrying job details are the core loop; (b) live iCal feeds — unauthenticated token-URL calendar feeds syncing appointment details into interpreters' personal Google/Apple calendars are a PHI leak by construction. Competitors (Propio: 'HIPAA-compliant from interpreter scheduling to invoicing'; Eclipse: SOC 2 + HIPAA) show this is a live purchase criterion, not theoretical. This is not a disclaimer-fixable problem — it requires re-architecture (PHI minimization or a HIPAA-eligible stack) and an ongoing compliance posture that is real, unbudgeted work for a solo non-specialist."
+          ],
+          "weaknesses": [
+            "Headline pricing anchors are unverifiable: Boostlingo's pricing is custom-quote only (their own site and Capterra show no public tiers); the '~$500/mo' and Interpreter Intelligence '$499/mo' figures trace solely to Gitnux/ZipDo AI-content-farm roundups. The 1/5th-the-price positioning may still be roughly true, but the evidence base is slop and the real comparison point is Eclipse at $125/mo — against which $79-249/mo is not a category-changing discount.",
+            "Email-only offer/confirm flow is a runtime reliability risk for time-critical dispatch: a cold-domain SaaS sending magic-link emails will land in spam for some interpreters, and a missed court assignment caused by a spam-foldered offer is exactly the catastrophic failure the product exists to prevent. The concept itself concedes SMS may become unavoidable; A2P 10DLC brand/campaign registration is weeks of carrier-approval friction a solo dev must plan for, not bolt on.",
+            "Vendor security review burden: agencies holding hospital and court contracts flow security/documentation requirements down to their software vendors. Competing without SOC 2 (or at least credible security documentation) against Eclipse's advertised SOC 2/HIPAA posture will stall exactly the compliance-motivated buyers the wedge targets.",
+            "The rate-rules 'moat' is thinner than claimed: state judiciary fee schedules are what courts pay interpreters, not what agencies bill their clients or pay their contractors (those are negotiated). The library is a nice onboarding accelerant, verified public, but it is manual curation across 50 states forever, and it does not block Eclipse/Usked from copying it.",
+            "Credential vault stores background-check documents and certifications that can contain SSNs/DOBs — no licensing regime applies, but it raises the data-breach blast radius and state breach-notification exposure for a one-person operation with no security staff.",
+            "Distribution assumptions (conference sponsorship at NAJIT/ATA/IMIA) cost thousands per event with long relationship-driven sales cycles — survivable but at odds with the indie 6-8-week-to-revenue framing."
+          ],
+          "evidence_checks": [
+            {
+              "claim": "Boostlingo tiers start ~$500/month (per Gitnux roundup)",
+              "result": "NOT VERIFIABLE. Boostlingo's own site and Capterra listing show custom-quote subscription pricing only; no public $500 tier exists. The figure originates from an AI-generated listicle (Gitnux). Directionally plausible (subscription + per-minute model confirmed) but the specific anchor is unsupported.",
+              "source_url": "https://boostlingo.com/resources/pricing/"
+            },
+            {
+              "claim": "Interpreter Intelligence starts ~$499/month",
+              "result": "NOT VERIFIABLE. Official pricing page is gated/custom; Capterra shows no free version and no published tier. Same AI-roundup provenance.",
+              "source_url": "https://www.interpreterintelligence.com/pricing/"
+            },
+            {
+              "claim": "No purpose-built tool serves small agencies in the $50-200/mo band; the roundups' budget option is generic Homebase",
+              "result": "REFUTED. Eclipse Scheduling starts at $125/month, all plans include the complete suite (scheduling, provider payroll, customer billing, screening/onboarding, reports), no per-user fees, built specifically for interpreting/captioning agencies, with SOC 2 and HIPAA frameworks and a dedicated healthcare vertical page. Usked, ScheduleInterpreter, Caretap, and Anolla also target the same segment.",
+              "source_url": "https://interpreterscheduling.com/pricing/"
+            },
+            {
+              "claim": "SendGrid is a safe, credential-accessible choice for the confirmation/offer email core loop",
+              "result": "REFUTED for the medical segment. Twilio's own docs and support pages state SendGrid is not a HIPAA Eligible Service, Twilio will not sign a BAA for it, and the ToS prohibits using it with PHI. Fine for court/school jobs only if no protected data is in the emails.",
+              "source_url": "https://www.twilio.com/docs/sendgrid/ui/account-and-settings/hipaa-compliant"
+            },
+            {
+              "claim": "No hidden regulatory exposure ('no carrier black boxes, no gated APIs, no legal language generation')",
+              "result": "PARTIALLY REFUTED. No software licensing regime applies and avoiding money movement is sound, but HIPAA subcontractor-business-associate obligations attach once hospital-appointment data enters the system; language-service vendors are business associates and competitors market HIPAA-compliant scheduling-to-invoicing as table stakes (Propio, Eclipse, Boostlingo healthcare pages).",
+              "source_url": "https://www.accountablehq.com/post/hipaa-compliant-language-services-for-healthcare-secure-medical-translation-interpretation"
+            },
+            {
+              "claim": "Per-state court interpreter fee schedules are public official sources for the rules library",
+              "result": "VERIFIED. Pennsylvania (pacourts.us), Nebraska ($50/$60/$75 per hour with 2-hour minimums by credential tier), Hawaii, New York ($140 half-day/$250 full-day), and federal CJA rate sheets are all published on official judiciary sites. Caveat: these are court-to-interpreter rates, not agency billing rates.",
+              "source_url": "https://nebraskajudicial.gov/personnel-and-miscellaneous-rules/court-interpreter-fee-schedule-and-payment-policy"
+            },
+            {
+              "claim": "Mileage/travel-conflict via a public distance API is credential-accessible and cheap",
+              "result": "VERIFIED. Google Maps Platform Routes/Distance Matrix is self-serve with a credit card; post-March-2025 pricing gives 10,000 free Essentials calls/month per SKU — ample for a small-agency SaaS. Note route-matrix billing is per origin-destination element, so naive all-interpreters-vs-all-jobs matching could burn quota; trivially engineered around.",
+              "source_url": "https://developers.google.com/maps/billing-and-pricing/pricing"
+            },
+            {
+              "claim": "Core data is all first-party, no scraping required",
+              "result": "VERIFIED. Interpreter rosters, credentials, rates, and jobs are agency-entered; the only external data (fee schedules, certification-body lists) is public and manually curated, not scraped at runtime. No fragile-scraping dependency exists.",
+              "source_url": "https://www.pacourts.us/page/1699"
+            }
+          ],
+          "improvements": [
+            "Kill the 'empty gap' framing and do a real teardown of Eclipse ($125/mo, full suite, SOC 2/HIPAA), Usked, and ScheduleInterpreter via trials/demos; the surviving wedge, if any, is the to-the-penny dual-rate reconciliation and one-hour roster/rate-rules import — validate that Eclipse's payroll/billing actually falls short there before building.",
+            "Re-architect for PHI minimization from day one: v1 stores no patient identifiers (job reference codes only), emails and iCal entries carry time/location/language but no protected details, full details live behind the authenticated magic-link portal. This keeps SendGrid and iCal legally usable and defers the HIPAA stack.",
+            "Sequence the ICP: launch to court/legal and school-district agencies first (public-record-adjacent, lower data sensitivity), and treat the hospital segment as phase 2 gated on a BAA-able stack (AWS/GCP under BAA, HIPAA-eligible email such as Paubox or notification-only emails, audit logging) — budget 4-8 extra weeks and ongoing compliance overhead for it.",
+            "Start A2P 10DLC brand/campaign registration during the build, not after the first churned trial; carrier approval takes weeks and the segment's dispatch culture is SMS-heavy.",
+            "Rebuild the evidence base from primary sources — Capterra/G2 reviews of Eclipse and Usked complaining about billing/payroll reconciliation, and 10-15 owner interviews — and drop all Gitnux/ZipDo-derived pricing claims from positioning.",
+            "Prepare a lightweight security package (vendor questionnaire answers, encryption/backup/access-control documentation, eventually SOC 2 Type I) because hospital- and court-contracted agencies will pass security requirements downstream and Eclipse already advertises this."
+          ],
+          "notes": "Honest bottom line: the pure engineering claim largely survives — this is CRUD + a rules engine + email, all first-party data, no scraping, no gated APIs, self-serve credentials for everything named (SendGrid, Google Maps), public rate-schedule data confirmed on official judiciary sites, and deliberate avoidance of money movement means no MSB/payroll licensing. A competent indie dev with Claude Code can build the court-focused, PHI-minimized version in roughly the claimed 6-8 weeks. What fails is the concept's specific implementability-adjacent premises: (1) the market slot it claims is empty is occupied by Eclipse at $125/mo with the same feature list plus the HIPAA/SOC 2 posture the concept lacks; (2) the named architecture (SendGrid + open iCal feeds) is contractually and legally unusable for the medical half of the ICP, and the concept's 'no compliance exposure' claim is wrong for exactly the compliance-motivated buyers it targets; (3) its evidence base is AI-listicle-derived and its headline competitor prices are unverifiable. Salvageable with repositioning, PHI-minimized design, and an ICP re-sequence — hence seriously_weakened rather than kill. Runtime failure modes worth engineering attention: email deliverability for time-critical offers (spam-foldered offer = missed court hearing = churned customer; B2B ToS disclaimers cover legal liability but not reputational death) and per-element billing blowup on naive distance-matrix matching. Approximately 9 searches/fetches performed; Eclipse and Interpreter Intelligence pricing pages block direct fetch (403), so Eclipse's $125 figure rests on its own site's search-indexed pricing page snippet corroborated across two queries."
+        }
+      },
+      {
+        "key": "interpreter-backoffice",
+        "lens": "market",
+        "verdict": {
+          "verdict": "kill",
+          "fatal_flaws": [
+            "The 'evidenced $50-200 empty gap' — the concept's entire rationale — does not exist. At least five purpose-built interpreter-agency back-office tools sit in or below that band today: Eclipse Scheduling ($136.58/mo annual starter 'perfect for small agencies' with invoice AND remittance generators, batch invoicing, QuickBooks integration, mileage/travel pay, credential Compliance Manager with expiry alerts and auto-deactivation, customer portal, 1,500 SMS/mo, iOS/Android apps — i.e., the entire TerpDesk wedge including the Dual-Rate Ledger and credential vault, shipping now at TerpDesk's mid-tier price); Aqua Schedules (from ~$100/mo, acquisition-to-invoicing, billing calculation, QuickBooks Online sync, on G2/Capterra); Interpreter IO ($89-199/mo entry, end-to-end 'booking through invoicing and payment of interpreters'); MigiHub (monthly freelancer-to-agency plans); Anolla (free tier + EUR 11.99/user/mo). Usked (~$3,990/yr) sits just above and actively publishes vs-Eclipse/vs-Aqua/vs-ScheduleInterpreter comparison pages — proof the low end is already a contested, mature micro-market, not a gap.",
+            "Core differentiation claims are factually false: 'there is no VC-funded free tier anywhere in interpreter dispatch' (Anolla offers a free interpreter-scheduling tier); 'the roundups' budget option is literally generic Homebase' (roundups and directories list Aqua Schedules, Eclipse, MigiHub, Anolla, Caretap, MyInterpreter, Slated — all purpose-built, all cheap or free).",
+            "The competitive framing is four years stale: Boostlingo acquired Interpreter Intelligence in March 2022 (confirmed by Boostlingo's own announcement, Slator, and MultiLingual). There are not two ~$500/mo incumbents leaving a hole; there is one consolidated platform plus roughly ten smaller purpose-built vendors, several of which were founded precisely to serve small onsite agencies priced out of Boostlingo — the exact wedge TerpDesk proposes, already executed by others years ago.",
+            "The evidence base collapses under spot-checking: 2 of 4 cited claims (the $500/$499 pricing anchor and the Homebase-gap claim) trace solely to Gitnux and ZipDo, sibling AI content farms that publish thousands of templated listicles and cross-publish articles vouching for each other's 'reliability'; Boostlingo's actual pricing is quote-only everywhere (its own site, Capterra, GetApp, TrustRadius), so the '1/5th the price' positioning is anchored to an unverifiable, likely hallucinated number. A third source is content marketing by Usked — a direct competitor."
+          ],
+          "weaknesses": [
+            "Tiny, fragmented TAM with ~10 incumbent micro-vendors already dividing it: 94% of US language companies are 'small businesses' (SBA threshold $22.5M revenue), and the ALC industry survey population is itself small; onsite community interpreting is further squeezed by post-2020 VRI/OPI shift and contract consolidation toward large LSPs, so the addressable pool of spreadsheet-run onsite agencies is shrinking, not growing.",
+            "Buyer reachability is expensive relative to ACV: the concept concedes 'no single watering hole' and proposes NAJIT/ATA/IMIA conference sponsorship — thousands of dollars per event against a $79-149/mo product — while competitors (Usked, Eclipse, MigiHub) already own the SEO comparison-page territory and conference circuit.",
+            "Churn structurally high: small agency mortality, contract loss (a single court or hospital contract loss can halve an agency's volume), and acquisition by larger LSPs all terminate subscriptions; switching-cost moat accrues to whoever got there first — Eclipse, Aqua, and ScheduleInterpreter, not a new entrant.",
+            "The deliberate no-SMS stance is a competitive liability, not a simplification: Eclipse bundles 1,500 SMS/month in its cheapest plan and competitors ship native mobile apps; interpreters in the field expect SMS/push, and the concept itself admits this may become 'unavoidable.'",
+            "The claimed moat (per-state rate-rules library from public sources) is trivially copyable by any incumbent — the data is public by definition, and Eclipse/Usked already maintain state-specific compliance features; a content asset built from public fee schedules is a marketing tool, not a moat.",
+            "Pricing at $79/mo undercuts a field where established purpose-built rivals charge $89-149/mo — the 'gap' pricing is actually price parity minus features (no SMS, no mobile apps, no track record), which is a losing trade for a risk-averse owner-operator holding court contracts."
+          ],
+          "evidence_checks": [
+            {
+              "claim": "Boostlingo subscription tiers start around $500/month; Interpreter Intelligence starts around $499/month (source: Gitnux listicle)",
+              "source_url": "https://gitnux.org/best/interpreter-scheduling-software/",
+              "result": "FLAGGED - content farm only. Gitnux is an AI-generated listicle farm (it and sibling site ZipDo cross-publish articles vouching for each other's reliability). Boostlingo's actual pricing is quote-only on its own site and on Capterra/GetApp/TrustRadius — no primary source for $500/mo exists. Worse, Interpreter Intelligence has not been a standalone product since Boostlingo acquired it in March 2022 (per Boostlingo's own press release, Slator, MultiLingual), so the '$499/mo' figure describes a product that no longer sells separately. The concept's entire '1/5th the price' anchor rests on unverifiable content-farm numbers."
+            },
+            {
+              "claim": "The roundup's suggested budget option is Homebase, a generic shift-scheduling app — evidencing that no purpose-built budget tool exists (source: ZipDo listicle)",
+              "source_url": "https://zipdo.co/best/interpreter-scheduling-software/",
+              "result": "FLAGGED - content farm only, and the inference is false. ZipDo is Gitnux's sibling AI content farm (mutual 'is X reliable?' puff pieces). Independent search of the category surfaces purpose-built budget options the roundups and the concept both missed: Aqua Schedules (~$100/mo), Eclipse Scheduling ($136.58/mo), Interpreter IO ($89-199/mo), MigiHub, Caretap, MyInterpreter, Slated, and Anolla with a literal free tier. The 'budget option is generic Homebase' framing is an artifact of a bad AI listicle, not of the market."
+            },
+            {
+              "claim": "An interpreter-agency-focused software buying guide exists because agencies struggle to find fitting tools, detailing needs like credential matching and dual-rate billing (source: Usked)",
+              "source_url": "https://usked.com/2026/05/14/interpreter-agency-software/",
+              "result": "FLAGGED - vendor content marketing by a direct competitor. The guide exists, but it is SEO content by Usked, which sells interpreter-agency software into this exact segment (~$3,990/yr) and maintains vs-Eclipse, vs-Aqua, and vs-ScheduleInterpreter comparison pages. Far from evidencing an unserved market, it evidences a crowded one where multiple vendors already compete for the same small-agency keywords — and it cuts against the concept, since the needs it lists (credential matching, dual-rate billing) are the features these vendors already ship."
+            },
+            {
+              "claim": "Boostlingo's Capterra listing confirms custom/opaque enterprise pricing and positions it as a full OPI/VRI delivery platform rather than a lightweight scheduling tool",
+              "source_url": "https://www.capterra.com/p/195358/Boostlingo/",
+              "result": "PARTIALLY VERIFIED (page blocked 403 direct fetch; corroborated via GetApp, TrustRadius, and Boostlingo's own pricing page, which all show quote-only pricing and OPI/VRI-centric positioning). This claim holds — but it only establishes that Boostlingo is enterprise-priced, not that the low end is empty. It says nothing about Eclipse, Aqua, Interpreter IO, MigiHub, or Anolla, which occupy the low end today. Also note Boostlingo explicitly markets an 'Interpretation Management System' for scheduling/onsite management, so even the 'they only care about telephony minutes' incentive argument is overstated."
+            }
+          ],
+          "improvements": [
+            "If pursued at all, rebuild the competitive analysis from primary sources: get real quotes from Boostlingo, Eclipse, Aqua Schedules, Interpreter IO, Usked, and MigiHub, and interview 10-15 actual small-agency owners (ATA/NAJIT directories, state court vendor lists) about what they use and why they churned — the current listicle-based evidence would not survive a single customer conversation.",
+            "Reposition against the real incumbents (Eclipse/Aqua/Interpreter IO), not the ghost of 2021 Boostlingo: the only credible wedges left are (a) radically faster onboarding — import an agency's spreadsheet roster and rate rules in under an hour, which the concept already identifies, or (b) a genuinely underserved sub-niche such as ASL/deaf-services agencies (VRS-adjacent compliance) or a specific state's court-vendor ecosystem, validated first.",
+            "Drop the no-SMS stance: Eclipse includes 1,500 SMS/month at $137/mo; parity on interpreter-facing notifications is table stakes, not a roadmap item.",
+            "Treat the per-state rate-rules library as a lead-gen content asset (free cheat sheets to build a list), not as a moat, and price at parity ($129-149) rather than undercutting — in a trust-driven compliance purchase, being the cheapest unproven option is a negative signal.",
+            "Before writing any code, run a smoke test: a landing page and $2-3k of outreach against Eclipse's and Aqua's existing customers and trial-abandoners; if you cannot pull 20 demo requests from agencies who evaluated and rejected the incumbents at $100-150/mo, there is no wedge — because price is not the blocker the concept assumes."
+          ],
+          "notes": "Honest accounting: the underlying pain is real and verified — small LSPs do run on spreadsheets, the dual-rate reconciliation and credential-compliance workload is genuine, and the category's existence (10+ vendors, active comparison-page warfare) proves willingness to pay. What is refuted is the opportunity as framed: the claim that nothing purpose-built exists between free spreadsheets and $500/mo telephony platforms is false — Eclipse Scheduling alone ships the entire proposed wedge (dual-rate invoicing + remittances, mileage/travel pay, credential vault with expiry alerts, client portal, QuickBooks export) at $136.58/mo with SMS and mobile apps included, and Aqua/Interpreter IO/MigiHub/Anolla fill in the rest of the band down to free. The concept's kill-pattern dodges (no free tier exists; budget option is generic Homebase; two separate $500 incumbents) are each factually wrong, and its pricing evidence rests on AI content farms (Gitnux/ZipDo) plus a competitor's content marketing. A pivot could survive — same segment, differentiation on onboarding speed or an ASL/state-specific niche, at price parity — but that is a different concept requiring fresh primary validation, hence kill rather than survives_with_fixes for this thesis. Sources: interpreterscheduling.com/pricing, aquaschedules.com, softwaresuggest.com/interpreter-io, anolla.com/en/interpreter-software, migihub.com, usked.com/interpreting-agencies-pricing, boostlingo.com/news/boostlingo-acquires-interpreter-intelligence-and-voiceboxer, slator.com/boostlingo-buys-voiceboxer-interpreter-intelligence-adds-rsi-scheduling-tech, slator.com/94-percent-us-language-companies-now-considered-small-businesses, gitnux.org/blog/zipdo-reliable + zipdo.co/blog/is-gitnux-org-a-reliable-source (mutual content-farm vouching), getapp.com and trustradius.com Boostlingo pricing pages (quote-only)."
+        }
+      },
+      {
+        "key": "hvac-radar-pivot",
+        "lens": "implementability",
+        "verdict": {
+          "verdict": "survives_with_fixes",
+          "fatal_flaws": [],
+          "weaknesses": [
+            "ICP is factually wrong on Jobber: the Core plan is single-user (no team members) — a 2-10 technician shop cannot run on Jobber Core. The real Jobber target is Connect ($119+/mo) or Grow, and Connect+ INCLUDES two-way QuickBooks Online sync, which partially collapses the 'billing lives in QB, scheduling lives in the FSM, nobody reconciles the gap' premise for Jobber shops — their invoices already flow into QBO from the FSM.",
+            "The membership ground truth does not exist in any of the three exports — that is the very premise (these tiers lack an agreement object). So plan terms, start/end dates, and the member roster must be manually defined or imported into PlanPatrol and kept current. That makes PlanPatrol a lightweight system of record for agreements after all, contradicting the 'no double-entry, not a system of record' pivot constraint; wedge accuracy then depends on free-text invoice memos/line items (the concept's own risk #3, confirmed as structural, not incidental).",
+            "QuickBooks Online Simple Start (the cheapest, most common tier at this shop size) only offers Sales by Customer SUMMARY — the line-item Sales by Customer Detail report requires Essentials+. Plan-sale detection from QBO line items is degraded exactly at the low end; the All Sales list export is a partial fallback without line-item descriptions.",
+            "Housecall Pro's public API and webhooks are gated to the MAX plan only, so the 'later replace CSV with API sync' roadmap is permanently unavailable for the HCP-basic ICP — HCP shops are CSV-forever, making the acknowledged habit-decay churn risk structural for roughly a third of the target base. Also unverified whether the HCP Basics tier retains the plain jobs/customers export (docs confirm admin-gating; 'advanced reporting' is gated to higher tiers).",
+            "Jobber API scaling is gatekept: apps in Draft state are blocked once connected to more than 5 paying Jobber accounts; going further requires Jobber's app review / marketplace approval or a Jobber-approved 'Custom Integration'. The concept simultaneously plans to market 'explicitly against Jobber per-seat pricing' and to depend on Jobber's marketplace for API access and distribution — a real conflict-of-interest risk with the gatekeeper.",
+            "Export ergonomics undercut the '2-minute Monday habit': Jobber report CSVs are not downloaded directly but EMAILED to the account's login address, chunked at 1500 rows into multiple files; Housecall Pro exports can take up to an hour to arrive by email. The weekly loop is really a multi-file email shuffle across 2-3 systems, so runtime staleness/churn risk is worse than the concept states.",
+            "Cross-system identity resolution (QBO customer vs FSM customer, no shared key) is fuzzy name/address matching over messy SMB data; mismatches produce false 'you paid and we never came' outreach emails sent under the shop's name — reputational (not legal) liability that a disclaimer doesn't fully absorb because the shop's customers see the error.",
+            "Silent format drift: Jobber/HCP/QBO can rename or reorder export columns at any time, breaking saved mappings without any error signal until a shop's radar quietly goes wrong — the 'curated adapter moat' is equally an unpaid perpetual maintenance treadmill for a solo dev."
+          ],
+          "evidence_checks": [
+            {
+              "claim": "Housecall Pro supports self-serve CSV export of customers and jobs/invoices (admin users, dashboard reports export to CSV / email delivery)",
+              "result": "VERIFIED. HCP help center documents export of customers and jobs lists (admins only) and dashboard report CSV export; exported email may take up to an hour. Third-party migration guides (Sera, ServiceTitan) rely on the same export path. Plan-tier availability on the cheapest Basics tier not explicitly confirmed.",
+              "source_url": "https://help.housecallpro.com/en/articles/6797101-how-to-import-export-jobs-and-customers"
+            },
+            {
+              "claim": "Jobber allows exporting job history to CSV (One-Off Jobs and Recurring Jobs reports)",
+              "result": "VERIFIED with friction. Reports export to CSV but are delivered by email to the login address, chunked at 1500 rows; some reports cannot be exported; 'reports are available on select plans' (Core has only basic reporting).",
+              "source_url": "https://help.getjobber.com/hc/en-us/articles/360043189194-One-Off-Jobs-Report"
+            },
+            {
+              "claim": "Jobber Core plan suits 2-10 technician shops (as stated in the ICP)",
+              "result": "REFUTED. Jobber's own help center and multiple 2026 pricing reviews confirm Core is one user, cannot add team members, and lacks QuickBooks sync. QBO sync starts at Connect ($119+/mo), which weakens the cross-system-gap premise for Jobber shops.",
+              "source_url": "https://help.getjobber.com/hc/en-us/articles/360048155913-The-Core-Plan"
+            },
+            {
+              "claim": "Jobber has a public, credential-accessible GraphQL API an indie can use for read-only sync",
+              "result": "PARTIALLY VERIFIED. Developer Center is free and self-serve with OAuth; but Draft apps are blocked after connecting >5 paying Jobber accounts — production scale requires Jobber's app review/marketplace approval or approved Custom Integration status. Accessible, but Jobber is a gatekeeper.",
+              "source_url": "https://developer.getjobber.com/docs/custom_integrations/"
+            },
+            {
+              "claim": "Housecall Pro has a public API that could replace CSV upload later",
+              "result": "REFUTED for the ICP. HCP's public API and webhooks are available only to customers on the MAX plan; the target buyer is on HCP basic, so API sync is impossible without the customer upgrading to the expensive tier the product exists to avoid.",
+              "source_url": "https://docs.housecallpro.com/"
+            },
+            {
+              "claim": "QuickBooks Online can export invoice data to CSV/Excel for the reconciliation",
+              "result": "VERIFIED with a tier caveat. Invoice lists and Sales by Customer reports export to Excel/CSV; however the line-item-level Sales by Customer Detail report requires Essentials or higher — Simple Start only gets the Summary version, degrading plan-sale detection on the cheapest QBO tier.",
+              "source_url": "https://quickbooks.intuit.com/learn-support/en-us/help-article/purchase-orders/reports-included-quickbooks-online-subscription/L0s4KrGgr_US_en_US"
+            },
+            {
+              "claim": "Hidden regulatory/licensing exposure exists (data licensing, telecom, financial regulation)",
+              "result": "NOT FOUND — this part genuinely survives. Read-only CSV ingestion of the shop's own exported data involves no scraping, no gated data license, no payment processing (no money-transmitter exposure), no SMS (no A2P 10DLC/TCPA), and mailto/BYO-SMTP outreach keeps CAN-SPAM obligations on the shop. Consumer PII volumes at 50-800 agreements/shop sit far below CCPA-class thresholds. Liability is reputational (bad outreach from mismatches), not legal.",
+              "source_url": "https://docs.housecallpro.com/docs/housecall-public-api/ZG9jOjU4NjM4-authentication"
+            }
+          ],
+          "improvements": [
+            "Fix the ICP claim: target Jobber Connect/Grow shops (multi-user) and HCP Basics/Essentials shops; drop 'Jobber Core with 2-10 techs' — it is impossible — and rewrite the wedge story for Jobber shops to account for the fact that Connect+ already syncs invoices to QBO (the leak there is agreement-vs-schedule, not billing-vs-schedule).",
+            "Make the agreement roster a first-class, honest onboarding step: one-time import of the shop's existing membership spreadsheet plus auto-detection of renewals from QBO invoice line items, and admit the product maintains a lightweight agreement roster — pretending 'no system of record at all' is unbuildable because no export contains plan terms.",
+            "Handle the QBO tier split explicitly: detect Simple Start accounts and fall back to All Sales list export plus a product/service-item naming convention ('Maintenance Plan' item), or state Essentials+ as a requirement — most shops billing recurring memberships need Essentials for recurring transactions anyway.",
+            "Apply for Jobber App Marketplace review early (before hitting the 5-paying-account Draft cap) and tone down 'marketed explicitly against Jobber pricing' — the API roadmap and the only warm distribution channel both run through Jobber's approval. Treat HCP as CSV-only permanently and design staleness nags/email-in ingestion around that reality from day one.",
+            "Ship per-vendor, per-tier export runbooks (screenshots, expected column headers) plus a header-drift detector that alerts the dev and the shop when a vendor silently changes export formats — this converts the adapter treadmill into the claimed moat instead of a silent-failure source.",
+            "Put a human-review gate on all outreach (never auto-send) and show match-confidence on fuzzy QBO-to-FSM customer matches, so a bad merge cannot generate a false 'you paid and we never showed up' email under the shop's name."
+          ],
+          "notes": "Net assessment against the brief to REFUTE indie implementability: I could not kill it on implementability grounds. The MVP's core data path (user-initiated CSV exports from Jobber, HCP, and QBO) is verified real, self-serve, and credential-free; there is no scraping dependency, no gated core dataset, and no regulatory or licensing exposure a disclaimer can't handle at this scale. A Next.js+Postgres CSV-reconciliation app with a rules engine is squarely within a non-specialist-with-Claude-Code's capability, and the deliberate exclusions (no payments, no SMS, no writes) remove the classic indie landmines. What the research did break: the ICP as written contains a factual impossibility (Jobber Core is solo-only), the HCP API roadmap is dead on arrival (MAX-only), the Jobber API path is gatekept by the very vendor the marketing attacks, QBO's cheapest tier can't export line items, and the 'no system of record, no double-entry' positioning is internally contradicted because agreement terms exist in no export and must be maintained inside PlanPatrol. None of these is fatal individually; together they mean the honest product is a bit more manual, more Jobber-dependent, and more roster-maintenance-shaped than the concept admits. 8 web searches/fetches performed; the two 403s (getjobber.com pages) were cross-verified via Jobber's own help-center content surfaced in search plus multiple independent 2026 pricing reviews."
+        }
+      },
+      {
+        "key": "hvac-radar-pivot",
+        "lens": "market",
+        "verdict": {
+          "verdict": "seriously_weakened",
+          "fatal_flaws": [
+            "The wedge's core premise — that membership billing and scheduling live in two systems 'no vendor will ever reconcile' — is false for most of the stated ICP. Jobber (QuickBooks Online sync on Connect and up) and Housecall Pro (built-in QBO integration on all paid plans) sync invoices natively to QuickBooks, and in most small shops the membership invoice originates in the FSM, so one FSM export already contains both the billing and the job history. Worse, 'sold-but-never-scheduled' is largely prevented for free by the recurring-jobs feature that exists on Jobber Core and Housecall Pro's base tiers: the standard workflow is to create the recurring visit schedule at point of sale. The failure mode PlanPatrol detects is a one-time process failure with a zero-cost process fix, not a structural software gap. The genuinely un-reconciled segment (bills memberships directly in QB, schedules in an FSM, never sets up recurring jobs, has 50-800 agreements, 2-10 techs, refuses to upgrade tiers) is a thin slice of an already thin slice.",
+            "Weekly manual CSV upload is a structural churn engine, and the concept's own escape hatch destroys its differentiation. The product is worthless the week the office manager stops exporting three CSVs, and busy small-shop office managers stop. The stated mitigation — read-only Jobber API sync and a Jobber App Marketplace listing — converts the product into a single-platform Jobber add-on, forfeiting the cross-vendor 'structurally unbuildable by platforms' argument that is the entire differentiation section, and placing it directly in the path of Jobber's own tier roadmap and marketplace rules.",
+            "At $79/mo ($948/yr), PlanPatrol is priced against alternatives that deliver strictly more for similar money: Housecall Pro's Service Plans add-on (~$1,200/yr per the concept's own evidence) or MAX tier gives full agreement management including billing and scheduling, not a read-only list; Jobber Grow, FieldPulse (maintenance agreements included in base platform, ~$70-130/user), Service Fusion (flat-rate, unlimited users, recurring invoicing), QuoteIQ Pro ($149.99/mo with recurring invoicing + renewal automation), and Sera ($399/mo flat, membership-centric) all bracket the price point. And for a shop with 50-300 agreements, the reconciliation itself is an hour with a pivot table on the same two CSVs — the tool automates a chore that is quarterly-scale, not weekly-scale, at that agreement volume."
+          ],
+          "weaknesses": [
+            "The 'revenue protected' tally — the number claimed to drive renewals — is economically shaky: industry consensus (Contracting Business, HVAC coaching content) is that maintenance tune-up visits are frequently loss-leaders or break-even at the visit level; an unperformed prepaid visit is avoided labor cost plus a retention liability, not a clean recoverable dollar figure, so the Monday-digest ROI number is self-graded and contestable by the owner.",
+            "Buyer reachability is worse than stated: the daily user is the office manager, but the communities in the distribution plan (HVAC-Talk business forum, r/HVAC, ACCA/PHCC chapters, trade podcasts) are owner/technician spaces, and trade forums like HVAC-Talk enforce anti-solicitation rules against vendors — founder-led promotion there risks bans, making an already small, slow channel smaller and slower. Searching Reddit for small-shop membership-tracking pain threads turned up essentially nothing indexed, which also undercuts the assumption this pain is loudly expressed where the founder plans to fish.",
+            "Housecall Pro CSV export friction: job/customer exports require admin access and arrive by email, and the platform steers data work toward its MAX-plan import team — the weekly three-file ritual is clunkier on HCP than the concept assumes.",
+            "Platform down-market risk is real and admitted: Jobber and HCP both have histories of moving features across tiers, and either one adding a simple 'members with no upcoming visit' report (trivial for them, since they hold both datasets) erases the wedge for their installed base.",
+            "The concept preaches 'evidence discipline' while its underlying problem statement still leads with the $30k/yr and 2:1 pull-through figures that the pivot brief itself bans as coming from a vendor SEO farm — the internal case for the pain still rests on numbers the team has already admitted are unusable.",
+            "No dominant standalone competitor was found doing exactly this read-only cross-CSV radar — but that is weak comfort: the adjacent space (agreement modules inside affordable FSMs) is crowded and well-executed, suggesting the standalone-radar shape is unoccupied because the economics and churn profile are bad, not because nobody noticed the pain."
+          ],
+          "evidence_checks": [
+            {
+              "claim": "80%→60% renewal on 500 agreements at $300 = $30,000/yr lost; ~2:1 pull-through; #1 contract killer is selling the plan and never scheduling visits (Simply Connected Systems)",
+              "source_url": "https://help.simplyconnectedsystems.com/pain/service-contracts",
+              "result": "FLAGGED: sole source is vendor content marketing (an FSM vendor's SEO pain page); the figures are illustrative arithmetic, not research. The pivot brief itself concedes this source is a vendor SEO farm and bans the numbers — yet they remain the headline quantification in the problem statement. No independent corroboration found."
+            },
+            {
+              "claim": "ServiceTitan averages $250-$500/tech/mo, $5,000-$50,000 implementation, 6-12 month onboarding, too heavy for <10-tech shops (FieldCamp)",
+              "source_url": "https://fieldcamp.ai/reviews/servicetitan/",
+              "result": "DIRECTIONALLY VERIFIED but source is competitor content marketing (FieldCamp is an FSM vendor). Multiple independent-of-each-other competitor analyses (projul.com, repair-crm.com, getonecrew.com, myquoteiq.com) corroborate $245-$398+/tech/mo, $5k-$50k implementation, 12-month contracts, and ServiceTitan's own statement that it is 'not optimized' for ≤3 technicians. However ServiceTitan publishes no prices, so the concept's phrase 'publicly reported pricing' overstates — every number traces to competitor blogs, not a primary source."
+            },
+            {
+              "claim": "Housecall Pro add-on creep is the top churn driver; one user's Service Plans + pictures add-on cost +$1,200/yr (FieldCamp)",
+              "source_url": "https://fieldcamp.ai/reviews/housecall-pro/",
+              "result": "PARTIALLY VERIFIED, FLAGGED: the $1,200/yr anecdote's only source is a competitor's review page quoting an anonymous user — unverifiable content marketing. The structural fact underneath does check out independently: HCP's own help center and third-party reviews (SoftwareAdvice, Projul) confirm Service Plans are gated to the MAX tier (~$299/mo) or a paid add-on, not available on Basic/Essentials as standard."
+            },
+            {
+              "claim": "Jobber per-employee pricing penalizes growth: Connect for Teams $170/mo, Grow for Teams $349/mo, Plus $599/mo + $29/user; Marketing Suite $80/mo add-on (QuoteIQ)",
+              "source_url": "https://myquoteiq.com/jobbers-biggest-problem-exposed/",
+              "result": "FLAGGED: QuoteIQ is a directly competing FSM vendor and the article is an explicit hit piece ('Biggest Problem Exposed'). Its specific figures do not match current 2026 pricing reported across multiple sources (Core $39/mo, Connect $119/mo, Grow $199/mo monthly; team bundles ~$149/5 users; Marketing Suite ~$79/mo) — the claim is stale and competitor-slanted, though the general per-seat/add-on structure is real. Note also the cuts-both-ways fact the concept omits: Jobber's base tiers include recurring job scheduling, which directly mitigates the wedge failure mode."
+            },
+            {
+              "claim": "HVAC companies traditionally relied on spreadsheets/paper to manage maintenance contracts, causing errors and missed appointments (Velappity)",
+              "source_url": "https://www.velappity.com/how-do-hvac-companies-track-maintenance-contracts-with-software/",
+              "result": "FLAGGED: Velappity is itself a field-service software vendor; the page is generic SEO content asserting a truism with no data. Every one of the five cited evidence sources is vendor content marketing — zero primary or independent sources support the problem quantification."
+            }
+          ],
+          "improvements": [
+            "Narrow the ICP to the segment where the wedge is actually true — shops that bill memberships in QuickBooks (recurring transactions/memorized invoices) while scheduling in a disconnected FSM — and validate its size with 20-30 direct interviews before writing code; if fewer than half of small membership-selling shops bill QB-side, the reconciliation wedge does not exist at viable scale.",
+            "Reshape the offer from self-serve SaaS with a weekly manual chore into a productized one-time 'membership leak audit' ($300-$750, done-for-you on their exports) that funnels into monitoring only for shops that convert to API-synced ingestion — this monetizes the strong part (the audit reveal with named customers and dollar amounts) without betting retention on an office manager's CSV habit.",
+            "If the Jobber API sync is the real retention answer, make it the day-one architecture and own being a Jobber marketplace app — then rewrite the differentiation section honestly around speed-to-value and price versus the Jobber Grow upgrade delta, rather than a cross-vendor claim the roadmap abandons.",
+            "Replace the 'revenue protected' tally with metrics the owner cannot dispute: count of overdue included visits booked and renewals invoiced after flagging, denominated in the shop's own plan prices — and drop any implied claim that a skipped loss-leader tune-up equals its sticker price in lost revenue.",
+            "Purge all five vendor-blog citations from the evidence base and rebuild it on primary sources only: Jobber's and Housecall Pro's own published pricing/help pages for tier gating, plus first-party interview quotes from target shops; the concept's 'evidence discipline' positioning is currently contradicted by its own bibliography.",
+            "Stress-test willingness to pay against the true alternative set in sales conversations: not ServiceTitan, but the ~$60-120/mo delta to HCP MAX/Jobber Grow, FieldPulse, Service Fusion, or QuoteIQ Pro — all of which include agreement or recurring-billing management in an operational (not read-only) form."
+          ],
+          "notes": "Honest summary: the underlying pain kernel is real and corroborated — base-tier Jobber/HCP genuinely gate full agreement management behind higher tiers or add-ons, ServiceTitan genuinely prices out 2-10 tech shops, and no well-loved standalone 'membership radar' was found on G2/Capterra/marketplaces. What fails is the specific product shape: (1) the two-system reconciliation gap is much rarer than claimed because FSM↔QuickBooks sync is native and recurring-jobs on base tiers prevents the flagship failure mode when basic process discipline exists; (2) weekly manual CSV ingestion is a churn engine the concept itself identifies as risk #1, and its mitigation (Jobber API) dissolves the differentiation; (3) the $79/mo price sits inside the upgrade delta to full agreement modules from multiple well-executed, affordable competitors (FieldPulse, Service Fusion, QuoteIQ, HCP MAX, Jobber Grow, Sera). Evidence hygiene is poor: all five cited sources are vendor content marketing, one is a source the team already banned, and one contains stale competitor-slanted pricing. Not an outright kill because a real sub-segment (QB-billed memberships + disconnected FSM) plausibly exists and the audit-reveal trial is a genuinely strong sales mechanic — but as specified, this is a small-TAM, high-churn, founder-effort-heavy product whose wedge premise is mostly untrue for its own ICP. Survives only if reshaped into an audit-led service or a Jobber-native app with honest positioning."
+        }
+      }
+    ]
+  },
+  "workflowProgress": [
+    {
+      "type": "workflow_phase",
+      "index": 1,
+      "title": "Ideate"
+    },
+    {
+      "type": "workflow_phase",
+      "index": 2,
+      "title": "Skeptic"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 1,
+      "label": "ideate:str-eu-compliance",
+      "phaseIndex": 1,
+      "phaseTitle": "Ideate",
+      "agentId": "ac15d48d65045d5d5",
+      "model": "claude-fable-5",
+      "state": "done",
+      "startedAt": 1783690097533,
+      "queuedAt": 1783690097477,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "lastToolSummary": "Registry Radar",
+      "promptPreview": "You are a world-class SaaS product strategist. Turn this evidenced market problem into the sharpest possible SaaS concept an indie developer could build and sell with Claude Code (standard web app, simple DB, public/no-credential APIs, mockable integrations, content/data curation is fine and is often the moat).\n\nLESSONS FROM TWO PRIOR ADVERSARIAL ROUNDS (8 concepts killed). The concept you design …",
+      "lastProgressAt": 1783690161764,
+      "tokens": 31368,
+      "toolCalls": 1,
+      "durationMs": 64230,
+      "resultPreview": "{\"name\":\"Registry Radar\",\"one_liner\":\"The host-side compliance system of record for EU short-term rental portfolios: a curated, citation-backed registry-requirements database mapped to each property, with renewal deadlines, rule-change alerts, and a document vault — so a missed registration never gets a listing auto-delisted.\",\"icp\":\"Professional STR property managers and co-hosting agencies runni…"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 2,
+      "label": "ideate:surveyor-jobtrack",
+      "phaseIndex": 1,
+      "phaseTitle": "Ideate",
+      "agentId": "a2979bc9ddfab4392",
+      "model": "claude-fable-5",
+      "state": "done",
+      "startedAt": 1783690097549,
+      "queuedAt": 1783690097478,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "lastToolSummary": "Backsight",
+      "promptPreview": "You are a world-class SaaS product strategist. Turn this evidenced market problem into the sharpest possible SaaS concept an indie developer could build and sell with Claude Code (standard web app, simple DB, public/no-credential APIs, mockable integrations, content/data curation is fine and is often the moat).\n\nLESSONS FROM TWO PRIOR ADVERSARIAL ROUNDS (8 concepts killed). The concept you design …",
+      "lastProgressAt": 1783690157140,
+      "tokens": 31103,
+      "toolCalls": 1,
+      "durationMs": 59590,
+      "resultPreview": "{\"name\":\"Backsight\",\"one_liner\":\"Job tracking built for land surveying firms: a pipeline that speaks surveying (fieldwork → drafting → licensed review → delivery), a client status link that kills \\\"where's my survey?\\\" calls, and a prior-work archive searchable by Section-Township-Range so every new request instantly shows what the firm already knows about that ground.\",\"icp\":\"Owner/licensed surve…"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 3,
+      "label": "ideate:interpreter-backoffice",
+      "phaseIndex": 1,
+      "phaseTitle": "Ideate",
+      "agentId": "a0f2bfc81c91caa4c",
+      "model": "claude-fable-5",
+      "state": "done",
+      "startedAt": 1783690157151,
+      "queuedAt": 1783690097478,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "lastToolSummary": "TerpDesk",
+      "promptPreview": "You are a world-class SaaS product strategist. Turn this evidenced market problem into the sharpest possible SaaS concept an indie developer could build and sell with Claude Code (standard web app, simple DB, public/no-credential APIs, mockable integrations, content/data curation is fine and is often the moat).\n\nLESSONS FROM TWO PRIOR ADVERSARIAL ROUNDS (8 concepts killed). The concept you design …",
+      "lastProgressAt": 1783690223982,
+      "tokens": 31207,
+      "toolCalls": 1,
+      "durationMs": 66830,
+      "resultPreview": "{\"name\":\"TerpDesk\",\"one_liner\":\"The scheduling and dual-rate billing back office for small onsite interpreter agencies — match the right credentialed interpreter to every job, confirm both sides, and generate client invoices and interpreter pay statements that always reconcile, at 1/5th the price of the telephony-bundled incumbents.\",\"icp\":\"Owner-operators and lead schedulers of small US language …"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 4,
+      "label": "ideate:hvac-radar-pivot",
+      "phaseIndex": 1,
+      "phaseTitle": "Ideate",
+      "agentId": "a76687e872900f4eb",
+      "model": "claude-fable-5",
+      "state": "done",
+      "startedAt": 1783690161780,
+      "queuedAt": 1783690097479,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "lastToolSummary": "PlanPatrol — Maintenance Agreement Leak Radar",
+      "promptPreview": "You are a world-class SaaS product strategist. Turn this evidenced market problem into the sharpest possible SaaS concept an indie developer could build and sell with Claude Code (standard web app, simple DB, public/no-credential APIs, mockable integrations, content/data curation is fine and is often the moat).\n\nLESSONS FROM TWO PRIOR ADVERSARIAL ROUNDS (8 concepts killed). The concept you design …",
+      "lastProgressAt": 1783690223487,
+      "tokens": 32504,
+      "toolCalls": 1,
+      "durationMs": 61706,
+      "resultPreview": "{\"name\":\"PlanPatrol — Maintenance Agreement Leak Radar\",\"one_liner\":\"A read-only \\\"profit-leak radar\\\" that ingests the CSV exports a small HVAC/plumbing shop already produces (Jobber, Housecall Pro, QuickBooks) and every week flags exactly which maintenance-plan members were sold but never scheduled, are owed a seasonal visit, or are about to lapse — with a ready-to-send outreach list, no double-…"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 5,
+      "label": "skeptic-impl:str-eu-compliance",
+      "phaseIndex": 2,
+      "phaseTitle": "Skeptic",
+      "agentId": "aa5821da5aabd3f29",
+      "model": "claude-fable-5",
+      "state": "done",
+      "startedAt": 1783690224026,
+      "queuedAt": 1783690223985,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "lastToolSummary": "seriously_weakened",
+      "promptPreview": "You are a ruthless IMPLEMENTABILITY skeptic. REFUTE the claim that a non-specialist indie developer can build and run this SaaS with Claude Code and ordinary tools. Investigate with real web research (5-10 searches/fetches): required APIs/data actually public and credential-accessible? hidden regulatory/licensing exposure? core data only via fragile scraping? what breaks at runtime? liability a di…",
+      "lastProgressAt": 1783690549978,
+      "tokens": 60818,
+      "toolCalls": 16,
+      "durationMs": 325952,
+      "resultPreview": "{\"verdict\":\"seriously_weakened\",\"fatal_flaws\":[\"The concept's flagship retention engine — renewal deadlines — largely does not exist in the five launch markets. Italy's CIN has no expiry/renewal; Portugal abolished the AL 5-year renewal and auto-expiry rules; Greece's AMA does not expire (recurring obligations are annual income declarations to AADE — tax territory, i.e., Avalara/Chekin turf); Fran…"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 6,
+      "label": "skeptic-mkt:str-eu-compliance",
+      "phaseIndex": 2,
+      "phaseTitle": "Skeptic",
+      "agentId": "a925cce77806d967e",
+      "model": "claude-fable-5",
+      "state": "done",
+      "startedAt": 1783690224038,
+      "queuedAt": 1783690223985,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "lastToolSummary": "seriously_weakened",
+      "promptPreview": "You are a ruthless MARKET skeptic. REFUTE this SaaS opportunity with fresh web research: find well-executed competitors the research missed (app stores, G2, Capterra, ProductHunt, Reddit, niche directories), including FREE tiers and platform-native features; evidence the pain is already solved or not worth paying for; buyer reachability and churn problems; and spot-check 3-4 cited evidence claims …",
+      "lastProgressAt": 1783690764049,
+      "tokens": 66797,
+      "toolCalls": 26,
+      "durationMs": 540011,
+      "resultPreview": "{\"verdict\":\"seriously_weakened\",\"fatal_flaws\":[\"The core recurring engine — 'renewal deadlines' — largely does not exist in the five launch markets. Italy's CIN and Greece's AMA are one-time registrations with no periodic renewal; Portugal repealed the AL licence's 5-year renewal in Decree-Law 76/2024 (Nov 2024), making AL registrations permanent; and Spain's national NRUA was annulled outright. A…"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 7,
+      "label": "skeptic-impl:surveyor-jobtrack",
+      "phaseIndex": 2,
+      "phaseTitle": "Skeptic",
+      "agentId": "a7fe0eaaa2fb83a73",
+      "model": "claude-fable-5",
+      "state": "done",
+      "startedAt": 1783690549991,
+      "queuedAt": 1783690223986,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "lastToolSummary": "survives_with_fixes",
+      "promptPreview": "You are a ruthless IMPLEMENTABILITY skeptic. REFUTE the claim that a non-specialist indie developer can build and run this SaaS with Claude Code and ordinary tools. Investigate with real web research (5-10 searches/fetches): required APIs/data actually public and credential-accessible? hidden regulatory/licensing exposure? core data only via fragile scraping? what breaks at runtime? liability a di…",
+      "lastProgressAt": 1783691028460,
+      "tokens": 49981,
+      "toolCalls": 17,
+      "durationMs": 478468,
+      "resultPreview": "{\"verdict\":\"survives_with_fixes\",\"fatal_flaws\":[],\"weaknesses\":[\"The only ready-made legal-description parser (pyTRS) is NOT usable: its Modified Academic Public License explicitly prohibits any commercial or for-profit use ('pyTRS is NOT licensed for ANY commercial or for-profit use'). The wedge's hardest component must be licensed from a single hobbyist maintainer, clean-room reimplemented, or r…"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 8,
+      "label": "skeptic-mkt:surveyor-jobtrack",
+      "phaseIndex": 2,
+      "phaseTitle": "Skeptic",
+      "agentId": "a3ff3f00cd042e086",
+      "model": "claude-fable-5",
+      "state": "done",
+      "startedAt": 1783690764062,
+      "queuedAt": 1783690223986,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "lastToolSummary": "seriously_weakened",
+      "promptPreview": "You are a ruthless MARKET skeptic. REFUTE this SaaS opportunity with fresh web research: find well-executed competitors the research missed (app stores, G2, Capterra, ProductHunt, Reddit, niche directories), including FREE tiers and platform-native features; evidence the pain is already solved or not worth paying for; buyer reachability and churn problems; and spot-check 3-4 cited evidence claims …",
+      "lastProgressAt": 1783691162941,
+      "tokens": 61710,
+      "toolCalls": 29,
+      "durationMs": 398878,
+      "resultPreview": "{\"verdict\":\"seriously_weakened\",\"fatal_flaws\":[],\"weaknesses\":[\"The 'no dominant vertical solution exists' premise is false: fresh search surfaced at least SIX vertical land-surveying practice-management products the research missed or understated — Qfactor (ex-BizWatt, founded 2016, i.e. ~10 years in market, rebranded June 2026 claiming 'leading software for land surveying firms'), KudurruStone (…"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 9,
+      "label": "skeptic-impl:interpreter-backoffice",
+      "phaseIndex": 2,
+      "phaseTitle": "Skeptic",
+      "agentId": "a8bdd7a1c620ca7cd",
+      "model": "claude-fable-5",
+      "state": "done",
+      "startedAt": 1783691028473,
+      "queuedAt": 1783690223987,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "lastToolSummary": "seriously_weakened",
+      "promptPreview": "You are a ruthless IMPLEMENTABILITY skeptic. REFUTE the claim that a non-specialist indie developer can build and run this SaaS with Claude Code and ordinary tools. Investigate with real web research (5-10 searches/fetches): required APIs/data actually public and credential-accessible? hidden regulatory/licensing exposure? core data only via fragile scraping? what breaks at runtime? liability a di…",
+      "lastProgressAt": 1783691385472,
+      "tokens": 54389,
+      "toolCalls": 18,
+      "durationMs": 356999,
+      "resultPreview": "{\"verdict\":\"seriously_weakened\",\"fatal_flaws\":[\"The 'empty $50-200 gap' premise the whole business case rests on is factually false: Eclipse Scheduling (interpreterscheduling.com) is an established, purpose-built interpreter-agency platform starting at $125/month, all plans including the full suite with no per-user fees — scheduling, provider payroll, client billing/invoicing, interpreter screenin…"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 10,
+      "label": "skeptic-mkt:interpreter-backoffice",
+      "phaseIndex": 2,
+      "phaseTitle": "Skeptic",
+      "agentId": "a10759a457626f6a9",
+      "model": "claude-fable-5",
+      "state": "done",
+      "startedAt": 1783691162956,
+      "queuedAt": 1783690223987,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "lastToolSummary": "kill",
+      "promptPreview": "You are a ruthless MARKET skeptic. REFUTE this SaaS opportunity with fresh web research: find well-executed competitors the research missed (app stores, G2, Capterra, ProductHunt, Reddit, niche directories), including FREE tiers and platform-native features; evidence the pain is already solved or not worth paying for; buyer reachability and churn problems; and spot-check 3-4 cited evidence claims …",
+      "lastProgressAt": 1783691534707,
+      "tokens": 59017,
+      "toolCalls": 24,
+      "durationMs": 371751,
+      "resultPreview": "{\"verdict\":\"kill\",\"fatal_flaws\":[\"The 'evidenced $50-200 empty gap' — the concept's entire rationale — does not exist. At least five purpose-built interpreter-agency back-office tools sit in or below that band today: Eclipse Scheduling ($136.58/mo annual starter 'perfect for small agencies' with invoice AND remittance generators, batch invoicing, QuickBooks integration, mileage/travel pay, credent…"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 11,
+      "label": "skeptic-impl:hvac-radar-pivot",
+      "phaseIndex": 2,
+      "phaseTitle": "Skeptic",
+      "agentId": "aedcd2597b0e171b7",
+      "model": "claude-fable-5",
+      "state": "done",
+      "startedAt": 1783691385484,
+      "queuedAt": 1783690223987,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "lastToolSummary": "survives_with_fixes",
+      "promptPreview": "You are a ruthless IMPLEMENTABILITY skeptic. REFUTE the claim that a non-specialist indie developer can build and run this SaaS with Claude Code and ordinary tools. Investigate with real web research (5-10 searches/fetches): required APIs/data actually public and credential-accessible? hidden regulatory/licensing exposure? core data only via fragile scraping? what breaks at runtime? liability a di…",
+      "lastProgressAt": 1783691694173,
+      "tokens": 58158,
+      "toolCalls": 15,
+      "durationMs": 308688,
+      "resultPreview": "{\"verdict\":\"survives_with_fixes\",\"fatal_flaws\":[],\"weaknesses\":[\"ICP is factually wrong on Jobber: the Core plan is single-user (no team members) — a 2-10 technician shop cannot run on Jobber Core. The real Jobber target is Connect ($119+/mo) or Grow, and Connect+ INCLUDES two-way QuickBooks Online sync, which partially collapses the 'billing lives in QB, scheduling lives in the FSM, nobody reconc…"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 12,
+      "label": "skeptic-mkt:hvac-radar-pivot",
+      "phaseIndex": 2,
+      "phaseTitle": "Skeptic",
+      "agentId": "a604695741fc8607c",
+      "model": "claude-fable-5",
+      "state": "done",
+      "startedAt": 1783691534722,
+      "queuedAt": 1783690223988,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "lastToolSummary": "seriously_weakened",
+      "promptPreview": "You are a ruthless MARKET skeptic. REFUTE this SaaS opportunity with fresh web research: find well-executed competitors the research missed (app stores, G2, Capterra, ProductHunt, Reddit, niche directories), including FREE tiers and platform-native features; evidence the pain is already solved or not worth paying for; buyer reachability and churn problems; and spot-check 3-4 cited evidence claims …",
+      "lastProgressAt": 1783691877274,
+      "tokens": 59423,
+      "toolCalls": 19,
+      "durationMs": 342552,
+      "resultPreview": "{\"verdict\":\"seriously_weakened\",\"fatal_flaws\":[\"The wedge's core premise — that membership billing and scheduling live in two systems 'no vendor will ever reconcile' — is false for most of the stated ICP. Jobber (QuickBooks Online sync on Connect and up) and Housecall Pro (built-in QBO integration on all paid plans) sync invoices natively to QuickBooks, and in most small shops the membership invoi…"
+    }
+  ],
+  "totalTokens": 596475,
+  "totalToolCalls": 168
+}
