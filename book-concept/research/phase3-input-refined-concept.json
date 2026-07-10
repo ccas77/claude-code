@@ -1,0 +1,324 @@
+{
+  "refined": {
+    "refined_concept": {
+      "working_title": "Your Kid's AI Best Friend",
+      "subtitle": "What to Do When the Phone Loves Them Back \u2014 Scripts, House Rules, and How to Out-Relate the Machine",
+      "one_line_pitch": "The Anxious Generation told parents the phone stole their kid's childhood; this is the first clinician's protocol book for the parents who just discovered the phone now loves their kid back \u2014 word-for-word scripts, a one-page Family AI Agreement, and a step-by-step Breakup protocol for detecting, defusing, and out-relating a teen's attachment to an AI companion, for the 72% of American teens already using one.",
+      "category": "Family & Relationships / Parenting \u2014 Teenagers (FAM039000); hardcover prescriptive nonfiction with a reported case-study spine, \u00e0 la The Anxious Generation / Good Inside, with a crisis-triage front section \u00e0 la an ER manual.",
+      "target_reader": "Primary: mothers 35-55 of kids 10-17 \u2014 the demographic that kept The Anxious Generation at #1 NYT for over a year \u2014 split deliberately into two buyer states the book now serves separately: (1) the crisis buyer who just found the logs (served by the new 72-hour quick-start front section) and (2) the anxious-but-unaware buyer (served by the viral Attachment Check-In quiz that manufactures the discovery moment). Addressable base: parents of the ~42M US kids aged 8-17; per Common Sense Media/NORC (n=1,060), 72% of teens have used AI companions, 52% regularly, 33% have chosen an AI over a human for a serious conversation \u2014 figures the book triangulates against Pew, Internet Matters (UK), and the Stanford risk assessment rather than resting on alone. Secondary: school counselors, therapists, teachers, and PTAs \u2014 the schools/bulk-buy institutional channel the Haidt playbook proved; the family-meeting and co-parent chapters are written to be assigned ('read chapter 6 before Sunday'), making the natural unit of sale two-plus copies per household.",
+      "core_promise": "In one weekend \u2014 or, for the parent in active crisis, in the first 72 hours via the triage section that opens the book \u2014 a frightened parent goes from 'I just found the chat logs and I have no idea what this is' to a working plan: the six signs of companion attachment; a green/yellow/red calibration framework (front-loaded, so readers trust the alarms); word-for-word scripts for the first conversation, with the five sentences that slam the door annotated as failure modes; age-tiered house rules via the one-page Family AI Agreement; a concrete escalation protocol for the red zone (sexual content, self-harm reinforcement) including what to screenshot and what SB 243 and the settlements entitle you to demand from platforms; a Breakup protocol that anticipates real grief and doesn't drive the relationship underground; and the upstream rebuild of the human connection the bot was substituting for. The governing reframe, sharpened: this is not a screen-time problem, it is a relationship in your kid's life \u2014 and bans demonstrably backfire, so you can't ban it; you have to out-relate it.",
+      "why_now": "The catalysts are stacked, dated, and citable: Common Sense Media's 'unacceptable risk' verdict (July 2025); the Stanford risk assessment showing companions producing sexual content and self-harm encouragement with teen personas (Aug 2025); Character.AI banning under-18 open chat (Nov 2025) \u2014 which pushed minors toward unmoderated platforms and companion modes inside mainstream chatbots rather than ending use, the single fact that both proves the book's anti-ban thesis and immunizes the premise against an industry retreat from dedicated companion apps; the Character.AI/Google teen-suicide settlements (Jan 2026); California SB 243 in force since Jan 1, 2026, with enforcement actions regenerating coverage through 2027; MIT Technology Review naming AI companions a 2026 Breakthrough Technology; and an arXiv study documenting teens describing their own use in clinical addiction language ('withdrawal, tolerance, relapse'). The demand signal is the stopgap flood itself \u2014 APA, Child Mind, Common Sense, KQED, UNICEF web guides filling a book-shaped hole \u2014 and a July 2026 preemption check confirms no announced mainstream trade book. Every prior kids-and-tech wave produced its definitive parent book 2-3 years after the panic began; for AI companions that window is exactly now, which is why the package commits to proposal-out-by-Labor-Day 2026 and a crashed back-to-school-2027 pub.",
+      "toc": [
+        {
+          "chapter": "Start Here: The First 72 Hours",
+          "summary": "A crisis-triage front door for the parent who just found the logs: which phone call are you, what not to say tonight, what to screenshot, and which chapter to read first. Converts the mid-crisis buyer that free web guides currently catch, and makes the book usable before it is read."
+        },
+        {
+          "chapter": "1. The Girlfriend in the Phone",
+          "summary": "Three reported family stories \u2014 the discovered logs, the confrontation that went wrong, the quiet kid nobody suspected \u2014 anchored by the triangulated national numbers (72% have used companions, 52% regularly, 33% choosing the bot over a human for serious conversations). Thesis: this is not social media 2.0; it's the first technology that performs love."
+        },
+        {
+          "chapter": "2. Engineered to Be Irresistible",
+          "summary": "Why the bot wins: frictionless intimacy, engineered sycophancy, infinite availability, zero judgment \u2014 a product built to be the perfect listener your household can't be. Includes the book's evidence methodology in plain sight: every headline number sourced to primary research with ranges where studies diverge, the authority moat against both moral-panic critics and stat-shredding fact-checkers."
+        },
+        {
+          "chapter": "3. It's a Relationship, Not Screen Time",
+          "summary": "The governing reframe. Teens describe their own use in withdrawal/tolerance/relapse language; treating a relationship like a device quota produces secrecy, not safety. The Character.AI under-18 ban as the case study: prohibition moved kids to darker platforms and mainstream companion modes. The alternative: parent it like a relationship you're worried about."
+        },
+        {
+          "chapter": "4. Green, Yellow, Red",
+          "summary": "The calibration chapter, moved up front where credibility is earned: benign and even beneficial use exists and the research says so. A tiered framework for what's fine, what to watch, and what's a crisis \u2014 so readers trust the alarms in the red-zone chapters and the book survives the expert scrutiny that sinks moral-panic treatments."
+        },
+        {
+          "chapter": "5. The Quiet Audit",
+          "summary": "Detection without betrayal: the six behavioral signs of companion attachment, where companion dynamics hide (dedicated apps, mainstream chatbot personas, game NPCs, social-platform AIs), what platforms log, and how to look in a way you can later defend to your kid. Includes the Attachment Check-In \u2014 the 10-question self-assessment that doubles as the book's viral online quiz."
+        },
+        {
+          "chapter": "6. The First Conversation",
+          "summary": "The heart of the book: full scripts for opening the topic \u2014 the curious open, the discovered-logs conversation, the sideways 'my friend's kid' entry \u2014 with the five door-slamming sentences ('It's not real,' 'That's pathetic') annotated as failure modes. How to Talk So Kids Will Listen, rebuilt for synthetic love. Written to be assigned to a co-parent."
+        },
+        {
+          "chapter": "7. Know the Machines",
+          "summary": "A parent's field guide organized by attachment dynamics, not brand names: dedicated companion apps, companion modes inside mainstream chatbots and social platforms, romantic AI in games, and the homework-helper that drifts into confidant. App-specific details live in a dated appendix and a QR-linked companion page built for revision \u2014 the architecture that keeps the book evergreen through platform churn and any post-settlement industry retreat."
+        },
+        {
+          "chapter": "8. House Rules That Hold",
+          "summary": "The Family AI Agreement: age-tiered rules (8-12, 13-15, 16-18) covering what AI talk is fine, what's private-but-discussed, what's off-limits \u2014 negotiated with the kid, not imposed. The one-page agreement is the book's shareable artifact and free-download funnel."
+        },
+        {
+          "chapter": "9. The Red Zone",
+          "summary": "When it's a crisis: sexual content with minors, self-harm encouragement, suicidal ideation surfacing in bot chats \u2014 grounded in the Stanford findings and the litigation record. A concrete escalation protocol: what to screenshot, whom to call, when a therapist is non-negotiable \u2014 plus the platform-combat playbook: what SB 243, the settlements, and platform safety policies entitle you to demand, with model complaint language. The chapter no free web guide can safely write."
+        },
+        {
+          "chapter": "10. The Breakup",
+          "summary": "Ending an attachment without driving it underground: harm-reduction taper versus cold turkey, anticipating real grief (kids mourn these relationships), managing relapse, and the parent's script for the day the bot gets deleted. The book's most ownable protocol."
+        },
+        {
+          "chapter": "11. Out-Relating the Algorithm",
+          "summary": "The upstream chapter: the loneliness, social anxiety, or family friction the bot was medicating. Practical rebuild moves \u2014 engineered low-stakes peer contact, the 10-minute nightly no-agenda conversation, becoming askable \u2014 with the honest admission that the bot listened better than most adults do, and what to copy from it."
+        },
+        {
+          "chapter": "12. Special Cases",
+          "summary": "The 8-12s, where companions are colonizing the imaginary-friend years; neurodivergent kids, for whom bots can be both genuine practice ground and deeper trap; and the teen who insists, with evidence, that the AI helps \u2014 how to take that seriously without surrendering."
+        },
+        {
+          "chapter": "13. Your Leverage Beyond Your House",
+          "summary": "The collective-action layer that made Haidt a movement: what to ask your school to do, model PTA policy language, what enforcement of SB 243 and its state copycats means for parents, and where the regulatory fight goes next \u2014 the chapter that converts readers into the bulk channel."
+        },
+        {
+          "chapter": "14. Raising Kids Who Prefer People",
+          "summary": "The long game: companions are a 2026 Breakthrough Technology and they are not going away; the goal is not an AI-free child but a child for whom synthetic intimacy is a tool, not a home. Closes the loop on the three families from chapter 1."
+        }
+      ],
+      "comps": [
+        {
+          "title": "The Anxious Generation",
+          "author": "Jonathan Haidt",
+          "year": "2024 (Penguin Press)",
+          "relevance": "Proves the buyer and the playbook \u2014 #1 NYT for over a year, 2M+ copies, sold to this exact parent demographic with a diagnosis-plus-collective-action structure. Predates companion bots entirely; this is the next book its readers need, not a competitor."
+        },
+        {
+          "title": "How to Talk So Kids Will Listen & Listen So Kids Will Talk",
+          "author": "Adele Faber & Elaine Mazlish",
+          "year": "1980; updated ed. 2012 (Scribner)",
+          "relevance": "The scripts DNA and proof of format: parents pay, for decades, for word-for-word dialogue guidance \u2014 the evergreen-architecture precedent the field-guide chapter is built to match."
+        },
+        {
+          "title": "Good Inside",
+          "author": "Becky Kennedy",
+          "year": "2022 (Harper Wave)",
+          "relevance": "Proves a clinician with scripts and a connection-over-control philosophy can hit #1 NYT in the current market \u2014 the tonal and authorial model, and the coexistence precedent showing a protocol book thrives alongside a diagnosis bestseller (relevant to the expos\u00e9-preemption scenario)."
+        },
+        {
+          "title": "Raising AI: An Essential Guide to Parenting Our Future",
+          "author": "De Kai",
+          "year": "2025 (MIT Press)",
+          "relevance": "Proves publisher and media appetite at the AI-parenting intersection while defining the gap by what it isn't: philosophy, not a how-to for a parent holding chat logs. Its existence de-risks the category; its framing leaves the practical lane empty."
+        },
+        {
+          "title": "The Emotional Lives of Teenagers",
+          "author": "Lisa Damour",
+          "year": "2023 (Ballantine)",
+          "relevance": "Recent proof that a credentialed adolescent psychologist writing directly to worried parents is an instant NYT bestseller \u2014 the platform template for this book's lead author."
+        }
+      ],
+      "differentiation": "The shelf is verifiably empty and every occupant is disqualified by design: Haidt predates companion bots and stays in the phones/social-media lane; De Kai is MIT Press philosophy; three research scouts found nothing else but KDP spam; the institutional web guides are the demand signal, not the competition. The refined concept converts each judge-flagged threat into structure. (1) The expos\u00e9 preemption: a Character.AI-beat journalist's book is a diagnosis (what happened); this is a protocol book (what do I do Tuesday night) \u2014 different shelf, and the jacket is pre-positioned as 'after the headlines' so an expos\u00e9 landing first functions as free category marketing, exactly as Anxious Generation set up Good Inside. A clinician-fronted rival is the real threat, which is why the author search is now a 90-day two-track plan, not a wish list. (2) Free-content sufficiency: the web guides can't write the Breakup protocol, the platform-combat playbook, or the 72-hour triage section \u2014 the three deliverables a liability-averse nonprofit will never publish \u2014 and the free artifacts (Agreement, quiz) are deliberately the funnel, not the substitute. (3) Single-survey evidence base: the methodology chapter triangulates Common Sense/NORC against Pew, Stanford, Internet Matters, and the arXiv literature, states ranges, and the package commissions a proprietary 2,000-parent survey at proposal stage \u2014 turning the field's stat fragility into this book's authority moat (the Safe Word move: rigor as differentiation). (4) Industry-retreat risk: the field guide is organized by attachment dynamics across ALL synthetic-intimacy surfaces \u2014 mainstream chatbot companion modes, game NPCs, social AIs \u2014 with app specifics quarantined in a dated, QR-updated appendix; a retreat from dedicated under-18 companion apps validates rather than voids the premise, because the Nov 2025 ban already demonstrated migration. (5) The fast-follower moat remains the counterintuitive thesis a panic book will flinch from \u2014 you can't ban a relationship, you have to out-relate it \u2014 now reinforced by named, trademark-able protocols (the Quiet Audit, the Attachment Check-In, the Family AI Agreement, the Breakup) that plant flags a copycat must either license or awkwardly rename.",
+      "author_profile": "Requirement unchanged: a licensed clinical psychologist or adolescent psychiatrist with an active teen practice, fluency in the actual research, media presence, and no moral-panic track record \u2014 the Damour/Kennedy archetype \u2014 optionally paired with a tech-accountability journalist for the reported spine. What's changed is that author risk is now managed as a plan, not a hope: (1) a 90-day, two-track search run in parallel \u2014 Track A pursues the named bench (Stanford Brainstorm clinician-researchers behind the Aug 2025 risk assessment; Common Sense Media research leads/advisors on Talk, Trust, and Trade-Offs; Child Mind Institute clinicians already writing its AI guidance; APA task-force members; Character.AI litigation expert witnesses), Track B builds a clinician + journalist co-author pairing so a strong-but-not-celebrity clinician still yields a sellable package; (2) the structure is deliberately load-bearing \u2014 named protocols, scripts, the Agreement, the triage section \u2014 so the book works with a very good author rather than only a unicorn (the graft from the Bible concept's structural insurance); (3) an institutional co-brand or foreword (Common Sense Media or Child Mind, both currently publishing the stopgap guides) converts the free-content 'rival' into endorsement, launch media, and the school bulk channel, the Safe Word's AARP-as-channel maneuver. Hard gate honored: per the editor's verdict, the proposal does not circulate until a Track A or Track B author is signed \u2014 target Labor Day 2026.",
+      "marketing_hooks": [
+        "The Attachment Check-In as a free 10-question online quiz \u2014 'Does your kid have an AI best friend? Most parents don't know' \u2014 the awareness-manufacturing engine that solves the unaware-base problem the marketer flagged: the quiz creates the scare, the book sells the solution, every completion is a captured lead.",
+        "Morning-show-ready diagnostic: 'Six signs your kid has an AI best friend' plus the 33%-chose-the-bot-over-you stat is a complete GMA/Today segment in one sentence \u2014 now backed by a commissioned proprietary parent survey whose release is itself a news event the author owns.",
+        "The Family AI Agreement as a viral artifact: a free, downloadable one-page household contract engineered to spread through school newsletters and parent group chats the way Wait Until 8th and Haidt's phone-free pledge did.",
+        "Regenerating pegs on a calendar: SB 243 enforcement actions through 2026-27, state copycat bills, the Jan 2027 settlement anniversary, every Common Sense survey update \u2014 and a pre-drafted rapid-response op-ed ('the expos\u00e9 told you what happened; here's what to do tonight') that converts any rival journalist book or fresh litigation headline into this book's media cycle.",
+        "Counterprogramming hook for earned media: 'The parenting expert who says DON'T ban your kid's AI girlfriend' \u2014 the anti-ban thesis is built for op-ed pages and podcast debate bookings, differentiating every interview from generic AI-panic coverage.",
+        "Institutional bulk channel: PTAs, counselors, and districts already buying Anxious Generation class sets need the companion-bot sequel for back-to-school 2027; the Common Sense/Child Mind co-brand converts to endorsements, and the family-assignment chapter structure ('read chapter 6 before Sunday') makes two-plus copies per household the natural unit of sale."
+      ],
+      "open_questions": "What refinement cannot fix: (1) Pipeline invisibility \u2014 unannounced Big-5 deals can't be searched; a clinician-fronted rival proposal could surface any month, and the only defense is speed, which is a commitment, not a guarantee. (2) The author gate is real \u2014 the 90-day two-track plan and load-bearing structure improve the odds, but the named bench is uncontracted, those clinicians have agents and slower clocks, and the editor's condition (no circulation without a signed author) means a failed search kills the deal, correctly. (3) The trade-up bet \u2014 that crisis parents pay $28 after free APA/Child Mind guides \u2014 is analogous to but not proven by the Haidt precedent; the 72-hour triage section and Breakup protocol are the wager, not the proof. (4) Evidence replication \u2014 triangulation and a proprietary survey mitigate but don't eliminate the risk that the 72/52/33 numbers soften; the survey is also uncommissioned until a publisher funds it. (5) Regulatory overshoot \u2014 if federal or multi-state law effectively bans under-18 companion access across mainstream platforms too, the migration thesis (use moves rather than stops) is an inference from one Nov 2025 event, not a law of nature. (6) The retitle is a hypothesis \u2014 'Your Kid's AI Best Friend' wins the thumbnail test on paper but is untested against the demographic, and title testing must run before catalog lock."
+    },
+    "changes_made": [
+      "Title soft at thumbnail (marketer: 'could be a communication book'): retitled to 'Your Kid's AI Best Friend: What to Do When the Phone Loves Them Back' \u2014 names the buyer, the phenomenon, and the shelf at thumbnail distance; 'The Perfect Listener' is retained inside the book as the named diagnosis ('the perfect-listener problem') and as a tested alternate, with title testing committed before catalog lock.",
+      "Author dependency, the consensus kill risk (editor: 'only with a Damour-class clinician signed'; agent: 'a memo, not a proposal'; marketer: 'can't book the morning shows'): converted from a wish list to a plan \u2014 a 90-day two-track search (named bench vs. clinician+journalist pairing), structure made deliberately load-bearing so a very good author suffices, an institutional co-brand path (Common Sense/Child Mind), and a hard gate honoring the editor's condition: proposal does not circulate unsigned, target Labor Day 2026.",
+      "Single-survey evidence concentration (n=1,060 Common Sense/NORC): added an explicit methodology layer in chapter 2 that triangulates across Pew, Stanford, Internet Matters, and the arXiv literature with stated ranges, plus a commissioned proprietary 2,000-parent survey at proposal stage \u2014 turning stat fragility into an authority moat and an owned news event.",
+      "Free-content sufficiency (editor kill risk): added the 'Start Here: The First 72 Hours' crisis-triage front section and sharpened the three deliverables no liability-averse nonprofit guide will publish (the Breakup protocol, the platform-combat playbook, the triage section); repositioned the free artifacts (Agreement, quiz) explicitly as funnel rather than substitute.",
+      "Expos\u00e9 preemption by a Character.AI-beat journalist (agent + marketer): pre-positioned the jacket and a pre-drafted rapid-response op-ed as 'after the headlines: what to do Tuesday night,' making a rival expos\u00e9 function as category marketing (the Good Inside/Anxious Generation coexistence precedent), and committed to a 60-day-to-proposal clock.",
+      "Unaware-base pain problem (marketer: 'I have to manufacture the scare before I can sell the solution'): the Attachment Check-In is elevated from a chapter feature to the campaign's lead engine \u2014 a free viral online quiz that manufactures the discovery moment and captures leads.",
+      "Post-settlement industry-retreat risk (editor): broadened the field-guide chapter from companion apps to all synthetic-intimacy surfaces (mainstream chatbot companion modes, game NPCs, social AIs) with app specifics quarantined in a dated, QR-updated appendix \u2014 a dedicated-app retreat now validates the migration thesis instead of voiding the premise.",
+      "Moral-panic backlash exposure (open question 6): moved the calibration framework up from chapter 12 to chapter 4 ('Green, Yellow, Red') so credibility is earned before the alarm chapters, structurally front-loading the book's defense against expert criticism.",
+      "Concept-first fragility generally: named and flag-planted the protocols (Quiet Audit, Attachment Check-In, Family AI Agreement, the Breakup) as ownable, trademark-able assets a fast-follower must license or awkwardly rename.",
+      "Multi-copy economics: scripts and family-meeting chapters rewritten to be assignable ('read chapter 6 before Sunday'), making two-plus copies per household the natural unit of sale."
+    ],
+    "grafts_from_runners_up": [
+      "From The Safe Word: the named-protocol flag-plant strategy (a named protocol, once planted, is the hardest position to attack) applied to the Quiet Audit / Check-In / Agreement / Breakup suite; the statistics-rigor-as-authority-moat move (primary sources, stated ranges) now anchors chapter 2; and the convert-the-rival-to-a-channel maneuver (their AARP play) becomes the Common Sense Media / Child Mind co-brand and foreword strategy.",
+      "From The Parent Emergency: the crisis-sequenced ER architecture \u2014 the new 'Start Here: The First 72 Hours' triage front door that meets the mid-crisis buyer where free web guides currently catch her; and the sibling/co-parent multi-buy structure ('read chapter 6 before Sunday') as a designed conversion mechanic.",
+      "From The Off-Ramp: the drug-agnostic/decision-framework defense against landscape churn, applied as the attachment-dynamics-not-app-taxonomy field guide with a dated appendix; and the insurance-combat chapter as earned-media weapon, reborn as the platform-combat playbook in the Red Zone chapter ('the book that teaches you to fight the platform') with model complaint language under SB 243 and the settlements.",
+      "From So You Bought a Bible: making the STRUCTURE load-bearing rather than the voice \u2014 protocols, scripts, decoder-style field guide, and the Agreement mean the book works with a very good clinician, not only a once-in-a-generation one \u2014 the direct structural answer to the author-dependency kill risk.",
+      "From When the School Bus Stops Coming: the QR-linked living-update page and edition-cycle design that turns platform/regulatory churn into recurring revised-edition revenue instead of obsolescence, plus the shareable one-page checklist-as-excerpt distribution logic applied to the Agreement and the six-signs list."
+    ],
+    "unresolved_risks": [
+      "Pipeline invisibility: unannounced Big-5 deals cannot be searched, and a clinician-fronted rival proposal \u2014 the one scenario the protocol-vs-expos\u00e9 distinction does not defuse \u2014 could surface any month; the only mitigation is speed.",
+      "The author gate: the 90-day two-track search improves odds but the bench is uncontracted, those clinicians have agents, existing book ideas, and slower clocks; per the editor's own condition, a failed search kills the deal, and the concept is worth nothing without the clinician.",
+      "The trade-up bet: no direct proof that parents satisfied by free APA/Child Mind/Common Sense guides convert to a $28 hardcover; the 72-hour triage section and Breakup protocol are the wager, analogous to but not demonstrated by the Anxious Generation precedent.",
+      "Evidence replication: triangulation helps, but the headline 72/52/33 numbers still trace primarily to one n=1,060 self-report survey; the proprietary replication survey is unfunded until a publisher commits, and softer replication numbers weaken the urgency case.",
+      "Regulatory overshoot: the migration thesis (bans move use rather than stop it) rests on a single November 2025 natural experiment; sweeping federal or multi-state under-18 prohibitions across mainstream platforms could shrink the panic \u2014 and the addressable problem \u2014 before a back-to-school 2027 pub date.",
+      "Title risk: 'Your Kid's AI Best Friend' is a paper hypothesis that fixes the thumbnail problem but is untested against the mothers-35-55 demographic; a title that reads flip rather than urgent could depress the duty-purchase and gift mechanics.",
+      "Moral-panic backlash: even with calibration front-loaded, the CHI 2026 literature documents genuine benefits; if the reported spine skews alarmist in execution, the expert class that turned on Haidt makes this book radioactive, and no structural choice can fully constrain an author's tone."
+    ]
+  },
+  "score_table": [
+    {
+      "opportunity_rank": 1,
+      "title": "The Perfect Listener",
+      "total": 124,
+      "byJudge": {
+        "editor": 41,
+        "agent": 42,
+        "marketer": 41
+      },
+      "byCriterion": {
+        "pain": 25,
+        "urgency": 28,
+        "originality": 24,
+        "commercial": 26,
+        "buildability": 21
+      },
+      "rationales": [
+        "[editor] This is the one concept where the 2028 wave is a near-certainty \u2014 deepfake fraud will be strictly worse when this book ships, so the urgency compounds rather than expires, and the Gift-of-Fear protocols-not-tactics architecture is the correct answer to my staleness allergy. The rep one-liner writes itself ('The Gift of Fear for the deepfake era'), the dual-generation Thanksgiving purchase is a real two-copies-per-family mechanic, and the author package (fraud-beat journalist + AARP/IC3 credential) is genuinely findable in 90 days, unlike ranks 1 and 3. Docked on originality because it is consciously a Haidt/de Becker mashup, and the title needs to die in its first marketing meeting \u2014 but that is a fixable problem, which is the kind I like.",
+        "[agent] This is the one that starts a heated auction the week it goes out: the Haidt buyer is proven at 2M+ copies, the shelf is verifiably empty, and the 33%-choose-the-bot-over-you stat is a complete morning-show segment. The anti-ban 'out-relate the machine' thesis is sharp enough to survive the proposal process, which most panic books aren't. But I've watched a dozen 'we just need to attach the expert' packages die in the author search, and the settlement-beat journalists are absolutely writing proposals right now \u2014 the expos\u00e9 landing first doesn't kill this, but a clinician-fronted rival does. Score it as the hottest property with the shakiest deed.",
+        "[marketer] This is the best publicity machine in the field: the 33%-chose-the-bot-over-you stat is a complete GMA segment in one sentence, the Family AI Agreement is a genuinely engineered viral artifact (the Wait Until 8th playbook, which worked), and SB 243 enforcement plus settlement anniversaries give me bookable pegs on a calendar through 2028. The Haidt buyer is proven, reachable free via parent Facebook groups and school newsletters, and the PTA/district bulk channel is pre-built. I dock pain slightly because the base is largely unaware \u2014 I have to manufacture the scare before I can sell the solution, which the 72% stat fortunately does in one chyron. Title is soft at thumbnail ('The Perfect Listener' could be a communication book) but the subtitle rescues it; I'd still test alternatives."
+      ],
+      "kill_risks": [
+        "[editor] Free-content sufficiency: AARP, NCOA, and every local news segment give away the safe-word tip at $0, and the fear purchase never converts at the register because the buyer feels 'covered' after a 90-second explainer.",
+        "[agent] It's a concept in search of an author: without a contracted Damour/Kennedy-class clinician, this is a memo, not a proposal \u2014 and the clinicians who fit already have agents, their own book ideas, and slower clocks than this window allows.",
+        "[marketer] Author dependency: without a credentialed, media-fluent clinician attached fast, the package can't book the morning shows that ARE the marketing plan \u2014 and a Character.AI-beat journalist's expos\u00e9 sucks up the media oxygen first."
+      ]
+    },
+    {
+      "opportunity_rank": 2,
+      "title": "The Off-Ramp",
+      "total": 117,
+      "byJudge": {
+        "editor": 40,
+        "agent": 38,
+        "marketer": 39
+      },
+      "byCriterion": {
+        "pain": 26,
+        "urgency": 25,
+        "originality": 20,
+        "commercial": 25,
+        "buildability": 21
+      },
+      "rationales": [
+        "[editor] Highest ceiling in the field: the Haidt buyer is proven, the shelf is verifiably empty, the 33%-choose-the-bot-over-you stat is a complete GMA segment, and the schools/bulk channel is pre-built. My two hesitations are structural, not cosmetic \u2014 the entire evidence base hangs on one n=1,060 self-report survey, and this is a concept shopping for an author rather than an author with a concept, which is where most of these die. On the 2028 test it mostly passes: companion use will likely be larger, though a post-settlement industry retreat from minors is the scenario that guts the panic before pub. If Damour-or-equivalent signs, I preempt; if not, I pass, because the concept without the clinician is worth nothing.",
+        "[agent] The audience math is obscene \u2014 30M+ users who were paying $1,200/month \u2014 and the coverage-collapse news cycle is a publicist's dream with an annual open-enrollment re-detonation. But originality is weaker than the pitch admits: BenBella's Wyatt/Hill title already planted the off-ramp flag, and 'we're broader' is a differentiation argument editors have heard die a thousand times. This is the highest preemption-risk concept on the table; the file itself calls it the fastest-closing window, and unannounced GLP-1 deals are stacked at every Big 5 right now. I'd sell it, but only at sprint speed and only with the MD attached before the proposal circulates.",
+        "[marketer] The media beat is live and I don't have to create it \u2014 NPR, CNBC, WaPo are covering coverage-collapse weekly, and open enrollment is a guaranteed annual detonation, which is exactly the regenerating peg structure I want. The buyer was spending $1,200/month, so price resistance is zero, and the insurance-combat chapter books consumer-advocacy segments no diet book can touch. But originality is only moderate: BenBella already planted a flag on the off-ramp and Penguin has a platformed MD one greenlight away from a maintenance sequel \u2014 this window is genuinely the fastest-closing, and the honest-regain message is a publicist's hardest sell even though it's the right book."
+      ],
+      "kill_risks": [
+        "[editor] Author dependency: without a credentialed, media-fluent clinician signed at proposal stage, this collapses into either an alarmist journalist book or an unsellable academic one \u2014 and the named acquisition targets are a wish list, not a shortlist.",
+        "[agent] Diet buyers buy hope, not aftermath \u2014 and Penguin can greenlight a Salas-Whalen maintenance sequel with a built-in platform in one phone call, which vaporizes the auction before it starts.",
+        "[marketer] Aftermath books fight purchase psychology: diet buyers buy hope, and 'most of it comes back \u2014 defend your 25%' is honest copy that loses the thumbnail war to any rival willing to overpromise."
+      ]
+    },
+    {
+      "opportunity_rank": 3,
+      "title": "So You Bought a Bible",
+      "total": 111,
+      "byJudge": {
+        "editor": 37,
+        "agent": 36,
+        "marketer": 38
+      },
+      "byCriterion": {
+        "pain": 28,
+        "urgency": 17,
+        "originality": 19,
+        "commercial": 20,
+        "buildability": 27
+      },
+      "rationales": [
+        "[editor] The safest P&L in the set: 63M caregivers, the strongest buying demographic, a documented $10K/year spend, a proven 500K-copy category, and a multi-copy-per-family sales structure. Authors are abundant (care managers, discharge planners, eldercare creators), the content is fully documented, and the demographics are ironclad through 2040, never mind 2028. What it lacks is any real originality \u2014 crisis-sequencing an existing category bible is a format play, not a new book \u2014 and 'Peak 80' is a manufactured peg on an evergreen shelf, which is why urgency scores modestly. But evergreen-with-a-format-edge is exactly what backlists, and I would publish this happily as a reliable compounder rather than a lead title.",
+        "[agent] The triage-not-encyclopedia inversion is genuinely smart structural differentiation, and the author bench (care managers, eldercare creators, well-desk journalists) is the deepest in the field \u2014 this book definitely gets written and written well. The sibling multi-buy and institutional channels are real P&L helpers. But 'Peak 80' is a soft peg dressed as a hard one; eldercare has been 'about to explode' for twenty years and remains a backlist grind, not an auction category. Being Mortal sold on mortality and Gawande, not on caregiving logistics. Solid acquisition at a sane advance; nobody preempts it, which tells you something.",
+        "[marketer] The most intense, most self-aware pain in the field \u2014 parents watching a dated deadline approach are the definition of a motivated buyer \u2014 and the marketing plan is the cheapest here because the channel already exists: parent centers, Arc chapters, and transition fairs are standing distribution I don't have to buy. The ABLE-Act 'every book in print is now wrong' hook is a legitimately great trade-ad line, though a regulatory peg is a feature story, not a fear cycle. Buildability is the best in the set (stable rules, cheap author search, org endorsements over follower counts). I rank it third precisely because it's the honest 36-Hour-Day play: guaranteed compounding backlist beats two of the speculative-heat concepts, but it will never lead a list and shouldn't be scored as if it could."
+      ],
+      "kill_risks": [
+        "[editor] Discoverability against a 500K-copy incumbent: the buyer searches mid-crisis on Amazon, Morris still owns the results page, and a Workman 4th edition announcement mid-cycle turns our '2014 is stale' jacket claim into a knife fight we lose on brand equity.",
+        "[agent] Eldercare is a category where the demographics never convert: buyers Google in the ambulance bay instead of buying books, and this must out-discover a 500K-copy incumbent in a shelf lane publishers quietly know underperforms its market size.",
+        "[marketer] Ceiling: first-year velocity is too low for trade frontlist economics, and the free nonprofit PDFs that make the best sales channel are also the free substitute \u2014 the book risks becoming a workshop handout with an ISBN."
+      ]
+    },
+    {
+      "opportunity_rank": 5,
+      "title": "When the School Bus Stops Coming",
+      "total": 107,
+      "byJudge": {
+        "editor": 35,
+        "agent": 39,
+        "marketer": 33
+      },
+      "byCriterion": {
+        "pain": 24,
+        "urgency": 20,
+        "originality": 21,
+        "commercial": 18,
+        "buildability": 24
+      },
+      "rationales": [
+        "[editor] Hot today, and that is precisely the problem \u2014 this is the concept my 18-month staleness allergy was built for. The forced-off wave is real and the pain is acute, but the pharma pipeline is the fastest-moving variable in publishing right now, and 'most of it comes back, defend your 25%' is the most honest and least sellable promise in this field; the overpromising fast-follower outsells us in year one. BenBella already planted the off-ramp flag, Penguin has a bestselling author one maintenance-sequel away, and the concept's own open_questions concede the window may already be shut. High buildability, competent architecture, wrong moment to pay a lead-title advance.",
+        "[agent] The sharpest pain in the entire field \u2014 these parents are terrified, self-aware, and already paying attorneys \u2014 and the ABLE Act regulatory hook that makes every competing title 'checkably wrong' is the best why-now mechanism here because it expires the competition rather than outshouting it. Zero preemption risk, cheap author search, honest open_questions. But I get paid on advances and this is a $75K deal that compounds quietly for fifteen years, not an auction. The 36-Hour Day model is real; it's just a university-press or Workman business, and the panel should score it as the best book and the smallest deal in the set.",
+        "[marketer] The Thanksgiving duty-purchase structure and the bank/credit-union bulk channel are exactly what I look for, and the news pegs regenerate reliably (IC3 every spring, each celebrity deepfake). But this concept has a fatal marketing self-contradiction the pitch treats as an asset: 'safe word, hang up, call back, wait 24 hours' fits on a wallet card, and CBS is already giving the wallet card away. The kink connotation on the title is not a coin flip \u2014 it's a disqualifier for a gift book bought by 55-year-old women for their mothers, and the tested alternates concede the point. Vendor-sourced stats (1,210%, 1,600%) will shrink under fact-check and take the jacket copy with them."
+      ],
+      "kill_risks": [
+        "[editor] The 2028 landscape dissolves the premise: cheap oral GLP-1s and price competition shrink the forced-off population between deal and pub date, leaving a book about a 2026 insurance crisis on a 2028 shelf \u2014 while diet buyers keep proving they purchase hope, not aftermath.",
+        "[agent] The ceiling: a trade-paperback bulk-channel franchise that tops out at numbers no Big-5 P&L gets excited about, in a category where the nonprofit sales force also gives the content away free.",
+        "[marketer] The entire protocol is teachable in a free 90-second TV segment or AARP web page \u2014 the demand signal (safe-word meme everywhere) is also the substitute \u2014 and the title reads BDSM at Amazon-thumbnail distance, which poisons the exact 'hand it to Mom at Thanksgiving' gift purchase the model depends on."
+      ]
+    },
+    {
+      "opportunity_rank": 4,
+      "title": "The Safe Word",
+      "total": 103,
+      "byJudge": {
+        "editor": 33,
+        "agent": 36,
+        "marketer": 34
+      },
+      "byCriterion": {
+        "pain": 20,
+        "urgency": 20,
+        "originality": 21,
+        "commercial": 20,
+        "buildability": 22
+      },
+      "rationales": [
+        "[editor] The most original concept on the table \u2014 the fluency-not-faith move genuinely exploits a structural seam neither Christian houses nor secular imprints can occupy, and if it works it is a 30-year backlist annuity in the Mere Christianity slot. But pain is the lowest in the field (curiosity is not a 2 a.m. purchase), the buyer's need is diffuse, and the author search is a 6-12 month unicorn hunt where a miss produces exactly the apologetics book the concept exists to avoid. The units-sold data is the hardest evidence in the set and the trend reads durable into 2028, so I keep this warm \u2014 but I acquire it only after the author exists, not before.",
+        "[agent] The 'named protocol' flag-plant is the right strategy and the Gift of Fear architecture answers the dating risk honestly. But I've sold into this category: scam-defense books are reliable midlist, never breakout \u2014 Abagnale with maximum celebrity moved modest numbers, and this package has no celebrity. The vendor-sourced statistics (Vectra's 1,210%) will get shredded in a serious vetting pass, the title's kink problem is worse than the open_questions concedes because it kills the exact gift-purchase mechanic the whole plan depends on, and AARP fast-tracking its own house title is a live threat, not a hypothetical. Buildable, timely, and commercially capped.",
+        "[marketer] The pain is acute and the sibling multi-buy ('read chapter 8 before Sunday') is a genuinely clever conversion structure, plus eldercare TikTok gives me a real creator channel and the chapter titles excerpt natively. But 'Peak 80' is the weakest why-now in the field \u2014 an evergreen category dressed up as an event \u2014 and originality is format-deep only: Workman can commission a 4th edition, Hachette already has the millennial-caregiver headline, and my publicity pitches will collide with Generation Care in every producer's inbox. Solid, buildable, but it's the concept most likely to be outspent rather than outflanked."
+      ],
+      "kill_risks": [
+        "[editor] The conversion assumption: 19M Bible purchases are heavily aesthetic/identity-driven (premium bindings, journaling Bibles), and there is zero direct evidence those buyers purchase a companion explainer \u2014 the whole P&L rests on an inference.",
+        "[agent] The free-content substitution problem is fatal at the register: AARP and NCOA give away 90% of the protocol, and a duty/fear purchase satisfied by a web guide never converts to a $28 hardcover at scale.",
+        "[marketer] Point-of-need discoverability: the buyer searches mid-crisis and Amazon/Google serve them the 500K-copy Morris incumbent \u2014 a format advantage is invisible in a search-results thumbnail, so winning requires paid spend the category's margins won't fund."
+      ]
+    },
+    {
+      "opportunity_rank": 6,
+      "title": "The Parent Emergency",
+      "total": 96,
+      "byJudge": {
+        "editor": 37,
+        "agent": 31,
+        "marketer": 28
+      },
+      "byCriterion": {
+        "pain": 18,
+        "urgency": 18,
+        "originality": 24,
+        "commercial": 18,
+        "buildability": 18
+      },
+      "rationales": [
+        "[editor] The most acute, most self-aware pain in the entire field \u2014 these families already pay attorneys and conference fees, the ABLE regulatory peg genuinely obsoletes the shelf, and the demographic wave runs a decade. Buildability is strong because org trust beats platform in this category, making the author search the cheapest here. But I am a Big-5 editor and this is not a Big-5 book: 50K families a year is a niche annuity, the free-PDF nonprofit channel is both the sales force and the competition, and no rep walks into B&N with a lead-title pitch for it. Someone should publish this; it just should not be me at hardcover-advance money.",
+        "[agent] The freshest thesis on the table \u2014 'fluency, not faith' is a structural move no incumbent can copy, and religion is one of the only growth categories in print, something most panels don't know. But pain is the lowest here: curiosity is not crisis, and curiosity buyers browse rather than need. The undisclosed weakness the proposal soft-pedals: a large share of that 19M-unit figure is premium-binding and replacement purchasing by existing believers \u2014 the Gen-Z-seeker share is publisher spin on top of Circana data, and the 'buys a Bible, buys the companion' conversion is pure hypothesis. Highest variance in the field: a once-a-decade backlist annuity if the unicorn author materializes, and nothing at all if she doesn't \u2014 and the 6-12 month critical path means I can't even take it out this cycle.",
+        "[marketer] Best title in the field \u2014 it wins the 3-second thumbnail test outright and claims the exact purchase moment \u2014 and the fluency-not-faith frame is genuinely original. But curiosity is not pain; nobody buys this at 2 a.m. in a panic, and the annual 'why is Gen Z buying Bibles' news cycle is a soft feature peg, not a fear engine. The gift channel is real (the Strobel engine) but the seam positioning is a marketing-copy tightrope with hostile readers on both flanks, and the 6-12 month author search sits directly on the critical path. I'd rather see this as a nimble mid-size acquisition than a lead title."
+      ],
+      "kill_risks": [
+        "[editor] The ceiling: this is a Johns Hopkins/Workman-model decade-long backlist reference with bulk-channel economics, and a Big-5 hardcover P&L built on frontlist velocity simply does not clear \u2014 the concept admits it, and the concept is right.",
+        "[agent] The author search fails or lands wrong: without a genuinely credible translator-not-evangelist under 40, the seam positioning collapses and you get an apologetics book Christian retail won't need and secular media won't trust.",
+        "[marketer] The conversion assumption fails at retail: 19M Bible purchases never translate into explainer purchases, and the seam positioning means neither B&N nor Christian retail merchandises it \u2014 a book both channels can stock is often a book neither champions."
+      ]
+    }
+  ],
+  "judge_verdicts": [
+    {
+      "judge": "editor",
+      "verdict": "I would acquire The Safe Word \u2014 retitled \u2014 because it is the only concept where every axis a P&L actually runs on points the same direction: the threat provably grows through 2028 rather than risking staleness, the author package is findable in a quarter rather than a unicorn hunt, the rep one-liner ('The Gift of Fear for the deepfake era') sells itself to a B&N buyer in one breath, and the dual-generation duty-gift purchase plus bank/advisor bulk channel gives it de Becker-style backlist legs. The Perfect Listener has a higher ceiling and I would chase it hard \u2014 but only with a Damour-class clinician already signed, because concept-first proposals with single-survey evidence bases are how editors get fired. Everything else is either a timing bet against the pharma pipeline (Off-Ramp), an author search disguised as a proposal (Bible), or a fine book for somebody else's imprint (School Bus)."
+    },
+    {
+      "judge": "agent",
+      "verdict": "I acquire The Perfect Listener, and I take it out within sixty days. It is the only concept in the field where a proven 2M-copy buyer demographic, a verifiably empty shelf, a stacked and citable why-now, and ownable artifacts (the scripts, the Family AI Agreement, the Breakup protocol) converge \u2014 that combination is what produces a six-house auction rather than a respectable sale. The author dependency is real but solvable inside one proposal cycle because the concept names an actual bench (Stanford Brainstorm, Child Mind, Common Sense advisors) rather than wishing for a unicorn, which is exactly what sinks the Bible concept. The Off-Ramp is the runner-up on raw audience size, but its window is closing fastest and its 'honest regain' message fights the category's hope-buying psychology; I'd co-agent it only with the MD already signed. Everything else is either a midlist grind, a capped backlist annuity, or a thesis without a throat to speak it."
+    },
+    {
+      "judge": "marketer",
+      "verdict": "I acquire The Perfect Listener. It is the only concept in the field where the marketing engine is fully load-bearing before a word is written: a morning-show-ready stat (33% chose the bot over a human), a downloadable viral artifact with a proven distribution precedent, regenerating legal and survey pegs on a calendar, a counterprogramming hook ('don't ban the AI girlfriend') that differentiates every booking, and the Haidt-proven PTA bulk channel waiting for the sequel. The Off-Ramp is the close second and I would chase it too, but its category requires selling honesty against rivals selling hope, and its window is visibly closing. The Perfect Listener's one real vulnerability \u2014 author dependency \u2014 is a solvable search problem with named acquisition paths; every other concept's kill risk is structural to the market itself. Move at proposal speed and lock the clinician before Labor Day."
+    }
+  ]
+}
