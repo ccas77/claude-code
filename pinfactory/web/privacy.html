@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>pinfactory — Privacy Policy</title>
+<style>
+  :root{--bg:#0b0407;--panel:#160a10;--line:#2b141c;--ink:#f3e4de;--sub:#c9a79c;--accent:#c98a5e;
+    --serif:Georgia,"Times New Roman",serif;--sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.65}
+  a{color:var(--accent)}
+  .wrap{max-width:760px;margin:0 auto;padding:40px 20px 80px}
+  h1{font-family:var(--serif);font-size:34px;margin:0 0 6px}
+  .updated{color:var(--sub);margin-bottom:28px}
+  h2{font-family:var(--serif);font-size:21px;margin:32px 0 8px}
+  p,li{color:#e6d6ce}
+  .note{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;color:var(--sub);font-size:14px;margin:18px 0}
+  code{background:#20101a;border:1px solid var(--line);border-radius:6px;padding:1px 6px}
+  footer{border-top:1px solid var(--line);margin-top:40px;padding-top:18px;color:var(--sub);font-size:14px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Privacy Policy</h1>
+  <div class="updated">pinfactory · Last updated: [DATE]</div>
+
+  <div class="note"><b>Before you publish this:</b> replace every <code>[BRACKETED]</code>
+  placeholder with your details, read it through, and adapt it to how you actually
+  operate. This is a starting template, not legal advice.</div>
+
+  <p>This Privacy Policy explains how the pinfactory application ("the app",
+  operated by <b>[YOUR NAME OR BUSINESS]</b>) handles information when it is used to
+  publish content to Pinterest on behalf of its operator.</p>
+
+  <h2>Who this app is for</h2>
+  <p>pinfactory is a self-hosted tool that its operator runs to create and schedule
+  Pinterest Pins for their own books and Pinterest account. It does not offer
+  accounts to, or act on behalf of, other users.</p>
+
+  <h2>Information the app uses</h2>
+  <ul>
+    <li><b>Your Pinterest account access.</b> When you authorize the app, Pinterest
+      provides an access token and refresh token so the app can create boards and
+      Pins on <em>your</em> account via the Pinterest API. These tokens are stored
+      locally by the operator (and, if the operator runs it on a scheduler, in that
+      service's encrypted secrets store). They are never shared with third parties.</li>
+    <li><b>Your catalogue data.</b> Book titles, descriptions, links, cover images,
+      and related metadata that the operator supplies, stored locally to generate
+      Pins and their captions.</li>
+    <li><b>Pinterest analytics.</b> If enabled, the app may read impression, save, and
+      click metrics for Pins it created, to produce private performance reports.</li>
+  </ul>
+
+  <h2>How the information is used</h2>
+  <ul>
+    <li>To create boards and publish Pins to the operator's own Pinterest account.</li>
+    <li>To generate Pin titles and descriptions (optionally using the Anthropic API,
+      which receives only the book metadata needed to write the caption).</li>
+    <li>To produce private analytics summaries for the operator.</li>
+  </ul>
+  <p>The app does <b>not</b> sell data, does not use it for advertising to third
+  parties, and does not collect information about anyone other than its operator's
+  own account and catalogue.</p>
+
+  <h2>Storage &amp; retention</h2>
+  <p>Data is stored locally in a database on the operator's own machine or hosting
+  environment for as long as the operator keeps it. Pinterest access and refresh
+  tokens can be revoked at any time from your Pinterest account settings, which
+  immediately ends the app's access.</p>
+
+  <h2>Third-party services</h2>
+  <ul>
+    <li><b>Pinterest API</b> — to publish Pins and read their analytics
+      (<a href="https://policy.pinterest.com/privacy-policy" target="_blank" rel="noopener">Pinterest Privacy Policy</a>).</li>
+    <li><b>Anthropic API</b> (optional) — to draft Pin captions from book metadata
+      (<a href="https://www.anthropic.com/legal/privacy" target="_blank" rel="noopener">Anthropic Privacy Policy</a>).</li>
+  </ul>
+
+  <h2>Your choices</h2>
+  <p>You can revoke the app's Pinterest access at any time in your Pinterest settings,
+  and delete the app's local data at any time.</p>
+
+  <h2>Contact</h2>
+  <p>Questions about this policy: <b>[YOUR CONTACT EMAIL]</b>.</p>
+
+  <h2>Changes</h2>
+  <p>This policy may be updated; material changes will be reflected by the "Last
+  updated" date above.</p>
+
+  <footer><a href="./index.html">← Back to pinfactory</a></footer>
+</div>
+</body>
+</html>
