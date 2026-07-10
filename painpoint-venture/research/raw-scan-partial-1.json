@@ -1,0 +1,454 @@
+{
+  "summary": "Parallel web research to find high-pain underserved SaaS opportunities with evidence",
+  "agentCount": 8,
+  "logs": [
+    "[scout:ai-era-ops] failed: You've hit your session limit · resets 4:30am (UTC)",
+    "[scout:creators-solo] failed: You've hit your session limit · resets 4:30am (UTC)",
+    "[scout:ecommerce-sellers] failed: You've hit your session limit · resets 4:30am (UTC)",
+    "[scout:devtools-b2b] failed: You've hit your session limit · resets 4:30am (UTC)",
+    "[scout:hated-incumbents] failed: You've hit your session limit · resets 4:30am (UTC)",
+    "[scout:reg-compliance] failed: You've hit your session limit · resets 4:30am (UTC)",
+    "Collected 8 raw problems from 2/8 scouts"
+  ],
+  "result": {
+    "count": 8,
+    "problems": [
+      {
+        "title": "Standalone maintenance-agreement (membership) tracker for small HVAC/plumbing shops",
+        "customer": "Owner-operators of residential HVAC, plumbing, and electrical shops with roughly 2-10 technicians who sell annual maintenance plans/memberships but run their operations on spreadsheets, QuickBooks, or a low-tier FSM plan (Jobber Core, Housecall Pro basic) that lacks real agreement management",
+        "pain_description": "Maintenance agreements are the recurring-revenue engine of a small HVAC/plumbing shop, but tracking them in spreadsheets and sticky notes means missed spring/fall visits, missed renewals, and billing that silently lapses. Industry sources put concrete numbers on it: a renewal rate dropping from 80% to 60% on 500 agreements at $300 average is $30,000/year of lost recurring revenue, and each $300 agreement typically pulls through ~$900 in total annual revenue (2:1 pull-through ratio). The most common failure mode is collecting payment for a plan and then never scheduling the included visits — the customer discovers they paid for nothing and churns. The 'proper' fix, ServiceTitan, costs $250-$500 per technician per month with $5,000-$50,000 implementation and 6-12 month onboarding; Housecall Pro gates comparable features behind add-ons that users report adding ~$1,200/year.",
+        "evidence": [
+          {
+            "claim": "When renewals rely on spreadsheets/sticky notes, missing 10 renewals a month costs a mid-size shop tens of thousands; 80%→60% renewal on 500 agreements at $300 avg = $30,000/yr lost, and pull-through work runs ~2:1, so one lost $300 agreement ≈ $900 total revenue gone; the #1 contract killer is selling the plan and never scheduling the visits",
+            "source_title": "Maintenance Agreement Tracking in Field Operations — Simply Connected Systems",
+            "source_url": "https://help.simplyconnectedsystems.com/pain/service-contracts"
+          },
+          {
+            "claim": "ServiceTitan averages $250-$500 per technician per month, implementation fees run $5,000-$50,000, onboarding takes 6-12 months, and small shops (<10 techs) commonly find it too expensive and overwhelming — with BBB complaints from contractors who paid a full year without being fully onboarded",
+            "source_title": "ServiceTitan Pricing 2026: Real Costs Exposed — FieldCamp",
+            "source_url": "https://fieldcamp.ai/reviews/servicetitan/"
+          },
+          {
+            "claim": "Housecall Pro users report add-on cost creep as the single most common reason for churn — signing up at $59-$149/mo then having the bill double or triple; one user reported adding pictures and Service Plans (the maintenance-agreement feature) raised their cost by $1,200/year",
+            "source_title": "Housecall Pro Review 2026 — FieldCamp",
+            "source_url": "https://fieldcamp.ai/reviews/housecall-pro/"
+          },
+          {
+            "claim": "Jobber's per-employee pricing penalizes growth (Connect for Teams $170/mo, Grow for Teams $349/mo, Plus $599/mo + $29/user), and everyday features like review automation and email campaigns cost an extra $80/mo Marketing Suite add-on — leaving small shops squeezed between cheap-but-limited and bloated-but-expensive",
+            "source_title": "Jobber's Biggest Problem Exposed: Add-Ons, Extra Fees & More — QuoteIQ",
+            "source_url": "https://myquoteiq.com/jobbers-biggest-problem-exposed/"
+          },
+          {
+            "claim": "HVAC companies traditionally relied on spreadsheets, paper forms, or manual methods to manage maintenance contracts, which are prone to errors, miscommunication and missed appointments that damage retention",
+            "source_title": "How HVAC Companies Track Maintenance Contracts With Software — Velappity",
+            "source_url": "https://www.velappity.com/how-do-hvac-companies-track-maintenance-contracts-with-software/"
+          }
+        ],
+        "existing_alternatives": "Spreadsheets + QuickBooks memorized transactions; agreement modules inside ServiceTitan (enterprise-priced), Housecall Pro (paid add-on), Jobber Grow tier ($199-$349/mo); generic CMMS tools like OxMaint that aren't built around residential memberships. No well-loved, affordable standalone 'membership manager' that sits alongside whatever FSM/accounting stack the shop already has.",
+        "why_underserved": "Incumbents bundle agreement management into expensive all-in-one suites, so the 2-10 tech shop must either overbuy (ServiceTitan) or cobble spreadsheets. The niche-depth product — agreements, auto-billing, visit scheduling reminders, renewal chasing, and a simple profitability view, priced flat at ~$50-150/mo — doesn't have a dominant player; every vendor's blog acknowledges the spreadsheet status quo because that's what most small shops still do.",
+        "willingness_to_pay_signal": "These buyers already pay $59-$600+/mo for FSM software and complain about add-on fees, proving budget exists; the pain is directly denominated in dollars ($30k/yr lost renewals on a 500-agreement base), so a tool that saves even a handful of renewals pays for itself many times over. Housecall Pro users demonstrably paid +$1,200/yr just to unlock Service Plans.",
+        "buildability_notes": "Very buildable by an indie dev: CRUD app (customers, equipment, agreements, visit schedule), Stripe subscriptions for auto-billing, cron-driven email/SMS renewal and visit reminders (SendGrid/Twilio), CSV import from spreadsheets, optional QuickBooks Online public API integration later. No gated APIs, no licensing, data model is simple; can demo entirely with mock data.",
+        "scout": "smb-trades"
+      },
+      {
+        "title": "Affordable COI (certificate of insurance) collection and expiry-chasing for small GCs and property managers",
+        "customer": "Small general contractors, remodelers, and independent/regional property management companies who hire 10-75 subcontractors/vendors per year and currently track ACORD certificates in Excel and email inboxes; secondary: HOAs and facility managers",
+        "pain_description": "Every sub and vendor must carry valid liability/workers-comp insurance, and the hiring firm bears the risk if a certificate lapses: documented cases include an $8M lawsuit on a $1.5M project after a sub's COI expired, and a GC whose own policy absorbed $680,000 in defense and settlement after a sub's policy lapsed three weeks before mobilization. Yet the workflow is manual hell — industry data says roughly 7 of 10 collected COIs are non-compliant and each certificate takes ~3 follow-up emails to fix, so someone in the office is perpetually chasing agents and updating a spreadsheet that breaks the moment volume grows. The market leader, myCOI, hides pricing, runs ~$30-$60 per vendor per year ($1,500-$3,000+ for a 50-vendor shop) plus seats and per-extraction charges, and users report surprise fees.",
+        "evidence": [
+          {
+            "claim": "A company was sued for over $8M on a $1.5M project because a certificate of insurance expired and the sub was permitted on site; COI tracking is a painstaking chore that quickly overwhelms short-staffed companies",
+            "source_title": "The Importance of Tracking Insurance — Billy",
+            "source_url": "https://billyforinsurance.com/resources/the-importance-of-tracking-insurance/"
+          },
+          {
+            "claim": "Usually seven out of ten collected COIs are non-compliant and it takes about three follow-ups to make a certificate fully compliant; inbox/spreadsheet tracking 'works with 5 subs and fails at 50'",
+            "source_title": "How to Manage Subcontractor Certificates of Insurance (COIs) — Jones",
+            "source_url": "https://getjones.com/blog/how-to-manage-subcontractor-certificates-of-insurance-cois/"
+          },
+          {
+            "claim": "A GC on a $4.2M project absorbed $680,000 in defense costs and settlement after a drywall sub's policy lapsed three weeks before mobilization and the carrier denied the claim",
+            "source_title": "Subcontractor Insurance Requirements: A GC's Field Guide — Struvia",
+            "source_url": "https://struvia.co/blog/subcontractor-insurance-requirements"
+          },
+          {
+            "claim": "myCOI does not publish pricing; entry-level runs an estimated $30-$60 per vendor per year ($1,500-$3,000+ annually for 50 vendors) before seats and per-extraction charges, and its assignment-based pricing makes costs nearly impossible to predict, with users reporting surprise fees",
+            "source_title": "myCOI Alternatives (2026): Real Pricing, No Sales Call — TrackMyVendor",
+            "source_url": "https://trackmyvendor.com/mycoi-alternatives"
+          },
+          {
+            "claim": "Free Excel templates for COI tracking are widely distributed (Billy, TrackMyVendor, SubcontractorCOI), confirming the spreadsheet status quo at the small end of the market",
+            "source_title": "Free Certificate of Insurance Tracking Excel Template — Billy",
+            "source_url": "https://billyforinsurance.com/certificate-of-insurance-tracking-template-excel/"
+          }
+        ],
+        "existing_alternatives": "Excel/Google Sheets templates and Outlook reminders (dominant at the low end); myCOI, Jones, Evident, bcs, and Billy at the mid/enterprise tier (sales-call pricing, per-vendor fees, insurance-services upsells); early low-cost entrants like TrackMyVendor ($39-79/mo) showing the demand but with tiny footprints and no category winner for the SMB tier.",
+        "why_underserved": "Incumbents built for enterprises with compliance departments: opaque per-vendor pricing, mandatory sales calls, vendor-portal friction. The sub-50-vendor GC/property manager is explicitly told by the industry to 'use a spreadsheet until it breaks.' The recent appearance of multiple scrappy low-end alternatives with free tiers signals validated demand without an entrenched, well-loved winner — the SMB tier is still up for grabs on distribution and simplicity, not technology.",
+        "willingness_to_pay_signal": "Risk is denominated in six-to-seven-figure lawsuit outcomes and insurance-audit penalties, and buyers already pay myCOI $1,500-$3,000+/yr while complaining about it; commercial property insurance carriers increasingly require COI programs, creating urgency. A $50-150/mo self-serve tool undercuts incumbents by 5-10x while staying highly profitable.",
+        "buildability_notes": "Classic indie-buildable web app: vendor records, document upload (S3), expiration dates, automated email chase sequences, compliance dashboard, magic-link vendor upload pages (no portal accounts). ACORD 25 certificates are a standardized public form — LLM-based field extraction (Claude API) makes 'auto-read the COI' feasible without proprietary data. No licensing required as long as you position as tracking software, not insurance advice.",
+        "scout": "smb-trades"
+      },
+      {
+        "title": "Backflow test report filing + annual retest reminder engine for plumbers and certified backflow testers",
+        "customer": "Certified backflow testers and small plumbing companies (often 1-5 person operations) that perform annual backflow-preventer tests for commercial and residential customers and must file results with each local water authority",
+        "pain_description": "Annual backflow testing is legally mandated by most municipalities, but every city has a different submission process — one wants a PDF, the next has its own portal, another still requires paper mail — so a 15-minute, $75-$150 test drags a further ~30 minutes of paperwork per job, multiplied across several tests per day. A wrong form or missing field can get the tester's client fined by the city, which loses the tester the account, and most small testers have no central record or audit trail when disputes arise. On the revenue side, testers lose repeat business because they have no systematic way to remind hundreds of past customers that their device is due again in 12 months — the entire business model is an annual-recurrence machine run out of a truck and a filing cabinet.",
+        "evidence": [
+          {
+            "claim": "Every city differs (Plano wants a PDF, Frisco has a portal, Denton wants paper mail); the test takes 15 minutes but paperwork takes double that for every job; one wrong form can get the client fined and lose the tester the account; there is typically a 30-day filing deadline and testers lack any central record or audit trail",
+            "source_title": "FlowCert — Backflow Testing Software for Plumbers (blog)",
+            "source_url": "https://flowcert.co/blog/how-to-become-certified-backflow-tester"
+          },
+          {
+            "claim": "Backflow testing costs $30-$300 per device (commonly $75-$150 residential, $150-$300 commercial), and most municipalities require testing annually — making every customer an automatic yearly repeat sale if the tester remembers to chase it",
+            "source_title": "How Much Does Backflow Testing Cost? (2026) — HomeGuide",
+            "source_url": "https://homeguide.com/costs/backflow-testing-cost"
+          },
+          {
+            "claim": "Direct submission to the water utility by the tester is the preferred workflow because reports going missing is a real failure mode that breaks the documentation trail",
+            "source_title": "Who Files Backflow Test Reports With the City? — Pacific Backflow",
+            "source_url": "https://www.pacificbackflow.com/post/who-files-backflow-test-reports-with-city-explained-simply"
+          },
+          {
+            "claim": "SwiftComply sells primarily to water utilities (testers are pushed into whichever portal each city bought), and Inspect Point targets fire/life-safety contractors — leaving the small independent tester's side of the workflow thinly served",
+            "source_title": "Backflow Testers — SwiftComply",
+            "source_url": "https://www.swiftcomply.com/backflow-testers/"
+          }
+        ],
+        "existing_alternatives": "Paper forms and the trunk of the truck; per-city municipal portals (SwiftComply, BSI Online/Aqua Backflow) that testers must juggle and often pay per-report filing fees into; general FSM software with no backflow-specific forms; FlowCert, a new entrant generating ready-to-submit PDFs with a database of ~1,700 cities — evidence the niche is real but far from locked up.",
+        "why_underserved": "The dominant vendors (SwiftComply, BSI) sell to the municipality, not the tester, so the tester experience is fragmented across dozens of inconsistent portals — nobody with scale is optimizing the contractor's side. Field-service incumbents ignore the niche because it's form-and-filing centric rather than dispatch centric. Only one visible small startup (FlowCert) is attacking it, and thousands of certified testers per state still run on paper.",
+        "willingness_to_pay_signal": "Testers gross $75-$300 per 15-minute test and do several per day; software that cuts 30 minutes of paperwork per job directly increases daily test capacity, and automated 12-month retest reminders convert a one-time customer list into guaranteed annual recurring revenue — a $50-100/mo price is trivially justified. The city-fine risk adds urgency beyond convenience.",
+        "buildability_notes": "Indie-buildable: form-template engine that maps standard test-gauge readings onto per-jurisdiction PDF layouts (public municipal forms), customer/device database, cron-based annual reminder emails/SMS, and a submission log/audit trail. City form templates can be added incrementally starting with one metro area; PDFs generated server-side. No gated APIs — where a city has a portal, the tool still generates the data sheet and logs the submission. Tester certification is the customer's license, not the software's.",
+        "scout": "smb-trades"
+      },
+      {
+        "title": "Modern quote-to-BEO workflow for small independent caterers",
+        "customer": "Independent caterers and small catering companies (owner + small kitchen crew, roughly $200K-$2M revenue) doing weddings, corporate drop-off, and events — currently building quotes, Banquet Event Orders (BEOs), prep lists, and shopping lists in Excel/Google Docs",
+        "pain_description": "For every event, a small caterer re-keys the same information four times: a client-facing quote, a BEO for the kitchen, prep/pack lists for staff, and a shopping list — usually across a tangle of spreadsheet tabs where one un-updated guest count means food shortages or blown margins. Industry commentary describes small caterers as 'drowning in Excel Catering Event Order spreadsheets.' The category software is famously miserable: Caterease users call it 'a dinosaur' with 'a very complicated and obtuse interface' and a learning curve that is 'VERY steep and seemingly never plateauing,' while Total Party Planner users report 'spending more time trying to fix problems with the software than spending with clients… it is costing us money in labor, time off task.' The industry is highly fragmented (no player over 5% share), so no incumbent has consolidated goodwill.",
+        "evidence": [
+          {
+            "claim": "Total Party Planner reviewers report a steep initial learning curve and 'spending more time trying to fix problems with the software than spending with clients… it is costing us money in labor, time off task'",
+            "source_title": "Total Party Planner Reviews — Capterra",
+            "source_url": "https://www.capterra.com/p/2278/Total-Party-Planner/reviews/"
+          },
+          {
+            "claim": "Caterease is described by users as feeling and operating like a 'dinosaur' with 'a very complicated and obtuse interface' and a never-plateauing learning curve",
+            "source_title": "Total Party Planner Reviews, Pros and Cons — Software Advice (comparative user commentary)",
+            "source_url": "https://www.softwareadvice.com/catering/total-party-planner-profile/reviews/"
+          },
+          {
+            "claim": "Vendor buyer's-guide content explicitly targets small caterers 'drowning in Excel Catering Event Order spreadsheets,' confirming the spreadsheet status quo",
+            "source_title": "Best Catering Software for 2026: A Complete Buyer's Guide — CaterZen",
+            "source_url": "https://www.caterzen.com/blog/best-catering-software-for-2026-a-complete-buyers-guide"
+          },
+          {
+            "claim": "There are ~13,263 dedicated catering businesses in the US in 2025 (IBISWorld) with the industry highly fragmented — no company holds more than 5% market share — and US catering estimated at $14.4B (IBISWorld industry definition)",
+            "source_title": "Caterers in the US — IBISWorld",
+            "source_url": "https://www.ibisworld.com/united-states/industry/caterers/1682/"
+          }
+        ],
+        "existing_alternatives": "Excel/Google Sheets plus Word templates (dominant at the small end); legacy desktop-era suites Caterease and Total Party Planner (steep learning curves, dated UX, sales-led pricing); CaterZen (busy interface, oriented to drop-off/restaurant catering); HoneyBook/Dubsado (generic client management, no BEO/kitchen-output concept); event-venue software (Tripleseat) priced and shaped for venues, not independent caterers.",
+        "why_underserved": "The incumbents were architected 15-25 years ago and their own review pages document user resentment; meanwhile generic modern tools stop at the proposal and never generate the kitchen-facing artifacts (BEO, prep list, pack list, scaled shopping list) that are the actual daily pain. Because the market is fragmented with no >5% player and small caterers churn off legacy tools back to Excel, a focused, modern, self-serve product has room at the $50-150/mo tier.",
+        "willingness_to_pay_signal": "Caterease and Total Party Planner charge roughly $100-$300+/month and still win customers despite hated UX — proving caterers pay for this job-to-be-done; a single miscounted event (wrong guest count on a $5,000 wedding) can wipe out a year of software cost, and reviewers explicitly frame bad software as 'costing us money in labor.'",
+        "buildability_notes": "Straightforward for an indie dev: menu/recipe database with per-guest scaling, event records, quote generation (PDF + e-sign via public APIs like Dropbox Sign or roll-your-own click-to-accept), auto-generated BEO/prep/pack/shopping outputs from one source of truth, Stripe for deposits. No POS integration, licensing, or proprietary data needed for the MVP; food-cost math is simple arithmetic. Reachable buyers via catering Facebook groups, ICA community, and SEO on 'BEO template.'",
+        "scout": "smb-trades"
+      },
+      {
+        "title": "Affordable certificate-of-insurance (COI) tracking for small property managers, GCs, and self-managed communities",
+        "customer": "Small property management companies tracking 20-80 vendors, general contractors with 10-150 subcontractors, and self-managed HOAs/condos that must verify vendor insurance before allowing work on site. Buyer is the owner/ops manager or compliance admin.",
+        "pain_description": "Every vendor/subcontractor must have a current ACORD 25 certificate with correct coverage limits, additional-insured wording, and unexpired dates. Small firms track this in spreadsheets and email folders: certificates expire silently, chasing renewals is a manual email grind, and one lapsed cert exposes the firm to uninsured-claim liability and failed audits. The enterprise incumbent myCOI starts at roughly $500+/month with custom contracts and weeks-long implementation, and its certificate reviews take 2 days to 2 weeks during renewal season; its vendor portal requires subs to register and manage logins, so subs simply ignore the emails. Firms below ~200 certificates are priced out entirely and fall back to Excel.",
+        "evidence": [
+          {
+            "claim": "myCOI pricing starts at $500+/month with custom contracts, mandatory demo, and weeks-long implementation; it is designed for organizations managing 200+ certificates, and below that threshold you pay enterprise pricing for features you don't need. For GCs with 10-150 subs or property managers running 20-80 vendors, 'myCOI... was never designed for you.'",
+            "source_title": "myCOI Alternatives (2026): Simpler COI Tracking for SMBs",
+            "source_url": "https://trackmyvendor.com/mycoi-alternatives"
+          },
+          {
+            "claim": "Property managers report myCOI certificate review/audit turnaround of two days to two weeks, especially during construction/renewal season, plus a steep learning curve and frustrating document organization.",
+            "source_title": "Certificate of Insurance Tracking Solutions for Property Managers: bcs vs. MyCOI",
+            "source_url": "https://www.getbcs.com/blog/certificate-of-insurance-tracking-solutions-for-property-managers-bcs-vs.-mycoi"
+          },
+          {
+            "claim": "G2 reviewers describe myCOI's UI as outdated and cumbersome ('the certificate or document view drop-down is chunky and cumbersome to navigate'), and vendors uploading documents cite unclear instructions and complicated login credentials.",
+            "source_title": "myCOI Reviews 2026 | G2",
+            "source_url": "https://www.g2.com/products/mycoi/reviews"
+          },
+          {
+            "claim": "Review roundups of COI tracking tools confirm slow myCOI review speed during renewal periods and vendor-portal friction (subs skipping registration), which is driving demand for simpler alternatives.",
+            "source_title": "4 Best COI Tracking Software Tools Reviewed (Jones)",
+            "source_url": "https://getjones.com/blog/4-coi-tracking-software-tools-comparison/"
+          },
+          {
+            "claim": "An emerging cluster of small challengers (COI File, TrackMyVendor, bcs, Certificial) confirms active demand for sub-enterprise COI tracking, but the SMB tier remains fragmented with no dominant well-loved player.",
+            "source_title": "Best COI Management Software 2026 | COI File",
+            "source_url": "https://coifile.com/blog/coi-management-software/"
+          }
+        ],
+        "existing_alternatives": "myCOI, TrustLayer, SmartCompliance, Jones (all enterprise-priced, human-review-based, aimed at 200+ certificates); bcs; spreadsheets + Outlook reminders, which is what most small firms actually use. New SMB entrants (COI File, TrackMyVendor) are early-stage and unproven.",
+        "why_underserved": "Incumbents monetize via human certificate-review teams, which forces $500+/month pricing and multi-week onboarding — economically impossible to offer downmarket. LLM/vision document extraction now makes automated ACORD 25 parsing feasible at software margins, so a $50-150/month self-serve product can serve the 20-150-vendor segment the incumbents structurally cannot. The SMB tier is fragmented among tiny new entrants; no well-loved winner.",
+        "willingness_to_pay_signal": "Firms in this segment already pay $500+/month for myCOI when forced to (its own site markets to property management), and competitor content explicitly targets refugees from that price point. The liability risk (an uninsured vendor injury can mean a six-figure claim) plus lender/insurer audit requirements create urgency; $75-200/month is an easy sell against 5-10 hours/month of admin chasing and one avoided lapse.",
+        "buildability_notes": "Very buildable by an indie dev: web app + Postgres; upload/email-in ACORD 25 PDFs; use an LLM vision API to extract carrier, policy numbers, limits, additional-insured text, and expiration dates; rules engine compares against per-vendor requirements; cron-driven email sequences chase expiring certs (vendors reply with a PDF — no portal login needed, which is itself the differentiator). No gated APIs, no licensing; ACORD 25 is a public standard form and sample certs are widely available for testing.",
+        "scout": "niche-pros"
+      },
+      {
+        "title": "Carrier commission reconciliation for small independent insurance agencies",
+        "customer": "Independent insurance agencies and brokerages (P&C, life/health, Medicare) with 2-20 producers — the owner or agency bookkeeper who reconciles carrier commission statements and calculates producer splits every month.",
+        "pain_description": "Each carrier sends a monthly commission statement in its own format (PDF, Excel, CSV, portal download). The agency must normalize every statement, match thousands of line items against its book of business, detect short-pays and missing payments, and compute producer split payouts. Done in Excel this takes 8-12+ hours a month, and errors are invisible: agencies lose an estimated $10,000-$16,000 per year (roughly $1,200-$4,000/month) to unrecovered carrier underpayments. A mid-size book of 500 policies across 15 carriers generates 7,500+ line items a year — practically impossible to reconcile by hand, so most small agencies simply don't, and eat the leakage.",
+        "evidence": [
+          {
+            "claim": "Agents/agencies lose $10,000-$16,000 annually in commission discrepancies; 500 policies x 15 carriers = 7,500+ line items per year, practically impossible to reconcile manually.",
+            "source_title": "Insurance Commission Reconciliation: How to Recover $10K-$16K in Annual Lost Revenue",
+            "source_url": "https://unlockedcrm.ai/blog/insurance-commission-reconciliation-guide"
+          },
+          {
+            "claim": "Comparing carrier statements against the agency's books takes 8-12 hours per month for the average agency; the vendor also claims the average agency loses $1,200-$4,000/month to carrier short payments.",
+            "source_title": "CommissionIQ — Insurance Commission Management",
+            "source_url": "https://mycommissioniq.com/"
+          },
+          {
+            "claim": "Carrier statements routinely disagree with internal records due to mid-term policy adjustments, cancellations, and timing delays; the most time-consuming part of manual reconciliation is normalizing each carrier's data format, repeated every month for every carrier.",
+            "source_title": "Insurance Commission Reconciliation: A Practical Guide (EnrollHere)",
+            "source_url": "https://enrollhere.com/blogs/insurance-commission-reconciliation-guide"
+          },
+          {
+            "claim": "Industry incumbent AgencyBloc publishes an entire content series on why agencies must move off Excel for commission processing — spreadsheets hide keying errors, delay agent payroll, and mask commission leakage — confirming spreadsheets are still the status quo at small agencies.",
+            "source_title": "Spreadsheets vs. Commissions Software: 5 Reasons Insurance Agencies Are Making the Switch (AgencyBloc)",
+            "source_url": "https://www.agencybloc.com/commissions-management/efficiency/reasons-you-shouldnt-use-excel-spreadsheets-to-process-commissions/"
+          }
+        ],
+        "existing_alternatives": "Excel (the actual incumbent at small agencies); AgencyBloc (health/benefits-focused, requires adopting a full AMS); Applied Recon (locked to the Applied Systems enterprise ecosystem); Commission Tracker and CommissionIQ (small, dated players); outsourced bookkeeping services. Nothing modern, self-serve, and standalone for a 5-person P&C or Medicare agency.",
+        "why_underserved": "Existing tools are either bolted onto full agency-management systems (forcing a painful platform migration to get one feature) or are legacy desktop-era products. The core technical barrier — parsing dozens of heterogeneous PDF/Excel carrier statement formats — used to require hand-built templates per carrier, which only enterprise vendors could afford; LLM-based extraction removes that barrier and makes a standalone SMB tool feasible for the first time. Roughly 40,000 independent agencies in the US, most too small for AgencyBloc/Applied pricing.",
+        "willingness_to_pay_signal": "The product recovers hard dollars: if an agency recoups even a fraction of $10K-$16K/year in short-pays and saves 8-12 bookkeeper-hours a month, a $99-$299/month subscription pays for itself immediately. Agencies already pay for AMS software and outsourced commission-processing services (eNoah and others sell this as a manual service), proving budget exists.",
+        "buildability_notes": "Buildable solo: users upload carrier statements (PDF/CSV/XLSX) and a book-of-business export from their AMS or a spreadsheet; LLM extracts and normalizes line items; deterministic matching engine flags missing/short payments; computes producer splits; exports payroll and dispute reports. No carrier API access needed (statements are files the agency already has), no licensing — the software does math on the customer's own data, it doesn't sell insurance. Mock statements are easy to generate for development.",
+        "scout": "niche-pros"
+      },
+      {
+        "title": "Scheduling, matching, and payroll back-office for small interpreter agencies (language service providers)",
+        "customer": "Small interpretation agencies (2-50 staff/contract interpreters) serving courts, hospitals, schools, and social services — the owner/scheduler who assigns interpreters to appointments and reconciles billing and interpreter pay.",
+        "pain_description": "A small LSP juggles daily one-off assignments: match an interpreter by language, credential (court-certified, medical), and location to each job; confirm with both the client and the interpreter; handle cancellations and no-shows; then invoice clients at one rate and pay interpreters at another with per-job minimums, mileage, and overtime rules. Most run this on spreadsheets, phone calls, and generic tools because purpose-built platforms — Boostlingo (from ~$500/month subscription tiers) and Interpreter Intelligence (~$499/month) — are priced and designed for large providers with VRI/OPI call platforms bundled in. The mismatch means double-bookings, missed assignments (which can derail a court hearing or medical appointment), and hours of manual invoice/payroll reconciliation weekly.",
+        "evidence": [
+          {
+            "claim": "Boostlingo subscription tiers start around $500/month for agencies (plus $0.50-$2.00/min usage for OPI/VRI); Interpreter Intelligence starts around $499/month — pricing built for larger operations.",
+            "source_title": "Top 10 Best Interpreter Scheduling Software of 2026 (Gitnux)",
+            "source_url": "https://gitnux.org/best/interpreter-scheduling-software/"
+          },
+          {
+            "claim": "Small interpreter agencies with predictable shift-based schedules 'may need a simple, low-cost tool without advanced matching requirements' — the roundup's suggested budget option is Homebase, a generic free shift-scheduling app not built for interpreting at all, evidencing the gap.",
+            "source_title": "Top 10 Best Interpreter Scheduling Software of 2026 (ZipDo)",
+            "source_url": "https://zipdo.co/best/interpreter-scheduling-software/"
+          },
+          {
+            "claim": "An interpreter-agency-focused guide on choosing software (what to look for, what to avoid) exists precisely because agencies struggle to find fitting tools; it details agency-specific needs like credential matching and dual-rate billing that generic schedulers lack.",
+            "source_title": "Interpreter Agency Software: What To Look For, What To Avoid, And How To Choose (Usked)",
+            "source_url": "https://usked.com/2026/05/14/interpreter-agency-software/"
+          },
+          {
+            "claim": "Boostlingo's Capterra listing confirms custom/opaque enterprise pricing and positions the product as a full interpretation-delivery platform (OPI/VRI) rather than a lightweight scheduling/back-office tool for onsite-focused agencies.",
+            "source_title": "Boostlingo Software Pricing, Alternatives & More 2026 | Capterra",
+            "source_url": "https://www.capterra.com/p/195358/Boostlingo/"
+          }
+        ],
+        "existing_alternatives": "Boostlingo and Interpreter Intelligence (enterprise-priced, bundled with remote-interpreting call platforms most onsite agencies don't need); Usked; generic tools (Google Calendar, Homebase, spreadsheets, QuickBooks) that can't handle language/credential matching or dual-rate (client bill vs interpreter pay) accounting.",
+        "why_underserved": "The incumbents chased the lucrative VRI/OPI (remote call delivery) market and priced accordingly; the thousands of small onsite/community interpreting agencies — a fragmented, unglamorous segment — were left with spreadsheets. The core need (assignment scheduling + credential matching + two-sided rate math + confirmations) is pure CRUD workflow software, no telephony required, which incumbents treat as an afterthought.",
+        "willingness_to_pay_signal": "These agencies bill $60-$150+/hour per interpreter assignment and lose real revenue on every missed or double-booked job; incumbents successfully charge $500+/month in this market, proving software budget exists — the gap is at the $50-200/month tier. Court and hospital contracts also impose documentation requirements (confirmations, credential records) that spreadsheets satisfy poorly, adding compliance urgency.",
+        "buildability_notes": "Straightforward for an indie dev: web app with interpreter directory (languages, certifications, availability, rates), job intake form or client portal, matching/filter engine, automated email/SMS confirmations and reminders (Twilio/SendGrid — public APIs), iCal feeds, and invoice/pay-stub generation with per-job rate rules. No gated integrations required; data is all first-party. Easily demoed with mock agency data.",
+        "scout": "niche-pros"
+      },
+      {
+        "title": "Job-status and workflow tracking for small land surveying firms (field-to-office visibility)",
+        "customer": "Small land surveying firms (1-5 crews, 3-25 employees) — the owner/licensed surveyor who quotes jobs, dispatches crews, and shepherds each survey through fieldwork, drafting, QA, and delivery.",
+        "pain_description": "Survey firms run high volumes of small jobs (boundary surveys, ALTA surveys, topos at $500-$5,000 each) whose status lives on whiteboards, email folders, and verbal updates from the field. Clients (title companies, builders, homeowners) call constantly asking 'where's my survey?'; drafters sit idle waiting on field notes; finished jobs go uninvoiced for weeks. Firms also need to search past jobs by legal description (Section/Township/Range or subdivision) to reuse prior work — impossible in generic tools. Their technical software (CAD, GNSS) is world-class, but business operations software for the vertical barely exists, so firms cobble together spreadsheets, monday.com, or field-service apps built for landscapers.",
+        "evidence": [
+          {
+            "claim": "When job tracking is spread across whiteboards, email folders, and verbal updates from the field, things fall through the cracks: clients call for status updates, drafters wait on field notes, and invoices get delayed.",
+            "source_title": "Best Business Management Software for Surveyors 2025 (CQ)",
+            "source_url": "https://www.cq-business-management-software.com/blog/best-business-management-software-for-surveyors-2025-complete-practice-management-guide/"
+          },
+          {
+            "claim": "Purpose-built survey job management must handle field-to-office coordination, searching jobs by Section, Township, and Range, deliverable lifecycle management, and crew dispatching — needs generic tools don't meet; SurveyOps is a new entrant built on exactly this gap.",
+            "source_title": "SurveyOps | Land Surveying Job Management Software",
+            "source_url": "https://survey-ops.com/land-surveying-job-management-software"
+          },
+          {
+            "claim": "Roundups of software for surveying businesses recommend adapting generic tools (QuoteIQ, monday.com, Jobber-style field-service apps, BQE Core) because no dominant vertical solution exists; the common pain framed is 'I can never tell where every job stands.'",
+            "source_title": "Top 8 Softwares For Land Surveying Businesses In 2026 (QuoteIQ)",
+            "source_url": "https://myquoteiq.com/top-8-softwares-for-land-surveying-businesses-in-2026/"
+          }
+        ],
+        "existing_alternatives": "Spreadsheets and whiteboards; generic field-service software (Jobber, ServiceTitan) built for lawn care/HVAC semantics; monday.com boards; BQE Core (accounting-heavy, engineering-firm priced); SurveyOps (a very new, unproven vertical entrant).",
+        "why_underserved": "The surveying software market is dominated by technical/CAD vendors (Trimble, Leica, Carlson) who have no interest in small-firm practice management; horizontal field-service tools don't model surveying's office-heavy workflow (fieldwork is only step one — drafting, licensed review, and recorded-document research happen back at the office) or legal-description-based job lookup. About 25,000+ small surveying establishments in the US, too niche for big SaaS players, ideal for an indie vertical product.",
+        "willingness_to_pay_signal": "These are licensed professional firms with $300K-$5M revenue that already pay heavily for technical software and equipment (GNSS receivers cost $10-30K); recovering even one lost/delayed job per month or cutting status-call interruptions justifies $100-300/month. Adjacent vertical tools (Jobber at ~$40-200/mo, BQE Core at ~$25-50/user/mo) show established price anchors, and the appearance of SurveyOps validates purchase intent in the vertical.",
+        "buildability_notes": "Classic CRUD vertical SaaS an indie can ship: job pipeline (request → quote → fieldwork → drafting → review → delivered → invoiced) with per-stage assignments, a client-facing status link to kill 'where's my survey' calls, search by address/parcel/Section-Township-Range, file attachments for field notes, and QuickBooks/Stripe invoicing via public APIs. County parcel data is optional enrichment, not core. No licensing issues — the tool tracks work, it doesn't perform surveying.",
+        "scout": "niche-pros"
+      }
+    ]
+  },
+  "workflowProgress": [
+    {
+      "type": "workflow_phase",
+      "index": 1,
+      "title": "Scout"
+    },
+    {
+      "type": "workflow_phase",
+      "index": 2,
+      "title": "Synthesize"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 1,
+      "label": "scout:smb-trades",
+      "phaseIndex": 1,
+      "phaseTitle": "Scout",
+      "agentId": "acca3499034d34521",
+      "model": "claude-fable-5",
+      "state": "done",
+      "startedAt": 1783654690686,
+      "queuedAt": 1783654690640,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "promptPreview": "You are a market researcher hunting for HIGH-PAIN, UNDERSERVED problems that could become a SaaS product built by a non-specialist indie developer using Claude Code.\n\nUse WebSearch and WebFetch extensively (8-15 searches minimum). Find REAL evidence: forum complaints, Reddit threads, review-site gripes (G2/Capterra), industry stats, pricing pages, news. Record real URLs — never invent sources. Tod…",
+      "lastProgressAt": 1783655022922,
+      "tokens": 61474,
+      "toolCalls": 26,
+      "durationMs": 332236,
+      "resultPreview": "{\"problems\":[{\"title\":\"Standalone maintenance-agreement (membership) tracker for small HVAC/plumbing shops\",\"customer\":\"Owner-operators of residential HVAC, plumbing, and electrical shops with roughly 2-10 technicians who sell annual maintenance plans/memberships but run their operations on spreadsheets, QuickBooks, or a low-tier FSM plan (Jobber Core, Housecall Pro basic) that lacks real agreemen…"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 2,
+      "label": "scout:niche-pros",
+      "phaseIndex": 1,
+      "phaseTitle": "Scout",
+      "agentId": "a93306eccf42fa3de",
+      "model": "claude-fable-5",
+      "state": "done",
+      "startedAt": 1783654690694,
+      "queuedAt": 1783654690640,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "promptPreview": "You are a market researcher hunting for HIGH-PAIN, UNDERSERVED problems that could become a SaaS product built by a non-specialist indie developer using Claude Code.\n\nUse WebSearch and WebFetch extensively (8-15 searches minimum). Find REAL evidence: forum complaints, Reddit threads, review-site gripes (G2/Capterra), industry stats, pricing pages, news. Record real URLs — never invent sources. Tod…",
+      "lastProgressAt": 1783655117254,
+      "tokens": 67766,
+      "toolCalls": 33,
+      "durationMs": 426559,
+      "resultPreview": "{\"problems\":[{\"title\":\"Affordable certificate-of-insurance (COI) tracking for small property managers, GCs, and self-managed communities\",\"customer\":\"Small property management companies tracking 20-80 vendors, general contractors with 10-150 subcontractors, and self-managed HOAs/condos that must verify vendor insurance before allowing work on site. Buyer is the owner/ops manager or compliance admi…"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 3,
+      "label": "scout:reg-compliance",
+      "phaseIndex": 1,
+      "phaseTitle": "Scout",
+      "agentId": "a36476c4f6698637f",
+      "model": "claude-fable-5",
+      "state": "error",
+      "startedAt": 1783655022932,
+      "queuedAt": 1783654690640,
+      "attempt": 1,
+      "lastToolName": "WebSearch",
+      "lastToolSummary": "Belgium mandatory B2B e-invoicing January 2026 Peppol small…",
+      "promptPreview": "You are a market researcher hunting for HIGH-PAIN, UNDERSERVED problems that could become a SaaS product built by a non-specialist indie developer using Claude Code.\n\nUse WebSearch and WebFetch extensively (8-15 searches minimum). Find REAL evidence: forum complaints, Reddit threads, review-site gripes (G2/Capterra), industry stats, pricing pages, news. Record real URLs — never invent sources. Tod…",
+      "lastProgressAt": 1783655122608,
+      "error": "You've hit your session limit · resets 4:30am (UTC)",
+      "tokens": 45612,
+      "toolCalls": 11,
+      "durationMs": 99675
+    },
+    {
+      "type": "workflow_agent",
+      "index": 4,
+      "label": "scout:ai-era-ops",
+      "phaseIndex": 1,
+      "phaseTitle": "Scout",
+      "agentId": "a40e20f0a9fc9942b",
+      "model": "claude-fable-5",
+      "state": "error",
+      "startedAt": 1783655117268,
+      "queuedAt": 1783654690640,
+      "attempt": 1,
+      "promptPreview": "You are a market researcher hunting for HIGH-PAIN, UNDERSERVED problems that could become a SaaS product built by a non-specialist indie developer using Claude Code.\n\nUse WebSearch and WebFetch extensively (8-15 searches minimum). Find REAL evidence: forum complaints, Reddit threads, review-site gripes (G2/Capterra), industry stats, pricing pages, news. Record real URLs — never invent sources. Tod…",
+      "lastProgressAt": 1783655117648,
+      "error": "You've hit your session limit · resets 4:30am (UTC)",
+      "tokens": 0,
+      "toolCalls": 0,
+      "durationMs": 380
+    },
+    {
+      "type": "workflow_agent",
+      "index": 5,
+      "label": "scout:creators-solo",
+      "phaseIndex": 1,
+      "phaseTitle": "Scout",
+      "agentId": "a99b29b1462ed7101",
+      "model": "claude-fable-5",
+      "state": "error",
+      "startedAt": 1783655117656,
+      "queuedAt": 1783654690641,
+      "attempt": 1,
+      "promptPreview": "You are a market researcher hunting for HIGH-PAIN, UNDERSERVED problems that could become a SaaS product built by a non-specialist indie developer using Claude Code.\n\nUse WebSearch and WebFetch extensively (8-15 searches minimum). Find REAL evidence: forum complaints, Reddit threads, review-site gripes (G2/Capterra), industry stats, pricing pages, news. Record real URLs — never invent sources. Tod…",
+      "lastProgressAt": 1783655117913,
+      "error": "You've hit your session limit · resets 4:30am (UTC)",
+      "tokens": 0,
+      "toolCalls": 0,
+      "durationMs": 257
+    },
+    {
+      "type": "workflow_agent",
+      "index": 6,
+      "label": "scout:ecommerce-sellers",
+      "phaseIndex": 1,
+      "phaseTitle": "Scout",
+      "agentId": "a9bb49594f58a6616",
+      "model": "claude-fable-5",
+      "state": "error",
+      "startedAt": 1783655117921,
+      "queuedAt": 1783654690641,
+      "attempt": 1,
+      "promptPreview": "You are a market researcher hunting for HIGH-PAIN, UNDERSERVED problems that could become a SaaS product built by a non-specialist indie developer using Claude Code.\n\nUse WebSearch and WebFetch extensively (8-15 searches minimum). Find REAL evidence: forum complaints, Reddit threads, review-site gripes (G2/Capterra), industry stats, pricing pages, news. Record real URLs — never invent sources. Tod…",
+      "lastProgressAt": 1783655118177,
+      "error": "You've hit your session limit · resets 4:30am (UTC)",
+      "tokens": 0,
+      "toolCalls": 0,
+      "durationMs": 256
+    },
+    {
+      "type": "workflow_agent",
+      "index": 7,
+      "label": "scout:devtools-b2b",
+      "phaseIndex": 1,
+      "phaseTitle": "Scout",
+      "agentId": "a234a4c74f4e76ddb",
+      "model": "claude-fable-5",
+      "state": "error",
+      "startedAt": 1783655118186,
+      "queuedAt": 1783654690641,
+      "attempt": 1,
+      "promptPreview": "You are a market researcher hunting for HIGH-PAIN, UNDERSERVED problems that could become a SaaS product built by a non-specialist indie developer using Claude Code.\n\nUse WebSearch and WebFetch extensively (8-15 searches minimum). Find REAL evidence: forum complaints, Reddit threads, review-site gripes (G2/Capterra), industry stats, pricing pages, news. Record real URLs — never invent sources. Tod…",
+      "lastProgressAt": 1783655118470,
+      "error": "You've hit your session limit · resets 4:30am (UTC)",
+      "tokens": 0,
+      "toolCalls": 0,
+      "durationMs": 284
+    },
+    {
+      "type": "workflow_agent",
+      "index": 8,
+      "label": "scout:hated-incumbents",
+      "phaseIndex": 1,
+      "phaseTitle": "Scout",
+      "agentId": "a490e255cd90f2602",
+      "model": "claude-fable-5",
+      "state": "error",
+      "startedAt": 1783655118478,
+      "queuedAt": 1783654690641,
+      "attempt": 1,
+      "promptPreview": "You are a market researcher hunting for HIGH-PAIN, UNDERSERVED problems that could become a SaaS product built by a non-specialist indie developer using Claude Code.\n\nUse WebSearch and WebFetch extensively (8-15 searches minimum). Find REAL evidence: forum complaints, Reddit threads, review-site gripes (G2/Capterra), industry stats, pricing pages, news. Record real URLs — never invent sources. Tod…",
+      "lastProgressAt": 1783655118744,
+      "error": "You've hit your session limit · resets 4:30am (UTC)",
+      "tokens": 0,
+      "toolCalls": 0,
+      "durationMs": 266
+    }
+  ],
+  "totalTokens": 174852,
+  "totalToolCalls": 70
+}
