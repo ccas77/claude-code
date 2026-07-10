@@ -2,6 +2,28 @@
 
 Deviations from `content-engine-architecture.md` (repo root). One entry per deviation, newest first.
 
+## 2026-07-10 — M2 asset library
+
+### D-018: Storage upload is DRY_RUN when `SUPABASE_SERVICE_ROLE_KEY` is missing
+- **Spec §7 M2:** requires "upload/ingest" but is silent on how the storage path degrades in preview/dev.
+- **What we did:** `createAssetFromFile` reads `SUPABASE_SERVICE_ROLE_KEY` via `supabaseAdmin()`. When the key is absent, the row is created with `storagePath=null` and `metadata.dryRun=true`; no bytes are sent to Supabase Storage. The API route returns `{ dryRun: true }` and the UI surfaces "storage DRY_RUN — no file uploaded".
+- **Why:** Owner rule "everything must work in DRY_RUN without a live key" (mirrors D-014 for Post Bridge). Prevents accidental writes to a production storage bucket from a preview build and keeps the preview deploy green with only anon-key envs set.
+
+### D-019: OCR is DRY_RUN in M2 (no live provider wired)
+- **Spec §7 M2:** "the facebook-library import job (OCR at ingest)".
+- **What we did:** The `asset-ocr` Inngest function is registered and the ingest job fans out one `content-engine/asset.ocr-requested` event per new asset, but the handler currently sets `ocrStatus='dry_run_completed'` and leaves `ocrText=null`. Live OCR is guarded on `OCR_DRY_RUN=0|false`.
+- **Why:** Live OCR requires a paid provider choice (Google Vision, AWS Textract, or Tesseract-in-a-worker) that is not part of the authorized connector list for content-engine yet. The state machine + fan-out is in place so switching to live is a single service swap.
+
+### D-020: `assets.width` / `assets.height` stored as text
+- **Spec §3:** silent on the concrete type.
+- **What we did:** Both columns are `text` (nullable) rather than `integer`.
+- **Why:** Ingested assets from third-party sources (facebook-library, generator output) sometimes surface dimensions as strings (`"1080x1920"` splits, EXIF strings). Storing text keeps ingestion loss-free; a later derived column can materialize integers if a query path needs them.
+
+### D-021: Asset RLS gates writes by `uploaded_by`, not workspace role
+- **Spec §3:** "assets — the workspace asset library".
+- **What we did:** `assets_owner_or_admin_update` and `assets_owner_or_admin_delete` require `uploaded_by = auth.uid()` OR a workspace admin. `assets_member_insert` requires the caller to write themselves as `uploaded_by`.
+- **Why:** Prevents a workspace member from silently overwriting or deleting another member's assets, while still letting admins clean up. Matches the "engagement metrics as ground truth" intent — the uploader's row should not be mutable by unrelated members.
+
 ## 2026-07-10 — M1 posting core
 
 ### D-011: `is_aigc` lives on `social_accounts`, not on `workspaces`

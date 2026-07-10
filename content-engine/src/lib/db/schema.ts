@@ -28,6 +28,10 @@ export const postStatus = pgEnum("post_status", [
   "failed",
 ]);
 
+export const assetKind = pgEnum("asset_kind", ["image", "font", "audio", "video"]);
+export const assetVisibility = pgEnum("asset_visibility", ["workspace", "private"]);
+export const assetOrigin = pgEnum("asset_origin", ["uploaded", "generated", "ingested"]);
+
 export const profiles = pgTable("profiles", {
   id: uuid("id").primaryKey(),
   email: text("email").notNull(),
@@ -167,6 +171,61 @@ export const postLog = pgTable(
     ),
   }),
 );
+
+export const assets = pgTable(
+  "assets",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    workspaceId: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    uploadedBy: uuid("uploaded_by").references(() => profiles.id, { onDelete: "set null" }),
+    kind: assetKind("kind").notNull(),
+    visibility: assetVisibility("visibility").notNull().default("workspace"),
+    origin: assetOrigin("origin").notNull(),
+    storagePath: text("storage_path"),
+    externalUrl: text("external_url"),
+    mimeType: text("mime_type"),
+    width: text("width"),
+    height: text("height"),
+    ocrText: text("ocr_text"),
+    ocrStatus: text("ocr_status"),
+    sourcePlatform: text("source_platform"),
+    sourceUrl: text("source_url"),
+    metrics: jsonb("metrics").$type<Record<string, number | string>>().default({}).notNull(),
+    metadata: jsonb("metadata").$type<Record<string, unknown>>().default({}).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => ({
+    byWorkspaceKind: index("assets_workspace_kind_idx").on(t.workspaceId, t.kind),
+    byOrigin: index("assets_origin_idx").on(t.workspaceId, t.origin),
+    bySource: index("assets_source_idx").on(t.workspaceId, t.sourcePlatform),
+  }),
+);
+
+export const brandKits = pgTable(
+  "brand_kits",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    workspaceId: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    palette: jsonb("palette").$type<Record<string, string>>().default({}).notNull(),
+    fontRoles: jsonb("font_roles").$type<Record<string, string>>().default({}).notNull(),
+    recipeText: text("recipe_text"),
+    isDefault: boolean("is_default").notNull().default(false),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => ({
+    uniqueName: uniqueIndex("brand_kits_workspace_name_uidx").on(t.workspaceId, t.name),
+  }),
+);
+
+export type Asset = typeof assets.$inferSelect;
+export type NewAsset = typeof assets.$inferInsert;
+export type BrandKit = typeof brandKits.$inferSelect;
+export type NewBrandKit = typeof brandKits.$inferInsert;
 
 export type Workspace = typeof workspaces.$inferSelect;
 export type NewWorkspace = typeof workspaces.$inferInsert;
