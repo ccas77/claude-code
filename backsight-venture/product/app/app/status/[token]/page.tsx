@@ -111,6 +111,14 @@ export default function StatusPage({ params }: { params: { token: string } }) {
             Ask for Marcus Lee (office manager) and reference job {job.job_number}.
           </p>
         </div>
+
+        <p className="mt-6 text-center text-xs text-slate-400">
+          Tracked with{" "}
+          <a href="/" className="font-semibold text-orange-500 hover:text-orange-600">
+            Backsight
+          </a>{" "}
+          — job tracking for land-surveying firms
+        </p>
       </div>
     </div>
   );

@@ -68,9 +68,7 @@ Deliberately narrow. Published price integrity is a strategic asset against quot
 
 | Discount | Terms | Why |
 |---|---|---|
-| **Annual prepay** | 2 months free (
-
-≈16.7%) | Cash flow + churn insulation; industry-standard, already in `FINAL_CONCEPT.md` |
+| **Annual prepay** | 2 months free (≈16.7%) | Cash flow + churn insulation; industry-standard, already in `FINAL_CONCEPT.md` |
 | **Design partner** (first 10 firms) | 50% off for 12 months, in writing, in exchange for: 2 feedback calls/quarter, permission to use anonymized usage data, and a quote if (and only if) they're genuinely happy | Buys the social proof and interview access the validation plan requires; capped and time-boxed |
 | **State society member** | 10% off first year with a society partnership code | Makes society partnerships (see `GO_TO_MARKET.md`) concretely valuable to the society and trackable for us |
 | **Everything else** | No | No haggling, no "founder's special" beyond the above, no free tier (the audit lead magnet is the free taste — see `CUSTOMER_ACQUISITION.md`), no discounts to close a quarter |

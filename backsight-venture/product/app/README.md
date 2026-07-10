@@ -30,7 +30,7 @@ any time to reset the demo data.
 1. **Landing — `/`** — the pitch: "Your firm has surveyed this ground before.
    Backsight remembers." Skim the problem bullets and $79/$149/$249 flat pricing,
    then click **Open the demo**.
-2. **Dashboard — `/app`** — KPI tiles show ~29 active jobs, **2 overdue**, and an
+2. **Dashboard — `/app`** — KPI tiles show ~25 active jobs, **2 overdue**, and an
    **unbilled $** figure from delivered-but-uninvoiced work. "Needs attention"
    flags the overdue jobs plus plat **2026-0118, stuck in review ~15 days**.
 3. **Pipeline — `/app/jobs`** — kanban board across all stages. Find

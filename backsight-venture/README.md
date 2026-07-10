@@ -18,7 +18,7 @@ This folder is a complete, self-contained SaaS venture package: evidence-based m
 
 **Distribution.** State survey societies and NSPS chapters, r/Surveying, conference booths measured in hundreds of dollars, a free "Prior-Work Audit" lead magnet, and a built-in referral loop: every client status link puts Backsight in front of title companies and builders who deal with many surveying firms.
 
-**Status.** Local MVP in [`product/app/`](product/app/) (Next.js + SQLite + Leaflet; `npm install && npm run seed && npm run dev`). Real: pipeline, radar with license-clean PLSS parser, client status pages, dashboards, seeded realistic data. Mocked and documented: auth, email (outbox), live geocoding, billing.
+**Status.** Local MVP in [`product/app/`](product/app/) (Next.js + SQLite + Leaflet; `npm install && npm run seed && npm run dev`). Real: pipeline, radar with license-clean PLSS (Public Land Survey System) parser, client status pages, dashboards, seeded realistic data. Mocked and documented: auth, email (outbox), live geocoding, billing.
 
 ## Folder guide
 
@@ -39,6 +39,7 @@ This folder is a complete, self-contained SaaS venture package: evidence-based m
 | `product/MVP_BUILD_SPEC.md` | The spec the MVP was built against |
 | `product/app/` | **The runnable MVP** — see its README for the 3-command quickstart and demo script |
 | `decisions/DECISION_LOG.md` | Every executive decision (D-001…) with reasoning |
+| `decisions/FINAL_COMPLETENESS_REVIEW.md` | Independent 24-item audit against the Definition of Done (PASS) + fixes applied |
 
 ## Run the demo
 
@@ -49,7 +50,7 @@ npm run seed
 npm run dev   # open http://localhost:3000
 ```
 
-The landing page is at `/`, the product at `/app`, and a public client status page at `/status/<token>` (links are on each job). The seeded firm is "Whitfield Land Surveying" of Fort Collins, CO, with ~85 jobs from 2019–2026. Follow the 7-step demo script in `product/app/README.md` — step 4 (Prior-Work Radar search) is the aha moment.
+The landing page is at `/`, the product at `/app`, and a public client status page at `/status/<token>` (links are on each job). The seeded firm is "Whitfield Land Surveying" of Fort Collins, CO, with ~85 jobs from 2019–2026. Follow the 7-step demo script in `product/app/README.md` — step 5 (Prior-Work Radar search) is the aha moment.
 
 ## What a stranger should take away
 

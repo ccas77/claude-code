@@ -25,7 +25,7 @@ Backsight was the **only concept out of 12** across three adversarial rounds who
 
 ## The concept (post-skeptic, fixes incorporated)
 
-**Customer:** Owner/licensed surveyor of a US firm with 1–5 field crews and 3–25 staff ($300K–$5M revenue), running 20–80 concurrent jobs (boundary, ALTA, topo at $500–$5,000 each) on a whiteboard plus email and a spreadsheet. The owner personally fields status calls from title companies and builders, and personally remembers "we shot that section in 2019."
+**Customer:** Owner/licensed surveyor of a US firm with 1–5 field crews and 3–25 staff ($300K–$5M revenue), running 20–80 concurrent jobs (boundary, ALTA/NSPS land title, and topographic surveys at $500–$5,000 each) on a whiteboard plus email and a spreadsheet. The owner personally fields status calls from title companies and builders, and personally remembers "we shot that section in 2019."
 
 **Painful workflow:**
 1. **Job-status chaos** — field crews, drafting, and licensed review live in different tools (or none); title companies and builders call the owner for status; deadlines slip silently between stages.
