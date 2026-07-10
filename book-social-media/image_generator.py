@@ -67,28 +67,32 @@ def get_font(size: int, bold: bool = False) -> ImageFont.FreeTypeFont:
     return ImageFont.load_default(size=size)
 
 
-def draw_gradient(
-    draw: ImageDraw.ImageDraw,
+def gradient_image(
     width: int,
     height: int,
     color_start: tuple[int, int, int],
     color_end: tuple[int, int, int],
     angle: float = 0,
-):
-    """Draw a linear gradient on the image."""
-    # Simple vertical/diagonal gradient
-    for y in range(height):
-        ratio = y / height
-        # Apply angle offset
-        for x in range(width):
-            angle_offset = (x / width) * math.sin(math.radians(angle)) * 0.3
-            r = ratio + angle_offset
-            r = max(0, min(1, r))
-            color = tuple(
+) -> Image.Image:
+    """Build a linear gradient background image.
+
+    The gradient is smooth, so rendering a small grid and upscaling with
+    bilinear interpolation is visually identical to per-pixel rendering
+    while being ~1000x faster at full-resolution output sizes.
+    """
+    small_w, small_h = 64, 64
+    img = Image.new("RGB", (small_w, small_h))
+    px = img.load()
+    angle_factor = math.sin(math.radians(angle)) * 0.3
+    for y in range(small_h):
+        ratio = y / small_h
+        for x in range(small_w):
+            r = max(0.0, min(1.0, ratio + (x / small_w) * angle_factor))
+            px[x, y] = tuple(
                 int(color_start[i] + (color_end[i] - color_start[i]) * r)
                 for i in range(3)
             )
-            draw.point((x, y), fill=color)
+    return img.resize((width, height), Image.BILINEAR)
 
 
 def draw_geometric_accents(
@@ -176,11 +180,8 @@ def generate_quote_card(post: SocialPost, size: tuple[int, int]) -> Image.Image:
     accent = hex_to_rgb(Config.BRAND_ACCENT)
     font_color = hex_to_rgb(Config.BRAND_FONT_COLOR)
 
-    img = Image.new("RGB", (width, height))
+    img = gradient_image(width, height, primary, accent, angle=30)
     draw = ImageDraw.Draw(img, "RGBA")
-
-    # Gradient background
-    draw_gradient(draw, width, height, primary, accent, angle=30)
 
     # Geometric accents
     draw_geometric_accents(draw, width, height, secondary, "quote_card")
@@ -234,12 +235,9 @@ def generate_gradient_text(post: SocialPost, size: tuple[int, int]) -> Image.Ima
     accent = hex_to_rgb(Config.BRAND_ACCENT)
     font_color = hex_to_rgb(Config.BRAND_FONT_COLOR)
 
-    img = Image.new("RGB", (width, height))
-    draw = ImageDraw.Draw(img, "RGBA")
-
-    # Darker gradient
     dark = tuple(max(0, c - 30) for c in primary)
-    draw_gradient(draw, width, height, dark, primary, angle=45)
+    img = gradient_image(width, height, dark, primary, angle=45)
+    draw = ImageDraw.Draw(img, "RGBA")
 
     draw_geometric_accents(draw, width, height, accent, "gradient_text")
 
@@ -269,11 +267,8 @@ def generate_bold_question(post: SocialPost, size: tuple[int, int]) -> Image.Ima
     font_color = hex_to_rgb(Config.BRAND_FONT_COLOR)
     primary = hex_to_rgb(Config.BRAND_PRIMARY)
 
-    img = Image.new("RGB", (width, height))
+    img = gradient_image(width, height, primary, secondary, angle=60)
     draw = ImageDraw.Draw(img, "RGBA")
-
-    # Bold secondary color background with dark overlay
-    draw_gradient(draw, width, height, primary, secondary, angle=60)
 
     draw_geometric_accents(draw, width, height, font_color, "bold_question")
 
@@ -308,10 +303,8 @@ def generate_trivia_card(post: SocialPost, size: tuple[int, int]) -> Image.Image
     accent = hex_to_rgb(Config.BRAND_ACCENT)
     font_color = hex_to_rgb(Config.BRAND_FONT_COLOR)
 
-    img = Image.new("RGB", (width, height))
+    img = gradient_image(width, height, accent, primary, angle=20)
     draw = ImageDraw.Draw(img, "RGBA")
-
-    draw_gradient(draw, width, height, accent, primary, angle=20)
     draw_geometric_accents(draw, width, height, secondary, "trivia_card")
 
     # "Did you know?" header
@@ -403,7 +396,7 @@ def generate_image(post: SocialPost) -> Path:
     safe_type = post.post_type.replace(" ", "_")
     filename = f"{post.platform}_{safe_type}_{random.randint(1000, 9999)}.png"
     output_path = Config.IMAGES_DIR / filename
-    img.save(output_path, "PNG", quality=95)
+    img.save(output_path, "PNG", optimize=True)
 
     return output_path
 

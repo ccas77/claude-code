@@ -95,6 +95,31 @@ READERS = {
     ".epub": read_epub,
 }
 
+# Formats whose extraction is expensive enough to be worth caching.
+CACHED_FORMATS = {".pdf", ".epub"}
+
+
+def read_with_cache(filepath: Path, reader_fn) -> str:
+    """Read a book file, caching extracted text for slow formats.
+
+    PDF/EPUB extraction can take seconds per file and the scheduler re-reads
+    the books on every batch. The cache key includes mtime and size, so an
+    updated file is re-extracted automatically.
+    """
+    if filepath.suffix.lower() not in CACHED_FORMATS:
+        return reader_fn(filepath)
+
+    stat = filepath.stat()
+    cache_dir = Config.OUTPUT_DIR / ".book_cache"
+    cache_file = cache_dir / f"{filepath.name}.{int(stat.st_mtime)}.{stat.st_size}.txt"
+    if cache_file.exists():
+        return cache_file.read_text(encoding="utf-8")
+
+    text = reader_fn(filepath)
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    cache_file.write_text(text, encoding="utf-8")
+    return text
+
 
 def extract_chapters(text: str) -> list[dict]:
     """Split text into chapters based on common heading patterns."""
@@ -174,7 +199,7 @@ def read_books() -> BookContent:
         for filepath in sorted(book_dir.glob(f"*{ext}")):
             print(f"  Reading: {filepath.name}")
             try:
-                text = reader_fn(filepath)
+                text = read_with_cache(filepath, reader_fn)
                 all_text.append(text)
                 files_read.append(filepath.name)
             except Exception as e:
