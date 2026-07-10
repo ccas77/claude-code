@@ -1,12 +1,16 @@
-# App Audit & Consolidation Proposal — PRELIMINARY
+# App Audit & Consolidation Proposal
 
-**Date:** 2026-07-10
-**Status: PARTIAL.** Two blockers prevented a complete audit (details in [Blockers](#blockers)):
+**Date:** 2026-07-10 (updated same day — second pass)
+**Status: 12 of 24+ projects fully audited.** First pass covered the 6 projects in this repo; this second pass adds the 6 apps pulled from GitHub (slideshow-generator, slideshow-creator, tslides, aesthetic, tinkerboxxx, facebook-library). The slideshow head-to-head is now done for 3 of the 4 family members (bookslide's source is unreachable — see below).
 
-1. **`content-engine-architecture.md` is not in this folder** (searched the whole repo — no copy, no reference). The extraction-map "destination" column below is therefore based only on the architecture summary in your instructions (Supabase all-in-one, Drizzle, Inngest, Post Bridge, workspace asset library with per-user private content, `src/services/` + `src/modules/`, slideshow = Module #1). It must be re-checked against the real spec.
-2. **23 of the 24 Vercel apps are not cloned into this folder.** Only `bookshelf` is here. 16 of the missing ones exist in your GitHub account and can be pulled into this session as soon as you say so; 7 I could not find at all. The head-to-head slideshow-family comparison (slideshow-generator vs slideshow-creator vs tslides vs bookslide) **could not be done** — none of those four repos are available locally.
+Remaining blockers (details in [Blockers](#blockers--questions--need-answers-before-going-further)):
 
-What this document *does* contain: full audits of the 6 projects that are in this folder (5 of them are keepers with directly relevant code), a consolidated key/API list from those apps, a provisional extraction map, and the questions I need answered.
+1. **`content-engine-architecture.md` is still missing** — destination columns below remain based on the summary in your instructions.
+2. **10 private GitHub repos** (meme-maker, book-video-bot, my-toolkit, inkwell, trialreels, siggy, dictabook, simplepostr, authorbids, bookshelf) are pending session access — the add-repo approval flow is flaky; one repo per user message ("add ccas77/NAME") is what worked for tslides.
+3. **7 Vercel projects have no reachable source** — traced via Vercel deployment metadata: kinetic, quadrants, reposter, socialato (CLI-deployed from your local machine; source only there), bookslide (CLI-deployed by Codex, no git metadata), public (static shell), aimoviebot (misconfigured project pointed at this monorepo; every build errors — nothing to audit, candidate for deletion).
+
+> ### ⚠️ URGENT SECURITY — rotate now
+> **`slideshow-generator` is a PUBLIC GitHub repo and has a live production `CRON_SECRET` committed in `.claude/settings.local.json`** (appears ~20× in allow-listed curl commands, alongside the deployed URL `slideshow-generator-nine.vercel.app`). That token gates the cron AND admin routes (`clear-scheduled`, `migrate-configs`, …) — anyone on the internet can currently fire them. Actions: (1) rotate `CRON_SECRET` in Vercel, (2) delete the file and rewrite git history or make the repo private, (3) check Vercel logs for unexpected cron/admin hits. None of the other 11 audited repos have committed secrets.
 
 ---
 
@@ -16,52 +20,118 @@ What this document *does* contain: full audits of the 6 projects that are in thi
 
 | App | Where it is | Audited | Verdict |
 |---|---|---|---|
-| bookshelf | ✅ In this folder | ✅ Yes | **KEEPER** (strongest single codebase — see below) |
-| slideshow-generator | GitHub `ccas77/slideshow-generator` — not cloned | ❌ | pending |
-| slideshow-creator | GitHub `ccas77/slideshow-creator` — not cloned | ❌ | pending |
-| tslides | GitHub `ccas77/tslides` — not cloned | ❌ | pending |
-| tinkerboxxx | GitHub `ccas77/tinkerboxxx` — not cloned | ❌ | pending |
-| meme-maker | GitHub `ccas77/meme-maker` — not cloned | ❌ | pending |
-| ai-ugc-pipeline | GitHub `ccas77/ai-ugc-pipeline` — not cloned | ❌ | pending |
-| aesthetic | GitHub `ccas77/aesthetic` — not cloned | ❌ | pending |
-| book-video-bot | GitHub `ccas77/book-video-bot` — not cloned | ❌ | pending |
-| inkwell | GitHub `ccas77/inkwell` — not cloned | ❌ | pending |
-| simplepostr | GitHub `ccas77/simplepostr` — not cloned | ❌ | pending |
-| authorbids | GitHub `ccas77/authorbids` — not cloned | ❌ | pending |
-| my-toolkit | GitHub `ccas77/my-toolkit` — not cloned | ❌ | pending |
-| dictabook | GitHub `ccas77/dictabook` — not cloned | ❌ | pending |
-| siggy | GitHub `ccas77/Siggy` — not cloned | ❌ | pending |
-| trialreels | GitHub `ccas77/trialreels` — not cloned | ❌ | pending |
-| facebook-library | GitHub `ccas77/facebook-library` — not cloned | ❌ | pending |
-| **aimoviebot** | **MISSING — not local, not in your visible GitHub repos** | ❌ | unknown |
-| **kinetic** | **MISSING** | ❌ | unknown |
-| **quadrants** | **MISSING** | ❌ | unknown |
-| **reposter** | **MISSING** | ❌ | unknown |
-| **socialato** | **MISSING** | ❌ | unknown |
-| **bookslide** | **MISSING** (⚠️ part of the slideshow family) | ❌ | unknown |
-| **public** | **MISSING** | ❌ | unknown |
-
-Per your instructions I have not guessed at what any missing app does.
+| bookshelf | ✅ In this folder | ✅ | **KEEPER** (strongest single codebase) |
+| slideshow-generator | ✅ cloned (public repo) | ✅ | **KEEPER (prompt IP + renderer)** — single-user original; superseded by creator for app shell |
+| slideshow-creator | ✅ cloned (public repo) | ✅ | **KEEPER** — multi-user evolution of generator (bookpulls.com) |
+| tslides | ✅ cloned (added to session) | ✅ | **KEEPER** — most production-mature; closest stack to target |
+| aesthetic | ✅ cloned (public repo) | ✅ | **KEEPER** — quote-video renderer + prompt bank |
+| tinkerboxxx | ✅ cloned (public repo) | ✅ | **KEEPER** — ops/fleet dashboard + Post Bridge verification |
+| facebook-library | ✅ cloned (public repo) | ✅ | **KEEPER (data + ingest patterns)** — 999-post performance library |
+| meme-maker | GitHub (private) — pending access | ❌ | pending |
+| ai-ugc-pipeline | GitHub (private) — pending access | ❌ | pending |
+| book-video-bot | GitHub (private) — pending access | ❌ | pending |
+| inkwell | GitHub (private) — pending access | ❌ | pending |
+| simplepostr | GitHub (private) — pending access | ❌ | pending |
+| authorbids | GitHub (private) — pending access | ❌ | pending |
+| my-toolkit | GitHub (private) — pending access | ❌ | pending (referenced by tslides + aesthetic as the shared-patterns home — high priority) |
+| dictabook | GitHub (private) — pending access | ❌ | pending |
+| siggy | GitHub (private) — pending access | ❌ | pending |
+| trialreels | GitHub (private) — pending access | ❌ | pending |
+| aimoviebot | Vercel project mislinked to this monorepo; all builds ERROR | n/a | **DELETE the Vercel project** — no codebase exists |
+| kinetic | CLI-deployed from your machine (same local commit as quadrants) | ❌ | source only on your machine — push to GitHub to audit |
+| quadrants | CLI-deployed from your machine | ❌ | source only on your machine |
+| reposter | CLI-deployed from your machine (branch `master`, "PB" = Post Bridge) | ❌ | source only on your machine |
+| socialato | CLI-deployed from your machine (has custom domain socialato.com) | ❌ | source only on your machine |
+| bookslide | CLI-deployed by Codex, no git metadata (⚠️ slideshow family) | ❌ | source only on your machine |
+| public | CLI-deployed static shell, no git metadata | ❌ | probably just hosted assets — confirm & likely delete |
 
 ### Other projects found in this folder (not on the Vercel list)
-
-These were built in earlier Claude sessions inside this repo (per git history). Four of the five contain code highly relevant to the content engine, so I audited them fully:
 
 | Project | Verdict |
 |---|---|
 | book-social-media | **KEEPER** — complete Claude→Pillow→Post Bridge posting pipeline |
-| pinfactory | **KEEPER** — best text-overlay renderer found so far; anti-spam scheduler |
+| pinfactory | **KEEPER** — best Python text-overlay renderer; anti-spam scheduler |
 | storyforge | **KEEPER** — Gemini image gen w/ character consistency; ffmpeg video engine |
 | tropesite | **KEEPER (partial)** — grounded-copy prompts + compliance audit only |
-| thriller-concept-project | **NOT AN APP** — book-concept research package; only its README + decision log survive locally. Nothing to extract into the engine (its outputs are book-marketing *content*, not code). |
+| thriller-concept-project | **NOT AN APP** — book-concept research package; nothing to extract |
 
 ### Other GitHub repos visible in your account (not on the list, not cloned)
 
-`video-generator`, `book-boyfriend`, `book-writer-app`, `bookpulls-runbook`. Tell me if any of these should be in scope.
+`video-generator`, `book-boyfriend`, `book-writer-app`, `bookpulls-runbook`. Tell me if any should be in scope.
 
 ---
 
-## Per-app audits (the 6 local projects)
+## Per-app audits — the 6 GitHub apps (second pass)
+
+### slideshow-generator — KEEPER for its prompt IP + renderer (single-user original of the family)
+
+- **Purpose:** turns book quotes/excerpts into 1080×1920 TikTok/IG slideshows and Top-N book-list videos — Gemini background images, censored text overlays, manual or cron posting via Post Bridge. Deployed at slideshow-generator-nine.vercel.app.
+- **Stack:** Next.js 14, React 18, Tailwind 4. **Upstash Redis is the only database** (books, excerpts, configs, drafts, caches, locks, post-logs). sharp + resvg + ffmpeg-static; fonts embedded base64 and written to `/tmp` with a generated fontconfig (the serverless-fonts workaround). 3 Vercel crons.
+- **External APIs** (all env; see security box for the committed CRON_SECRET): Gemini (`lib/gemini.ts`), Vercel AI Gateway (`lib/image-gen.ts` — failover `gemini-2.5-flash-image` → `imagen-4.0` → `dall-e-3`), Anthropic (`claude-sonnet-4-6`), Post Bridge (`lib/post-bridge.ts`), PublisherChamp analytics, Resend, Upstash, Apify (health-check only).
+- **Crown jewels:**
+  - `app/api/generate-slides/route.ts` — the **passage→beats slide-planning prompt** (Claude): ≤24 one-line slides, "DO NOT write chronologically", no character names ("Not 'Dante' — 'your mafia boss'"), **backloading** (punch word lands at end of each line), author dialogue is sacrosanct, second-person POV, "End on the Turn". Plus `tighten` (cut-only editor) and `truncate` (best ≤10 slides for IG) actions.
+  - The **censorship engine** injected into that prompt: leetspeak map (`c0p, ja!l, d£ath, k!ss…`) + emoji substitutions (`😻 🐓 👅 💥 💦`) to dodge platform filters; user-extensible.
+  - `lib/booktok-prompt.ts` + `topn-booktok` — the viral **Top-N BookTok copy generator** (titles/captions/imagePrompts, Punchline Rule, per-genre notes, 5-hashtag format, ephemeral prompt caching, server-side dedup).
+  - `lib/render-slide.ts` — server text overlay via **sharp + Pango markup** (Inter Bold + NotoColorEmoji written to `/tmp`), gradient scrim, hand-rolled 48-layer outline stroke; `renderCoverSlide`, `renderTextOverlay` (transparent layer for video).
+  - `lib/render-topn-slide.ts` — **TikTok safe-zone aware** layouts (SAFE_TOP=280 / SAFE_BOTTOM=480), boxed-text style.
+  - `lib/render-video.ts` — slides→MP4 with per-slide durations, looped audio, optional Ken-Burns moving background.
+  - `lib/post-bridge.ts` — hardened client: `POST /v1/posts` deliberately non-retryable (2026-05-08 duplicate-post incident), post-verification helpers that work around Post Bridge's silently-ignored `social_account_id` filter (2026-06/07 incident).
+  - Every image prompt is wrapped in a **no-text guard** ("NO text, words, letters, or writing anywhere") because text is composited later — a rule the new module should keep.
+- **State:** complete, production, actively maintained (incident comments dated through 2026-07-04; zero TODOs). Bugs: `generate-slides` auth gates on `process.env.PASSWORD` instead of `APP_PASSWORD` (route may be effectively open); client canvas preview renders differently from server output; legacy `app/api/generate` bypasses the gateway failover and the no-text guard.
+- **Consolidation:** take the prompt library and renderers; leave Redis-only storage and the single shared `APP_PASSWORD`.
+
+### slideshow-creator — KEEPER (multi-user evolution of generator; bookpulls.com)
+
+- **Purpose/stack:** same product as generator, SaaS-ized: Google OAuth + JWT sessions + invite system + admin role + per-user Redis namespacing (`u:${userId}:…`), middleware auth gate. Still Upstash-Redis-only, no SQL.
+- Mirrors generator's prompt IP, renderers, Post Bridge client, cron pipeline, stuck-detector, daily digest. Its single commit message literally says "mirroring slideshow-generator", and CLAUDE.md calls it "distinct from the single-user Generator app".
+- **Extra:** `check-dupes.mjs` (Redis post-log duplicate checker), status reconciliation (planned/attempted/confirmed with `unconfirmed` list).
+- **State:** complete, production-live. Rough edges: resvg declared but unused; three divergent Gemini model lists (one missing the no-text guard); CLAUDE.md says 30-min cron but vercel.json is hourly. Minor SSRF surface in `analyze-slide`/`describe-image`/`fetch-image-url` (fetch arbitrary user URLs server-side).
+- **Consolidation:** of the two Redis siblings, creator is the shell with multi-user isolation and hardening; but the new engine replaces both shells anyway — what survives is the shared prompt/render IP (identical files; diff both repos for newest revisions before lifting).
+
+### tslides — KEEPER (most production-mature; closest to the target stack)
+
+- **Purpose:** end-to-end BookTok slideshow pipeline built around **competitive cloning**: mirror a TikTok account via Apify → Claude vision reverse-engineers each slide into a regenerable image prompt + reworded text + style hints → regenerate hook images → composite text → assemble carousel/MP4 → schedule via Post Bridge with full cron automation.
+- **Stack: the closest of all 12 to the target** — Next.js 16, **Neon Postgres + Drizzle (20 migrations)**, Vercel Blob, two-phase Vercel cron automation, Resend alerts.
+- **External APIs:** Anthropic (`claude-sonnet-4-6` vision + copy), Higgsfield via MCP OAuth (primary image gen, `gpt_image_2`), OpenAI (`gpt-image-2` fallback), **Gemini 2.5 Flash Image via AI Gateway as third fallback — chosen because its safety filter tolerates romance/dark-romance imagery OpenAI rejects** (key design insight for a Gemini-first module), Apify (TikTok scrape), Post Bridge, Resend.
+- **Crown jewels:**
+  - `lib/analyze.ts` — **vision-to-prompt reverse engineering**: produces `prompt` + 3 alt prompts, `extractedText` + 3 rewordings, and style hints (fontStyle/textColor/textPosition/textAlignment). "Always describe the scene as a candid photograph… NEVER use the words 'book cover', 'poster', 'typography'." Two alt-variant modes (broad vs superficial w/ identity preservation).
+  - `lib/overlay.ts` — **fontconfig-free text overlay**: text rendered as SVG `<path>` glyphs via `text-to-svg` (bundled Inter-Bold.woff) composited by sharp — deliberately avoids canvas/satori/Pango so librsvg needs no fontconfig. 18-char greedy wrap, top/middle/bottom + alignment, hex fill + black stroke with `paint-order`.
+  - 3-tier image fallback with `isContentRejection()` routing (`lib/slideshow.ts:296-386`, `lib/openai-image.ts`).
+  - **LRU anti-repeat picker** (`pickFresh`) used for prompts/texts/books/covers/excerpts/audio — fixed a real "same audio 3 days running" bug.
+  - `lib/automation.ts` — **two-phase cron dispatcher** (hourly enumerate → per-fire workers with own 300s budgets) + 5-min transient-retry sweep with a transient-vs-permanent error classifier.
+  - Post Bridge client with `tiktok: {draft:false, is_aigc:false}` (suppresses the AI badge that tanks reach — honest caveat in comments).
+  - Slide structure: fixed `[hook, …excerpts, cover]`, hook `generate`/`upload` modes, all slides normalized to 1080×1920 contain-fit.
+- **State:** complete/production-grade; zero TODOs; ~25 operational diagnostic scripts; real accounts referenced. Security notes: `lib/crypto.ts` falls back to `DATABASE_URL` then a literal dev string if `TSLIDES_TOKEN_SECRET` unset (set it in prod); generated Blob assets are public-if-URL-known.
+- **Consolidation:** its architecture (Drizzle schema, automation, blob layout) is the best structural template for Module #1; README points at `my-toolkit` (`patterns/apify-tiktok`, `patterns/postbridge`) as the canonical shared code — audit that repo next.
+
+### aesthetic — KEEPER (quote-video renderer + prompt-bank pattern)
+
+- **Purpose:** per-book "content factory" for ≤15s sepia-graded, beat-synced quote videos: captions + song + AI still-image bank → FFmpeg MP4 → Post Bridge autopost. The **video** sibling, distinct from the slideshow apps.
+- **Stack:** Next.js 15.5; **no database** — JSON + media in Vercel Blob (books index, post queue, render manifests); ffmpeg-static on serverless.
+- **External APIs:** Higgsfield via a **Clerk web-session cookie "unlimited mode"** client (`lib/higgsfield-clerk.ts` — 4-min cached single-flight JWT minting, 401 retry, cookie scrubbed from error paths; the cookie in env is a full account credential — handle accordingly); default model `nano-banana-2`. A dead legacy OAuth+MCP subsystem remains. Post Bridge (notably `is_aigc: true` here), Resend n/a.
+- **Crown jewels:** `lib/render-server.ts` (sepia `eq`/`curves` grade + `drawtext` captions from textfile w/ custom font, 30-char wrap, concat-demuxer slideshow→video, center-crop 1080×1920); `lib/bank.ts` (shared STYLE preamble + 8 categorized subject prompts — the cleanest prompt-template pattern found); `lib/beat-detect.ts` (`cutIntervalMs(bpm)` 250-400ms cut sweet spot); `lib/render-planner.ts` (caption×song pair dedup round-robin); character-reference routing by `appearsIn` (male/female/both) to avoid feature leakage.
+- **State:** deployed and working end-to-end, with dead-code baggage (whole OAuth/MCP layer) and two latent bugs (`generate-still` falsely gates on `ANTHROPIC_API_KEY`; `detectTempo` is browser-only).
+- **Consolidation:** the unique asset is the FFmpeg grade+drawtext+beat-sync pipeline — a video module capability none of the slideshow apps have. Its Post Bridge client is self-described as "Ported from my-toolkit/patterns/postbridge".
+
+### tinkerboxxx — KEEPER (the fleet control-plane prototype)
+
+- **Purpose:** launchpad + ops dashboard over the whole app fleet: Manager (fans out to sibling apps' `/api/status` and cross-checks against Post Bridge), Apps launcher, Ideas store, Stats (PB analytics), and an image→prompt AI tool. **This is a mini prototype of the content engine's control plane.**
+- **Stack:** React 18 + Vite SPA, Vercel serverless functions, **Supabase** (auth + Postgres + Storage) — the only audited app already on Supabase.
+- **External APIs:** Supabase, Post Bridge, OpenAI (`gpt-image-1` icons, `gpt-4o-mini` vision), Resend, per-app `CRON_SECRET` bearer registry (`APP_REGISTRY` env).
+- **Crown jewels:** `api/analytics.js` — production PB client with promise-chained ~8 req/s throttle, 429 retry via `rate_limit.reset_ms`, safe pagination; `api/aggregate.js` `crossCheckApp`/`diagnose` — reconciles app claims vs PB reality, classifying confirmed / queued / rejected / **missing-from-PB (silent failure)**; `api/cron/dead-account-check.js` — daily 0-views alerting (skips Facebook, PB doesn't sync it); `api/image-to-prompt.js` — a 60-120-word **nano-banana-tuned image→prompt** system prompt with strict "NO INTERPRETATION" rules; `api/generate-icon.js` — app-icon prompt. Its `CONN_LABEL` badge registry enumerates the exact integration roster of the fleet (Post Bridge, Apify, Higgsfield, OpenAI, Claude, Gemini, R2, Blob, Database, Resend, KV).
+- **State:** complete, actively iterated (battle-scar comments about PB rate caps and deep-page 500s). README stale.
+- **Consolidation:** absorb the Manager cross-check + analytics client as the new engine's ops/observability view rather than rebuilding it.
+
+### facebook-library — KEEPER for data + ingest patterns
+
+- **Purpose:** browse/sort/search/OCR the top 999 posts scraped (via Apify) from the "My Dark Romantasy" Facebook page, with one-click "rewrite for another genre" handoff to Claude.
+- **Stack:** Next.js 14, no backend/DB — `posts.json` bundled at build; tesseract.js OCR in-browser; Edge image proxy that defeats FB's referrer block (host-allowlisted to fbcdn).
+- **Crown jewels:** `posts.json` — a **performance-ranked content library** (999 posts, rank/date/type/likes/comments/shares/views/engagement; ~50/50 photo "quote cards" vs reels; range 2025-12→2026-05) — a goldmine of proven hooks for the asset library's "what worked" view; the genre-rewrite prompt (`openRewrite`: "keep the same emotional hook, format, and tone, but swap genre references… Give me 3 variations") — exactly the cross-account repurposing workflow the engine needs, currently manual, should become a server-side Claude call; OCR batch pipeline w/ cache + CSV export.
+- **State:** complete for its scope, but **data is time-bombed**: the fbcdn URLs are signed and expiring, and the `ocr` field was never populated. **Migrate now**: download/re-host the images and run OCR at ingest (the real hook text lives in the images; captions are mostly emoji/hashtags). No secrets, no PII beyond public page/post ids.
+
+---
+
+## Per-app audits — the 6 local projects (first pass)
 
 ### bookshelf — KEEPER (production-grade; closest existing code to the target architecture)
 
@@ -100,7 +170,7 @@ These were built in earlier Claude sessions inside this repo (per git history). 
 - **State:** complete and coherent (needs user-supplied book files; `books/`, `templates/` ship empty). Known wart: `save_publishing_plan` duplicates the stagger loop; gradient renderer is per-pixel slow.
 - **Notes:** Claude already generates an unused `image_prompt` per post — a ready hook for real AI image gen in the new app.
 
-### pinfactory — KEEPER (best text-overlay renderer found so far)
+### pinfactory — KEEPER (best Python text-overlay renderer)
 
 - **Purpose:** Local-first Pinterest engine for pen names: renders branded 1000×1500 pins from a book catalogue (Pillow, 6 layout templates), writes Pinterest-SEO copy via Anthropic, gates everything through a local approval gallery, publishes to Pinterest v5 on an anti-spam schedule.
 - **Stack:** Python 3; Pillow, PyYAML, anthropic, requests; SQLite; stdlib HTTP review gallery.
@@ -147,19 +217,25 @@ These were built in earlier Claude sessions inside this repo (per git history). 
 
 ### thriller-concept-project — NOT AN APP
 
-Market-research/concept package for a thriller series produced by an earlier multi-agent session. Locally only `README.md` and `07-governance/decision-log.md` exist (the README references ~20 deliverables that aren't in this folder). Nothing to extract into the engine codebase; its *outputs* (positioning, blurbs) would be content you upload, not code. Excluded from the extraction map.
+Market-research/concept package for a thriller series produced by an earlier multi-agent session. Locally only `README.md` and `07-governance/decision-log.md` exist. Nothing to extract into the engine codebase. Excluded from the extraction map.
 
 ---
 
-## Slideshow recommendation — BLOCKED, with a provisional finding
+## Slideshow head-to-head (3 of 4 audited; bookslide unreachable)
 
-The four slideshow apps (slideshow-generator, slideshow-creator, tslides, bookslide) are not in this folder, so the head-to-head prompt/renderer comparison cannot be done yet. bookslide isn't in your visible GitHub repos at all.
+**Lineage:** slideshow-generator (single-user original) → slideshow-creator (multi-user SaaS mirror, bookpulls.com). tslides is a separate, more advanced concept (clone-a-competitor pipeline). bookslide's source exists only on your machine (Codex CLI deploy) — its Vercel domain (`i-would-like-to-build-an.vercel.app`) suggests an early prompt-built prototype; likely superseded, but unverified.
 
-What the local audit already shows, to be tested against that family once available:
+| Dimension | slideshow-generator / creator | tslides |
+|---|---|---|
+| Slide *text* planning | ★ **Best prompt IP**: passage→beats GUIDE prompt (backloading, tropes-not-names, dialogue-sacrosanct, censorship engine), tighten/truncate actions, Top-N BookTok copy generator | None — text comes from reverse-engineering competitor slides + reword variants |
+| Image prompting | No-text guard wrapper; image→prompt describers | ★ **Best**: full vision-to-prompt reverse engineering w/ style hints + identity-preserving variants |
+| Image generation | Gateway failover (Gemini→Imagen→DALL-E) | 3-tier w/ content-rejection routing (Higgsfield→OpenAI→**Gemini for NSFW tolerance**) |
+| Text overlay | sharp+Pango (emoji support via Noto, Pango wrapping, safe-zone Top-N renderer) | ★ Simplest/most robust: SVG-glyph-paths via text-to-svg (no fontconfig at all) |
+| Storage/stack | Upstash Redis only — must be replaced | ★ Drizzle + Neon + Blob — nearly the target stack already |
+| Automation | 30-min/hourly cron phases, stuck-detector, digest | ★ Two-phase dispatcher + transient-retry classifier + LRU anti-repeat |
+| Posting | Hardened PB client (non-retryable POST, verification workarounds) | Same client family + `is_aigc:false` handling |
 
-- **Best text-overlay renderer so far: pinfactory** (`pinfactory/images.py` + `themes.yaml`) — auto-fit within width and height, scrim/vignette legibility, semantic theming, deterministic seeds + content-hash dedup, and six ready slide-template families.
-- **Best Gemini-image generation patterns so far: storyforge** (strict scene JSON + character-consistency injection + QC retry) combined with **bookshelf** (cover-fidelity prompt + automated cover-check QA gate).
-- So the provisional shape of Module #1 is already "a combination": Gemini generation with storyforge/bookshelf's fidelity+QC patterns, overlay/theming from pinfactory (ported to the new stack — e.g. satori/canvas/sharp in TS, to be decided by the spec), slide templates seeded from pinfactory's six variants. **The four dedicated slideshow apps may beat any of this — they must be compared before committing.**
+**Recommendation for Module #1:** structure and schema from **tslides**; slide-planning + censorship + Top-N prompt IP from **generator/creator** (diff the two for newest revisions); text overlay — pick between tslides' SVG-path approach (simplest) and generator's Pango approach (emoji + auto-wrap); keep generator's universal no-text image guard; theming from **pinfactory**; QA gates from **bookshelf/storyforge**. If bookslide surfaces, check it before locking the plan, but the bar is now high.
 
 ---
 
@@ -167,18 +243,34 @@ What the local audit already shows, to be tested against that family once availa
 
 | What | Source | Lands in |
 |---|---|---|
-| Post Bridge client (upload, create, analytics, idempotency guard) | bookshelf `src/lib/posting/postbridge.ts`, `run.ts` | `src/services/posting/` |
+| Post Bridge client (upload, create, analytics, idempotency guard) | bookshelf `src/lib/posting/postbridge.ts`; cross-check generator/tslides variants + `my-toolkit/patterns/postbridge` (pending) | `src/services/posting/` |
+| PB rate-limited analytics client + pagination hazards | tinkerboxxx `api/analytics.js` | `src/services/posting/analytics` |
+| Post verification / silent-failure cross-check | tinkerboxxx `api/aggregate.js` (`crossCheckApp`, `diagnose`); generator `verifyPostScheduled` | `src/services/posting/` (post-publish verification step) |
 | Post Bridge stagger/interleave batch logic | book-social-media `publisher.py:158-215` | `src/services/posting/` (as Inngest scheduling input) |
 | Posting-window scheduler (windows, caps, round-robin, DST-safe) | bookshelf `src/lib/automation/scheduler.ts` | `src/services/scheduling/` (ported to Inngest) |
+| Two-phase cron dispatcher + transient-retry classifier | tslides `lib/automation.ts` | `src/services/scheduling/` (Inngest shape) |
 | Anti-spam rules (rolling caps, URL spacing, quarantine, circuit breaker) | pinfactory `pinfactory/scheduler.py` | `src/services/scheduling/` |
-| Text-overlay engine (auto-fit, wrap, tracking, scrim, compositing) | pinfactory `pinfactory/images.py` | `src/services/rendering/` (port to TS) |
+| LRU anti-repeat content picker | tslides `lib/slideshow.ts` (`pickFresh`) | `src/services/scheduling/` or content selection util |
+| Dead-account / zero-views alerting | tinkerboxxx `api/cron/dead-account-check.js` | `src/services/observability/` |
+| Fleet status cross-check dashboard | tinkerboxxx Manager + `api/aggregate.js` | ops/observability view of new app |
+| Slide-planning prompt (passage→beats, tighten, truncate) + censorship engine | slideshow-generator/creator `app/api/generate-slides/route.ts` | `src/modules/slideshow/` prompts |
+| Top-N BookTok copy generator | generator/creator `lib/booktok-prompt.ts` | `src/services/ai/prompts/` |
+| Vision-to-prompt reverse engineering + variant prompts | tslides `lib/analyze.ts`, `app/api/text-variants/route.ts`; tinkerboxxx `api/image-to-prompt.js` (nano-banana-tuned); creator `analyze-slide` | `src/services/ai/prompts/` (one parameterized service) |
+| No-text image-gen guard wrapper | generator/creator `lib/image-gen.ts:34` | `src/services/ai/` image gen |
+| Image-gen fallback chain w/ content-rejection routing | tslides `lib/slideshow.ts` + `lib/openai-image.ts`; generator `lib/image-gen.ts` | `src/services/ai/` image gen |
+| Text overlay: SVG-glyph-path renderer | tslides `lib/overlay.ts` | `src/services/rendering/` (candidate A) |
+| Text overlay: sharp+Pango renderer + TikTok safe zones | generator `lib/render-slide.ts`, `lib/render-topn-slide.ts` | `src/services/rendering/` (candidate B) |
+| Text-overlay engine (auto-fit, wrap, tracking, scrim) — Python reference | pinfactory `pinfactory/images.py` | `src/services/rendering/` (port ideas to TS) |
 | Semantic theme system (palette + font roles + deep-merge defaults) | pinfactory `themes.yaml`, `pinfactory/themes.py` | `src/services/rendering/themes` + workspace brand kits |
 | Slide template set (headline, quote, checklist, comp, stats, trope-hook) | pinfactory `images.py:410-691` | `src/modules/slideshow/templates/` |
-| Card renderer variants + platform canvas sizes | book-social-media `image_generator.py` | `src/modules/slideshow/templates/` (merge with above) |
+| Card renderer variants + platform canvas sizes | book-social-media `image_generator.py` | `src/modules/slideshow/templates/` (merge) |
+| Slides→MP4 (per-slide durations, audio loop, moving background) | generator `lib/render-video.ts`; tslides `lib/video.ts` | `src/services/rendering/video` |
+| Quote-video pipeline (sepia grade, drawtext, beat-sync cuts) | aesthetic `lib/render-server.ts`, `lib/beat-detect.ts` | `src/modules/video/` (quote-video type) |
+| Prompt bank pattern (STYLE preamble + subject categories) | aesthetic `lib/bank.ts` | `src/services/ai/prompts/` + asset library |
 | Cover-fidelity image prompt | bookshelf `src/lib/render/prompt.ts` | `src/services/ai/prompts/` |
 | Visual QA gate (transcribe-and-vote cover check) | bookshelf `src/lib/render/cover-check.ts` | `src/services/ai/qa/` |
 | Style-recipe distillation (brand kit from reference images) | bookshelf `src/lib/recipe/prompt.ts`, `vision.ts` | `src/services/ai/` + asset library |
-| Character-consistency injection + drift QC retry | storyforge `stages/images.py`, `stages/cast.py`, `backends/qc.py` | `src/services/ai/` (image gen) |
+| Character-consistency injection + drift QC retry | storyforge `stages/images.py`, `stages/cast.py`, `backends/qc.py`; aesthetic `appearsIn` routing | `src/services/ai/` (image gen) |
 | Scene-decomposition prompt + JSON validator | storyforge `backends/llm.py` | `src/services/ai/prompts/` |
 | Kinetic ASS caption generator (10 effects) | bookshelf `src/lib/render/ass.ts` | `src/services/rendering/captions` |
 | Karaoke caption cues + TTS word-timestamp handling | storyforge `captions.py`, `backends/tts.py` | `src/services/rendering/captions` (merge) |
@@ -187,71 +279,91 @@ What the local audit already shows, to be tested against that family once availa
 | Timeline logic (durations, zoom alternation, cut-vs-fade) | storyforge `stages/timeline.py` | `src/modules/` (video/slideshow) |
 | Book-marketing post prompt + platform guidelines + 10 content types | book-social-media `post_generator.py:36-113` | `src/services/ai/prompts/` |
 | BookTok caption prompt (hook + 5 hashtags) | bookshelf `src/lib/captions/generate.ts` | `src/services/ai/prompts/` |
+| Genre-rewrite / cross-account adaptation prompt | facebook-library `app/page.tsx:164-178` | `src/services/ai/prompts/` (server-side Claude call) |
 | Pinterest SEO copy prompt + per-template angles | pinfactory `copy_gen.py` | `src/services/ai/prompts/` |
 | Grounded no-fabrication copy prompt + JSON repair/backfill | tropesite `src/content-engine.mjs` | `src/services/ai/prompts/` + LLM-JSON hardening util |
 | LLM JSON fence-strip/repair | book-social-media `post_generator.py:116-143` | same hardening util |
-| DB schema patterns (cards state machine, event_log, automation_configs, encrypted mcp_tokens) | bookshelf `src/lib/db/schema.ts` | Drizzle schema in new app |
+| DB schema patterns (cards state machine, event_log, automation_configs, encrypted tokens) | bookshelf `src/lib/db/schema.ts`; tslides schema (20 migrations) | Drizzle schema in new app |
 | Quote extraction from manuscripts | book-social-media `book_reader.py:128-155` | `src/services/ai/` (source-text ingestion) |
+| Performance-ranked content library (999 FB posts) + OCR-at-ingest + FB media proxy | facebook-library `posts.json`, `app/page.tsx` OCR, `app/api/img/route.ts` | asset library seed data + ingest service (**migrate now — URLs expiring**) |
 | Board/collection targeting strategy | pinfactory `boards.py` | `src/services/posting/` (platform metadata) |
-| Approval-gate lifecycle (draft→approved→published) + review gallery UX | pinfactory `review.py` / `copy_gen` statuses; storyforge `review.py`; tropesite comps flow | core content model + review UI of new app |
+| Approval-gate lifecycle (draft→approved→published) + review gallery UX | pinfactory, storyforge `review.py`, tropesite comps flow | core content model + review UI |
 | OFL fonts + role documentation | pinfactory `fonts/*.ttf`, `FONTS.md` | asset library upload (workspace-shared) |
-| Compliance audit engine + JSON-LD + AI-crawler robots | tropesite `src/audit.mjs`, `jsonld.mjs`, `robots.mjs` | only if an SEO-site module makes the cut (spec question) |
+| Compliance audit engine + JSON-LD + AI-crawler robots | tropesite `src/audit.mjs`, `jsonld.mjs`, `robots.mjs` | only if an SEO-site module makes the cut |
 
-Explicitly **not** carried: pinfactory's Pinterest v5 client (Post Bridge covers it; keep as reference for OAuth refresh/backoff), bookshelf's pg-boss/cron plumbing (replaced by Inngest), tropesite's SQLite/static-deploy machinery, bookshelf's dead Replicate render path, all Python CLI scaffolding.
+Explicitly **not** carried: the Redis-only storage layers (generator/creator), single-`APP_PASSWORD` auth, pinfactory's Pinterest v5 client, bookshelf's pg-boss/cron plumbing, aesthetic's dead OAuth/MCP subsystem, tslides' Apify mirroring UI (unless competitive cloning becomes a module — spec question), tropesite's SQLite/static-deploy machinery, facebook-library's client-side OCR (redo at ingest), all Python CLI scaffolding.
 
 ---
 
-## Consolidated external APIs / keys the new app will need (from audited apps only — will grow as the other 18 are audited)
+## Consolidated external APIs / keys the new app will need
 
 | Service | Used for | Seen in |
 |---|---|---|
-| **Post Bridge** | all posting + analytics | bookshelf, book-social-media (⚠️ bookshelf has TWO keys: owner + shared) |
-| **Anthropic** | copy/script generation | all five keepers |
-| **Google Gemini** | image gen (slideshow), captions, vision QA | storyforge, bookshelf (partly via Vercel AI Gateway OIDC) |
-| **OpenAI** | gpt-image-1 fallback, Whisper transcription | bookshelf |
-| **Higgsfield** | primary image gen (MCP OAuth + legacy key) | bookshelf |
+| **Post Bridge** | all posting + analytics | bookshelf, book-social-media, generator, creator, tslides, aesthetic, tinkerboxxx (⚠️ bookshelf has owner+shared keys; PB rate cap ~10 req/s; `social_account_id` filter silently ignored; deep pagination 500s) |
+| **Anthropic** | copy/script/vision (claude-sonnet-4-6 everywhere) | 10 of 12 audited apps |
+| **Google Gemini** | image gen + vision QA (direct + via AI Gateway) | storyforge, bookshelf, generator, creator, tslides (as NSFW-tolerant fallback) |
+| **Vercel AI Gateway** | model routing/failover (`AI_GATEWAY_API_KEY` / OIDC) | generator, creator, tslides, bookshelf |
+| **OpenAI** | gpt-image-1/2 image gen, Whisper, gpt-4o-mini vision | bookshelf, tslides, tinkerboxxx |
+| **Higgsfield** | primary image gen — two integration styles: MCP OAuth (bookshelf, tslides) vs Clerk-cookie "unlimited" (aesthetic) | bookshelf, tslides, aesthetic |
+| **Apify** | TikTok/FB scraping | tslides (`APIFY_TOKEN`), facebook-library (data source) |
+| **Upstash Redis** | KV store (legacy — being replaced) | generator, creator |
+| **Supabase** | DB/auth/storage (target stack; already live in one app) | tinkerboxxx |
 | **Replicate** | Demucs vocal separation | bookshelf |
 | **ElevenLabs** | TTS narration | storyforge |
-| **Resend** | failure notification email | bookshelf |
-| **Supabase** (replaces Neon Postgres + Vercel Blob + next-auth) | DB/auth/storage | target stack |
-| **Pinterest v5 OAuth** | only if direct pinning is kept alongside Post Bridge | pinfactory |
-| **Amazon Associates tags** | affiliate links (SEO-site module only) | tropesite |
-| Internal secrets | `CRON_SECRET` (→ Inngest signing key), `TOKEN_ENCRYPTION_KEY` (keep this pattern) | bookshelf |
+| **Resend** | failure/alert email | bookshelf, generator, creator, tslides, tinkerboxxx |
+| **PublisherChamp** | analytics | generator, creator |
+| **Google OAuth** | user auth | creator (tinkerboxxx uses Supabase auth) |
+| **Pinterest v5 OAuth** | direct pinning (reference only) | pinfactory |
+| **Amazon Associates** | affiliate links (SEO module only) | tropesite |
+| Internal secrets | `CRON_SECRET` (→ Inngest signing key), `TOKEN_ENCRYPTION_KEY`/`TSLIDES_TOKEN_SECRET` (keep the AES-GCM pattern, avoid tslides' weak fallback) | several |
 
-**Security:** no hardcoded keys were found in any of the six audited projects — everything reads from env, `.env` files are gitignored, examples contain placeholders only. Nothing to rotate from these repos. (The 18 unaudited apps still need the same check.)
+**Security findings across all 12 audited apps:**
+1. 🔴 **slideshow-generator: live `CRON_SECRET` committed in a public repo** (see box at top). Rotate now.
+2. 🟡 generator `generate-slides` route gates on `process.env.PASSWORD` instead of `APP_PASSWORD` — likely unauthenticated in prod.
+3. 🟡 tslides `lib/crypto.ts` token-encryption key silently falls back to `DATABASE_URL` → literal dev string; set `TSLIDES_TOKEN_SECRET`.
+4. 🟡 aesthetic's Higgsfield Clerk cookie is a full account credential in env (by design; ToS-gray "unlimited mode" — decide if the consolidated app keeps this or the sanctioned MCP path).
+5. 🟡 creator's `analyze-slide`/`describe-image`/`fetch-image-url` fetch arbitrary user URLs server-side (SSRF surface) — the new engine needs allowlisting.
+6. ⚪ tslides/aesthetic Blob assets are public-if-URL-known; fine for posts, not for private workspace assets.
 
 ---
 
 ## Things the architecture summary doesn't mention that the audit surfaced
 
-1. **Editorial approval gates.** Three apps independently converged on draft→approve/reject→publish with a review gallery (pinfactory, storyforge, tropesite). This should be a first-class state machine in the core content model, not a module afterthought.
-2. **A theming/brand-kit system.** pinfactory's semantic-palette + font-role YAML and bookshelf's AI "style recipes" are two halves of one feature: workspace brand kits in the asset library that both renderers and image-gen prompts consume.
-3. **Multi-pen-name support.** pinfactory models multiple author brands with per-brand theme/voice; the multi-user workspace design should decide whether "pen name" = workspace or a sub-entity within one.
-4. **Anti-spam/platform-safety rules** (rolling caps, per-URL spacing, quarantine, circuit breakers) as a shared scheduling concern, not per-module logic.
-5. **Automated visual QA** (bookshelf's cover-check, storyforge's face-drift QC) — a generate→verify→retry loop the image service should own.
-6. **Content types not in an obvious module list:** narrated long-form video (storyforge), music-transcription kinetic-caption videos (bookshelf), SEO/affiliate static sites (tropesite), manuscript ingestion → quote mining (book-social-media). Which of these become modules vs get dropped is a spec decision.
-7. **Deterministic regeneration** (seeded variants, content-hash dedup, hash-based incremental regen) — cheap to keep, prevents duplicate-content posting.
-8. **Post Bridge shared-key hazards** — bookshelf documents `/v1/post-results` failing on deep pagination and a shared key returning other apps' posts. The multi-user engine needs per-workspace keys or defensive filtering.
+1. **Editorial approval gates.** pinfactory, storyforge, tropesite independently converged on draft→approve/reject→publish. First-class state machine in the core content model.
+2. **A theming/brand-kit system.** pinfactory's semantic palette/font-roles + bookshelf's AI style recipes + aesthetic's STYLE-preamble prompt bank are three parts of one feature: workspace brand kits.
+3. **Multi-pen-name support.** pinfactory and the fleet at large model multiple author brands; decide pen-name = workspace vs sub-entity.
+4. **Anti-spam/platform-safety rules** as a shared scheduling concern (pinfactory caps/quarantine + tslides LRU anti-repeat + generator dedup keys).
+5. **Automated visual QA** (bookshelf cover-check, storyforge drift QC) — the image service should own generate→verify→retry.
+6. **Platform-filter evasion is core product IP** (generator's leetspeak/emoji censorship engine; tslides' NSFW-tolerant model routing; `is_aigc:false`). The spec should own an explicit policy here — it's load-bearing for reach but carries platform-ToS risk.
+7. **Posting verification / silent-failure detection** (tinkerboxxx cross-check, generator verify helpers) — posting isn't done until confirmed by Post Bridge.
+8. **Competitive-cloning ingest** (tslides Apify mirror → analyze → regenerate) — decide if this is a module; it's tslides' whole front end.
+9. **Performance-ranked content libraries** (facebook-library) — the asset library should store engagement metrics with assets ("what worked" view); migrate the 999-post dataset before its URLs expire.
+10. **Deterministic regeneration** (seeded variants, content-hash dedup, incremental regen) — cheap to keep.
+11. **Ops/fleet observability** (tinkerboxxx Manager) — the new app should ship a status/cross-check dashboard from day one.
+12. **Post Bridge operational hazards** — rate cap, ignored filters, deep-pagination 500s, shared-key cross-contamination: encode as client-level defenses.
 
 ---
 
-## Recommended build order (preliminary — finalize after the other 18 audits + real spec)
+## Recommended build order (updated)
 
-1. **Core scaffold:** Supabase (auth/DB/storage) + Drizzle schema seeded from bookshelf's `cards`/`event_log`/`automation_configs` patterns + Inngest wiring + workspace/user model.
-2. **Posting service:** port bookshelf `postbridge.ts` (it's already TS and battle-tested) with the idempotency guard; per-workspace key handling.
-3. **Scheduling service:** bookshelf windows/caps/round-robin + pinfactory anti-spam rules as Inngest functions.
-4. **Asset library:** storage buckets + brand kits (fonts from pinfactory, palettes/font-roles, style recipes), workspace-shared vs per-user-private.
-5. **Slideshow module (Module #1):** Gemini image gen (character/cover fidelity + QA gate) + ported overlay renderer + template set. **Gate: compare against the four dedicated slideshow apps first.**
-6. **Copy/caption service:** merged prompt library (platform guidelines, content-type taxonomy, grounded-copy rules) + LLM-JSON hardening.
-7. **Approval/review UI** across all content types.
-8. Later modules per spec priority (video/captions, memes, SEO site, …) once the remaining audits say what exists.
+1. **Rotate the leaked CRON_SECRET** (before anything else).
+2. **Core scaffold:** Supabase + Drizzle schema seeded from bookshelf's `cards`/`event_log`/`automation_configs` + tslides' slideshow/book tables; Inngest wiring; workspace/user model.
+3. **Posting service:** bookshelf `postbridge.ts` as the base + tinkerboxxx's rate limiter/paginator + generator's non-retryable-POST rule and verification helpers; per-workspace keys.
+4. **Scheduling service:** bookshelf windows/caps + tslides two-phase dispatcher/retry classifier + pinfactory anti-spam + LRU anti-repeat, as Inngest functions.
+5. **Asset library:** storage buckets + brand kits (pinfactory fonts/palettes, bookshelf style recipes, aesthetic prompt bank) + performance-metrics-on-assets; **import facebook-library's 999 posts now** (re-host images, OCR at ingest).
+6. **Slideshow module (Module #1):** per the head-to-head above — tslides structure, generator/creator prompt IP, one of the two proven overlay renderers, no-text guard, fallback chain w/ content-rejection routing, QA gate.
+7. **Copy/caption service:** merged prompt library + LLM-JSON hardening.
+8. **Approval/review UI** across content types.
+9. **Ops dashboard:** absorb tinkerboxxx Manager cross-check.
+10. Later modules per spec (quote-videos from aesthetic, narrated video from storyforge/bookshelf, memes, SEO site…) once remaining audits land.
 
 ---
 
 ## Blockers & questions — need answers before going further
 
-1. **Where is `content-engine-architecture.md`?** It is not in this folder or anywhere in this repo. Paste it, commit it, or tell me which repo it lives in.
-2. **May I add the 16 GitHub repos to this session and clone them?** They're all in your account (`ccas77/…`): slideshow-generator, slideshow-creator, tslides, tinkerboxxx, meme-maker, ai-ugc-pipeline, aesthetic, book-video-bot, inkwell, simplepostr, authorbids, my-toolkit, dictabook, Siggy, trialreels, facebook-library. This unblocks the slideshow head-to-head (3 of the 4 family members are there) and the rest of the inventory.
-3. **The 7 I can't find anywhere:** aimoviebot, kinetic, quadrants, reposter, socialato, **bookslide** (slideshow family!), public. Give me URLs, or say skip.
-4. **Is the local `bookshelf` folder the same code as the Vercel project `bookshelf`?** It matches the name and is clearly one of your apps, but confirm it's current.
-5. **Scope check:** should `video-generator`, `book-boyfriend`, `book-writer-app`, `bookpulls-runbook` (in your GitHub) or the four extra local projects' *products* be considered for the module list?
+1. **Where is `content-engine-architecture.md`?** Still not in this repo. Paste it, commit it, or point me at it.
+2. **10 private repos pending:** meme-maker, book-video-bot, **my-toolkit** (highest priority — tslides and aesthetic both cite it as the canonical shared-patterns source), inkwell, trialreels, siggy, dictabook, simplepostr, authorbids, bookshelf. The add-repo approval flow only works one repo per user-typed message (`add ccas77/NAME`); the batch attempt failed on infrastructure.
+3. **7 apps with local-only source:** kinetic, quadrants, reposter, socialato, bookslide, public — push those folders to GitHub (private is fine) and I'll audit them. aimoviebot needs no push — its Vercel project just needs deleting or relinking.
+4. **Is the local `bookshelf` folder the same code as the Vercel project + the private `ccas77/bookshelf` repo?** Adding the repo will answer this.
+5. **Scope check:** should `video-generator`, `book-boyfriend`, `book-writer-app`, `bookpulls-runbook` be considered?
+6. **Policy questions surfaced by the audit:** keep the censorship/`is_aigc:false` evasion features? Keep aesthetic's Clerk-cookie Higgsfield bypass or standardize on the MCP path? Is competitive cloning (tslides) a module?
