@@ -30,8 +30,17 @@ export async function POST(req: NextRequest) {
     });
     return NextResponse.json({ ok: true });
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    return NextResponse.json({ ok: false, error: message }, { status: 500 });
+    const e = err as { message?: string; code?: string; severity?: string; detail?: string; hint?: string; where?: string; stack?: string };
+    return NextResponse.json({
+      ok: false,
+      error: e.message ?? String(err),
+      code: e.code,
+      severity: e.severity,
+      detail: e.detail,
+      hint: e.hint,
+      where: e.where,
+      stack: e.stack,
+    }, { status: 500 });
   } finally {
     await sql.end({ timeout: 5 });
   }
