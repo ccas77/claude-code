@@ -16,7 +16,7 @@ from config import Config
 from book_reader import read_books
 from post_generator import generate_posts, save_posts
 from image_generator import generate_images_for_posts
-from publisher import PostBridgeClient, publish_batch, save_publishing_plan
+from publisher import publish_batch, save_publishing_plan
 
 
 def run_batch(dry_run: bool = False):
@@ -58,7 +58,8 @@ def run_batch(dry_run: bool = False):
         print(f"  Posts: {posts_file}")
         print(f"  Plan:  {plan_file}")
         print(f"  Images in: {Config.IMAGES_DIR}")
-        print(f"\n  Review the plan, then run with --publish to go live.\n")
+        print(f"\n  Review (and edit) the plan file, then run --publish to")
+        print(f"  post exactly what's in it.\n")
     else:
         print("[4/4] Publishing via Post Bridge...")
         results = publish_batch(posts_with_images)
@@ -80,7 +81,7 @@ def start_scheduler(dry_run: bool = False):
 
     print(f"Scheduler started")
     print(f"  Batch generation: every {cycle_days} days at {run_time}")
-    print(f"  Post times: {', '.join(Config.POST_TIMES)}")
+    print(f"  Post times: {', '.join(Config.POST_TIMES)} ({Config.POST_TIMEZONE})")
     print(f"  Days between posts: {Config.DAYS_BETWEEN_POSTS}")
     print(f"  Posts per batch: {Config.POSTS_PER_BATCH}")
     print(f"  Dry run: {dry_run}")

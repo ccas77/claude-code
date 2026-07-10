@@ -6,6 +6,8 @@ publishing API that supports Instagram, Facebook, TikTok, Pinterest, and more.
 This module handles:
 - Uploading images to Post Bridge media storage
 - Creating and scheduling posts for each platform
+- Building and saving a publishing plan (dry run), and publishing a saved
+  plan so what you reviewed is exactly what goes live
 - Checking post status and handling errors
 """
 
@@ -14,11 +16,41 @@ from __future__ import annotations
 import datetime
 import json
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 import requests
 
 from config import Config
 from post_generator import SocialPost
+
+PLAN_FILENAME = "publishing_plan.json"
+
+
+def _parse_time(value: str) -> tuple[int, int]:
+    """Parse an 'HH:MM' string into (hour, minute)."""
+    hour, minute = map(int, value.strip().split(":"))
+    return hour, minute
+
+
+def post_timezone() -> datetime.tzinfo:
+    """Return the configured POST_TIMEZONE, falling back to UTC if invalid."""
+    try:
+        return ZoneInfo(Config.POST_TIMEZONE)
+    except Exception:
+        print(
+            f"  Warning: unknown POST_TIMEZONE '{Config.POST_TIMEZONE}', using UTC"
+        )
+        return datetime.timezone.utc
+
+
+def default_start_time() -> datetime.datetime:
+    """Tomorrow at the first configured post time, in POST_TIMEZONE."""
+    tz = post_timezone()
+    tomorrow = datetime.datetime.now(tz).date() + datetime.timedelta(days=1)
+    hour, minute = _parse_time(Config.POST_TIMES[0])
+    return datetime.datetime(
+        tomorrow.year, tomorrow.month, tomorrow.day, hour, minute, tzinfo=tz
+    )
 
 
 class PostBridgeClient:
@@ -127,139 +159,167 @@ class PostBridgeClient:
         return result.get("data", result.get("accounts", []))
 
 
-def publish_post(
-    client: PostBridgeClient,
-    post: SocialPost,
-    image_path: Path | None = None,
-    scheduled_at: datetime.datetime | None = None,
-) -> dict | None:
-    """Publish or schedule a single post via Post Bridge.
-
-    Returns the API response, or None if the platform account is not configured.
-    """
-    account_id = Config.ACCOUNTS.get(post.platform)
-    if not account_id:
-        print(f"  Skipping {post.platform}: no account ID configured")
-        return None
-
-    media_id = None
-    if image_path and image_path.exists():
-        media_id = client.upload_media(image_path)
-
-    return client.create_post(
-        account_id=account_id,
-        platform=post.platform,
-        content=post.full_text(),
-        media_id=media_id,
-        scheduled_at=scheduled_at,
-    )
-
-
-def publish_batch(
+def build_plan(
     posts_with_images: dict[str, list[tuple[SocialPost, Path]]],
     start_time: datetime.datetime | None = None,
 ) -> list[dict]:
-    """Publish a batch of posts, scheduling them at staggered times.
+    """Assign a schedule slot to every post and return full plan entries.
 
-    Args:
-        posts_with_images: Dict of platform -> [(post, image_path)] pairs.
-        start_time: When to start scheduling. Defaults to tomorrow at the
-                     first configured post time.
-
-    Returns:
-        List of API response dicts for all published posts.
+    Platforms are interleaved so posts spread across days, and times are
+    taken from POST_TIMES interpreted in POST_TIMEZONE.
     """
-    client = PostBridgeClient()
-
     if start_time is None:
-        tomorrow = datetime.date.today() + datetime.timedelta(days=1)
-        first_time = Config.POST_TIMES[0]
-        hour, minute = map(int, first_time.split(":"))
-        start_time = datetime.datetime(
-            tomorrow.year, tomorrow.month, tomorrow.day, hour, minute,
-            tzinfo=datetime.timezone.utc,
-        )
+        start_time = default_start_time()
 
-    results = []
-    current_time = start_time
-
-    # Interleave platforms so posts are spread across time
+    entries: list[dict] = []
+    current_day = start_time
     max_posts = max(len(posts) for posts in posts_with_images.values())
 
     for i in range(max_posts):
         for platform, paired_posts in posts_with_images.items():
             if i >= len(paired_posts):
                 continue
-
             post, image_path = paired_posts[i]
 
-            # Pick next post time from the configured schedule
-            time_index = len(results) % len(Config.POST_TIMES)
-            hour, minute = map(int, Config.POST_TIMES[time_index].split(":"))
+            time_index = len(entries) % len(Config.POST_TIMES)
+            hour, minute = _parse_time(Config.POST_TIMES[time_index])
+            schedule_dt = current_day.replace(hour=hour, minute=minute)
 
-            schedule_dt = current_time.replace(hour=hour, minute=minute)
-            if schedule_dt <= datetime.datetime.now(datetime.timezone.utc):
-                schedule_dt += datetime.timedelta(days=1)
+            entries.append({
+                "platform": platform,
+                "scheduled_at": schedule_dt.isoformat(),
+                "post_type": post.post_type,
+                "content": post.content,
+                "hashtags": post.hashtags,
+                "caption": post.caption,
+                "image_path": str(image_path) if image_path else "",
+                "status": "pending",
+            })
 
-            try:
-                result = publish_post(client, post, image_path, scheduled_at=schedule_dt)
-                if result:
-                    results.append(result)
-            except requests.HTTPError as e:
-                print(f"  Failed to publish {platform} post: {e}")
+        current_day += datetime.timedelta(days=Config.DAYS_BETWEEN_POSTS)
 
-        # Move to next day after cycling through all platforms
-        current_time += datetime.timedelta(days=Config.DAYS_BETWEEN_POSTS)
-
-    print(f"\nScheduled {len(results)} posts total")
-    return results
+    return entries
 
 
 def save_publishing_plan(
     posts_with_images: dict[str, list[tuple[SocialPost, Path]]],
     start_time: datetime.datetime | None = None,
 ) -> Path:
-    """Save the publishing plan to a JSON file for review before publishing."""
+    """Save the full publishing plan to a JSON file for review and editing.
+
+    The plan is the source of truth for publishing: edit content/hashtags/
+    scheduled_at in the file, then run --publish to post exactly that.
+    """
     Config.POSTS_DIR.mkdir(parents=True, exist_ok=True)
 
-    if start_time is None:
-        tomorrow = datetime.date.today() + datetime.timedelta(days=1)
-        first_time = Config.POST_TIMES[0]
-        hour, minute = map(int, first_time.split(":"))
-        start_time = datetime.datetime(
-            tomorrow.year, tomorrow.month, tomorrow.day, hour, minute,
-            tzinfo=datetime.timezone.utc,
-        )
+    entries = build_plan(posts_with_images, start_time)
+    plan = {
+        "created_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+        "timezone": Config.POST_TIMEZONE,
+        "status": "pending",
+        "posts": entries,
+    }
 
-    plan = []
-    current_time = start_time
-    max_posts = max(len(posts) for posts in posts_with_images.values())
-    post_index = 0
-
-    for i in range(max_posts):
-        for platform, paired_posts in posts_with_images.items():
-            if i >= len(paired_posts):
-                continue
-            post, image_path = paired_posts[i]
-
-            time_index = post_index % len(Config.POST_TIMES)
-            hour, minute = map(int, Config.POST_TIMES[time_index].split(":"))
-            schedule_dt = current_time.replace(hour=hour, minute=minute)
-
-            plan.append({
-                "platform": platform,
-                "scheduled_at": schedule_dt.isoformat(),
-                "post_type": post.post_type,
-                "content_preview": post.content[:120] + "..." if len(post.content) > 120 else post.content,
-                "hashtags": post.hashtags,
-                "image_path": str(image_path),
-            })
-            post_index += 1
-
-        current_time += datetime.timedelta(days=Config.DAYS_BETWEEN_POSTS)
-
-    output_path = Config.POSTS_DIR / "publishing_plan.json"
+    output_path = Config.POSTS_DIR / PLAN_FILENAME
     output_path.write_text(json.dumps(plan, indent=2, ensure_ascii=False))
     print(f"  Publishing plan saved to: {output_path}")
-    print(f"  {len(plan)} posts across {len(posts_with_images)} platforms")
+    print(f"  {len(entries)} posts across {len(posts_with_images)} platforms")
     return output_path
+
+
+def pending_plan_path() -> Path | None:
+    """Return the saved plan file if it still has unpublished posts."""
+    path = Config.POSTS_DIR / PLAN_FILENAME
+    if not path.exists():
+        return None
+    try:
+        plan = json.loads(path.read_text())
+    except json.JSONDecodeError:
+        return None
+    if isinstance(plan, dict) and plan.get("status") in ("pending", "partial"):
+        return path
+    return None
+
+
+def publish_plan(plan_path: Path) -> list[dict]:
+    """Publish the posts in a saved plan file, exactly as reviewed/edited.
+
+    Entries already published (e.g. on a retry after a partial failure) are
+    skipped. Scheduled times that have passed are pushed forward day by day.
+    The plan file is rewritten with per-post statuses afterwards.
+    """
+    plan_path = Path(plan_path)
+    plan = json.loads(plan_path.read_text())
+    if not isinstance(plan, dict) or "posts" not in plan:
+        raise ValueError(f"Not a publishing plan file: {plan_path}")
+    if plan.get("status") == "published":
+        raise ValueError(
+            f"Plan already published: {plan_path}\n"
+            "Run --dry-run to generate a new plan, or --publish --fresh."
+        )
+
+    client = PostBridgeClient()
+    now = datetime.datetime.now(datetime.timezone.utc)
+    results = []
+
+    for entry in plan["posts"]:
+        if entry.get("status") == "published":
+            continue
+
+        account_id = Config.ACCOUNTS.get(entry["platform"])
+        if not account_id:
+            print(f"  Skipping {entry['platform']}: no account ID configured")
+            entry["status"] = "skipped"
+            continue
+
+        scheduled_at = datetime.datetime.fromisoformat(entry["scheduled_at"])
+        if scheduled_at.tzinfo is None:
+            scheduled_at = scheduled_at.replace(tzinfo=post_timezone())
+        while scheduled_at <= now:
+            scheduled_at += datetime.timedelta(days=1)
+
+        media_id = None
+        image_path = Path(entry["image_path"]) if entry.get("image_path") else None
+        if image_path and image_path.exists():
+            media_id = client.upload_media(image_path)
+        elif image_path:
+            print(f"  Warning: image missing, posting without media: {image_path}")
+
+        tags = " ".join(f"#{t}" for t in entry.get("hashtags", []))
+        content = f"{entry['content']}\n\n{tags}" if tags else entry["content"]
+
+        try:
+            result = client.create_post(
+                account_id=account_id,
+                platform=entry["platform"],
+                content=content,
+                media_id=media_id,
+                scheduled_at=scheduled_at.astimezone(datetime.timezone.utc),
+            )
+            entry["status"] = "published"
+            results.append(result)
+        except requests.HTTPError as e:
+            print(f"  Failed to publish {entry['platform']} post: {e}")
+            entry["status"] = "failed"
+
+    done = all(e.get("status") in ("published", "skipped") for e in plan["posts"])
+    plan["status"] = "published" if done else "partial"
+    plan_path.write_text(json.dumps(plan, indent=2, ensure_ascii=False))
+
+    print(f"\nScheduled {len(results)} posts from plan")
+    if not done:
+        print("Some posts failed — fix the issue and run --publish again to retry them.")
+    return results
+
+
+def publish_batch(
+    posts_with_images: dict[str, list[tuple[SocialPost, Path]]],
+    start_time: datetime.datetime | None = None,
+) -> list[dict]:
+    """Save a plan for a freshly generated batch and publish it.
+
+    Going through the plan file means every publish leaves a reviewable
+    record on disk, and failed posts can be retried with --publish.
+    """
+    plan_path = save_publishing_plan(posts_with_images, start_time)
+    return publish_plan(plan_path)
