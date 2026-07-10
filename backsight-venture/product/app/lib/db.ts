@@ -1,6 +1,7 @@
 import Database from "better-sqlite3";
 import fs from "node:fs";
 import path from "node:path";
+import { seedDatabase } from "./seed";
 
 const DATA_DIR = path.join(process.cwd(), "data");
 const DB_PATH = path.join(DATA_DIR, "backsight.db");
@@ -86,9 +87,6 @@ export function getDb(): Database.Database {
     .prepare("SELECT COUNT(*) AS n FROM jobs")
     .get() as { n: number };
   if (row.n === 0) {
-    // Lazy import avoids a cycle (seed.ts imports SCHEMA from this module).
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const { seedDatabase } = require("./seed") as typeof import("./seed");
     seedDatabase(db);
   }
   return db;
