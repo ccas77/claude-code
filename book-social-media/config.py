@@ -49,8 +49,12 @@ class Config:
     BRAND_ACCENT = os.getenv("BRAND_COLOR_ACCENT", "#0f3460")
     BRAND_FONT_COLOR = os.getenv("BRAND_FONT_COLOR", "#ffffff")
 
-    # Scheduling
-    POST_TIMES = os.getenv("POST_TIMES", "09:00,13:00,18:00").split(",")
+    # Scheduling (POST_TIMES are interpreted in POST_TIMEZONE)
+    POST_TIMES = [
+        t.strip()
+        for t in os.getenv("POST_TIMES", "09:00,13:00,18:00").split(",")
+        if t.strip()
+    ]
     POST_TIMEZONE = os.getenv("POST_TIMEZONE", "America/New_York")
     DAYS_BETWEEN_POSTS = int(os.getenv("DAYS_BETWEEN_POSTS", "2"))
 

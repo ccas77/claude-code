@@ -6,9 +6,11 @@ each optimized for the platform's audience, format, and best practices.
 
 from __future__ import annotations
 
+import datetime
 import json
 import re
 from dataclasses import dataclass
+from pathlib import Path
 
 import anthropic
 
@@ -59,6 +61,11 @@ PLATFORM_GUIDELINES = {
         "formats": "quote pins, reading list graphics, aesthetic mood boards, book recommendation pins",
     },
 }
+
+# Generous ceiling: a full Instagram batch (7 posts x ~2200 chars) can
+# exceed 4096 tokens, which truncated the JSON and silently yielded 0 posts.
+MAX_GENERATION_TOKENS = 8192
+GENERATION_ATTEMPTS = 2
 
 POST_TYPES = [
     "quote",
@@ -164,14 +171,33 @@ def generate_posts(
         print(f"  Generating {batch_size} posts for {platform}...")
         prompt = build_generation_prompt(book, platform, batch_size)
 
-        message = client.messages.create(
-            model=Config.CLAUDE_MODEL,
-            max_tokens=4096,
-            messages=[{"role": "user", "content": prompt}],
-        )
+        posts: list[SocialPost] = []
+        for attempt in range(1, GENERATION_ATTEMPTS + 1):
+            message = client.messages.create(
+                model=Config.CLAUDE_MODEL,
+                max_tokens=MAX_GENERATION_TOKENS,
+                messages=[{"role": "user", "content": prompt}],
+            )
 
-        response_text = message.content[0].text
-        posts = parse_posts_response(response_text, platform)
+            if message.stop_reason == "max_tokens":
+                print(f"  Warning: {platform} response hit the token limit and was cut off")
+
+            posts = parse_posts_response(message.content[0].text, platform)
+            if posts:
+                break
+            print(f"  No valid posts for {platform}, retrying ({attempt}/{GENERATION_ATTEMPTS})...")
+
+        if not posts:
+            # Fail the whole batch before any images are made or posts published,
+            # rather than silently continuing with an empty platform.
+            raise RuntimeError(
+                f"Could not generate posts for {platform} after {GENERATION_ATTEMPTS} attempts. "
+                f"Nothing was published. Try again, or lower POSTS_PER_BATCH "
+                f"(currently {batch_size})."
+            )
+        if len(posts) < batch_size:
+            print(f"  Note: asked for {batch_size} posts but got {len(posts)} for {platform}")
+
         all_posts[platform] = posts
         print(f"  Generated {len(posts)} posts for {platform}")
 
@@ -179,10 +205,11 @@ def generate_posts(
 
 
 def save_posts(posts: dict[str, list[SocialPost]]) -> Path:
-    """Save generated posts to a JSON file for review/editing before publishing."""
-    from pathlib import Path
-    import datetime
+    """Save generated posts to a timestamped JSON file as a reference record.
 
+    The editable file that publishing actually reads is the publishing plan
+    (see publisher.save_publishing_plan).
+    """
     Config.POSTS_DIR.mkdir(parents=True, exist_ok=True)
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
     output_path = Config.POSTS_DIR / f"posts_{timestamp}.json"
@@ -197,7 +224,6 @@ def save_posts(posts: dict[str, list[SocialPost]]) -> Path:
                 "image_prompt": p.image_prompt,
                 "post_type": p.post_type,
                 "caption": p.caption,
-                "full_text": p.full_text(),
             }
             for p in platform_posts
         ]

@@ -37,31 +37,46 @@ pip install -r requirements.txt
 # 2. Configure
 cp .env.example .env
 # Edit .env with your API keys and book info
+python main.py --accounts   # fetches your Post Bridge account IDs to paste into .env
 
 # 3. Add your book files
 cp your-book.pdf books/
 
-# 4. Preview
-python main.py --preview
+# 4. Verify everything is wired up
+python main.py --check
 
-# 5. Dry run (generates everything, saves plan, no publishing)
+# 5. Dry run (generates everything, saves an editable plan, no publishing)
 python main.py --dry-run
+# Review/edit output/posts/publishing_plan.json — tweak content, hashtags, times
 
-# 6. Go live
-python main.py --publish          # One-shot
-python main.py --schedule         # Continuous scheduler
+# 6. Go live — publishes exactly what's in the reviewed plan
+python main.py --publish
+python main.py --schedule         # Or: continuous scheduler
 ```
 
 ## Commands
 
 | Command | Description |
 |---------|-------------|
+| `--check` | Validate config, API keys, book files, and schedule settings |
+| `--accounts` | List Post Bridge accounts with ready-to-paste `.env` lines |
 | `--preview` | Show book content summary and configuration |
-| `--dry-run` | Full pipeline but save plan instead of publishing |
-| `--publish` | Generate and publish immediately |
+| `--dry-run` | Full pipeline but save an editable publishing plan instead of publishing |
+| `--publish` | Publish the reviewed plan from the last dry run (retries failed posts) |
+| `--publish --fresh` | Ignore any saved plan; generate and publish a new batch |
 | `--schedule` | Run continuously, generating new batches on a cycle |
 | `--schedule-dry` | Scheduled dry runs for testing |
 | `--generate-only` | Generate posts + images without publishing |
+
+### Review-then-publish workflow
+
+`--dry-run` writes `output/posts/publishing_plan.json` containing every post's
+full content, hashtags, image path, and scheduled time (in your
+`POST_TIMEZONE`). Edit anything you like in that file — the next `--publish`
+posts **exactly** what the plan says, uploading each image and scheduling each
+post at its recorded time (times already in the past are pushed forward).
+After publishing, the plan is rewritten with per-post statuses; if some posts
+failed, running `--publish` again retries only those.
 
 ## Configuration
 
@@ -75,7 +90,8 @@ All settings via environment variables (`.env` file):
 | `POSTBRIDGE_*_ACCOUNT_ID` | Account IDs for each platform |
 | `BOOK_TITLE` / `BOOK_AUTHOR` / `BOOK_GENRE` | Book metadata |
 | `BRAND_COLOR_PRIMARY` / `SECONDARY` / `ACCENT` | Hex colors for image branding |
-| `POST_TIMES` | Comma-separated times (24h format) |
+| `POST_TIMES` | Comma-separated times (24h format), interpreted in `POST_TIMEZONE` |
+| `POST_TIMEZONE` | IANA timezone (e.g. `America/New_York`) used for all scheduling |
 | `DAYS_BETWEEN_POSTS` | Spacing between posts per platform |
 | `POSTS_PER_BATCH` | Number of posts generated per platform per batch |
 
@@ -122,4 +138,4 @@ book-social-media/
 1. Sign up at [postbridge.app](https://postbridge.app)
 2. Connect your Instagram, Facebook, TikTok, and Pinterest accounts
 3. Copy your API key and workspace ID to `.env`
-4. Copy each platform's account ID to the corresponding env variable
+4. Run `python main.py --accounts` and paste the printed account-ID lines into `.env`
