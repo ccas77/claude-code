@@ -13,15 +13,22 @@ function build() {
   return { sql, db: drizzle(sql, { schema }) };
 }
 
-const cached =
-  globalThis.__contentEngineDb && globalThis.__contentEngineSql
-    ? { db: globalThis.__contentEngineDb, sql: globalThis.__contentEngineSql }
-    : build();
-
-if (process.env.NODE_ENV !== "production") {
-  globalThis.__contentEngineDb = cached.db;
-  globalThis.__contentEngineSql = cached.sql;
+function get() {
+  if (globalThis.__contentEngineDb && globalThis.__contentEngineSql) {
+    return { db: globalThis.__contentEngineDb, sql: globalThis.__contentEngineSql };
+  }
+  const built = build();
+  if (process.env.NODE_ENV !== "production") {
+    globalThis.__contentEngineDb = built.db;
+    globalThis.__contentEngineSql = built.sql;
+  }
+  return built;
 }
 
-export const db = cached.db;
+export const db = new Proxy({} as ReturnType<typeof drizzle>, {
+  get(_target, prop) {
+    return Reflect.get(get().db, prop);
+  },
+});
+
 export { schema };
