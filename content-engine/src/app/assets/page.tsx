@@ -1,21 +1,37 @@
 import { desc, eq } from "drizzle-orm";
-import { redirect } from "next/navigation";
 import { db, schema } from "@/lib/db";
-import { supabaseServer } from "@/lib/supabase/server";
+import { supabaseConfigured } from "@/lib/env";
+import { getSignedInUserId } from "@/lib/supabase/server";
 import { AssetUploadForm } from "./upload-form";
 
 export const dynamic = "force-dynamic";
 
 export default async function AssetsPage() {
-  const supabase = await supabaseServer();
-  const { data } = await supabase.auth.getUser();
-  if (!data.user) redirect("/");
+  if (!supabaseConfigured()) {
+    return (
+      <main className="min-h-screen p-8 max-w-5xl mx-auto">
+        <h1 className="text-2xl font-semibold">Assets</h1>
+        <p className="mt-4 text-sm">
+          Supabase not configured on this deployment — see the home page.
+        </p>
+      </main>
+    );
+  }
+  const userId = await getSignedInUserId();
+  if (!userId) {
+    return (
+      <main className="min-h-screen p-8 max-w-5xl mx-auto">
+        <h1 className="text-2xl font-semibold">Assets</h1>
+        <p className="mt-4 text-sm">Sign in to browse assets.</p>
+      </main>
+    );
+  }
 
   const memberships = await db
     .select({ workspaceId: schema.workspaceMembers.workspaceId, name: schema.workspaces.name })
     .from(schema.workspaceMembers)
     .innerJoin(schema.workspaces, eq(schema.workspaces.id, schema.workspaceMembers.workspaceId))
-    .where(eq(schema.workspaceMembers.userId, data.user.id));
+    .where(eq(schema.workspaceMembers.userId, userId));
 
   const workspaceIds = memberships.map((m) => m.workspaceId);
   const recent = workspaceIds.length

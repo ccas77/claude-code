@@ -1,6 +1,13 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
-import { publicEnv } from "@/lib/env";
+import { publicEnv, supabaseConfigured } from "@/lib/env";
+
+export async function getSignedInUserId(): Promise<string | null> {
+  if (!supabaseConfigured()) return null;
+  const supabase = await supabaseServer();
+  const { data } = await supabase.auth.getUser();
+  return data.user?.id ?? null;
+}
 
 export async function supabaseServer() {
   const cookieStore = await cookies();

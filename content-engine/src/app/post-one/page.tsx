@@ -1,20 +1,35 @@
 import { desc, eq } from "drizzle-orm";
-import { redirect } from "next/navigation";
 import { db, schema } from "@/lib/db";
-import { postbridgeDryRun } from "@/lib/env";
+import { postbridgeDryRun, supabaseConfigured } from "@/lib/env";
 import { listAllowedAccounts } from "@/services/posting";
-import { supabaseServer } from "@/lib/supabase/server";
+import { getSignedInUserId } from "@/lib/supabase/server";
 import { PostOneForm } from "./form";
 
 export const dynamic = "force-dynamic";
 
 export default async function PostOnePage() {
-  const supabase = await supabaseServer();
-  const { data } = await supabase.auth.getUser();
-  if (!data.user) redirect("/");
+  if (!supabaseConfigured()) {
+    return (
+      <main className="min-h-screen p-8 max-w-2xl mx-auto">
+        <h1 className="text-2xl font-semibold">Post one image now</h1>
+        <p className="mt-4 text-sm">
+          Supabase not configured on this deployment — see the home page.
+        </p>
+      </main>
+    );
+  }
+  const userId = await getSignedInUserId();
+  if (!userId) {
+    return (
+      <main className="min-h-screen p-8 max-w-2xl mx-auto">
+        <h1 className="text-2xl font-semibold">Post one image now</h1>
+        <p className="mt-4 text-sm">Sign in to use this flow.</p>
+      </main>
+    );
+  }
 
   const [allowed, recent] = await Promise.all([
-    listAllowedAccounts(data.user.id),
+    listAllowedAccounts(userId),
     db
       .select({
         id: schema.postLog.id,
@@ -26,7 +41,7 @@ export default async function PostOnePage() {
         socialAccountId: schema.postLog.socialAccountId,
       })
       .from(schema.postLog)
-      .where(eq(schema.postLog.actorUserId, data.user.id))
+      .where(eq(schema.postLog.actorUserId, userId))
       .orderBy(desc(schema.postLog.submittedAt))
       .limit(10),
   ]);

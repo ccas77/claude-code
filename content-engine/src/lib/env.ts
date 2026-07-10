@@ -32,6 +32,16 @@ export const publicEnv = {
   supabaseAnonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "",
 };
 
+// True when the deployment has real Supabase credentials wired.
+// Placeholder values (used to keep preview builds green without live creds)
+// short-circuit any code path that would otherwise reach Supabase and 500.
+export function supabaseConfigured(): boolean {
+  const url = publicEnv.supabaseUrl;
+  if (!url) return false;
+  if (url.startsWith("https://placeholder.")) return false;
+  return true;
+}
+
 // DRY_RUN default rule: if POSTBRIDGE_DRY_RUN is set, honour it; else dry-run
 // unless a POSTBRIDGE_API_KEY is present. Spec §7 M1: "DRY_RUN mode from day one."
 export function postbridgeDryRun(): boolean {
