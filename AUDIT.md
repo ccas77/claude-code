@@ -43,7 +43,7 @@ Remaining blockers (details in [Blockers](#blockers--questions--need-answers-bef
 | dictabook | ✅ In this folder (own git repo) | ✅ | **KEEPER (out of scope)** — Whisper dictation w/ 25MB re-encode fallback; not a posting app |
 | siggy | ✅ In this folder (own git repo) | ✅ | **DELETE** — insecure single-JSX prototype; API key in request body, unauthenticated Redis, hardcoded to one pen name |
 | trialreels | ✅ In this folder (own git repo) | ✅ | **KEEPER (partial, Layers 3–5 unfinished)** — hook-generator + Pexels mood board; Layers 3–5 schema only |
-| aimoviebot | Vercel project mislinked to this monorepo; all builds ERROR | n/a | **DELETE the Vercel project** — no codebase exists |
+| aimoviebot | Own repo `ccas77/aimoviebot` (20+ commits, last push 2026-06-24) | ⚠️ separate repo, not local | **KEEPER (defer)** — real 6-stage AI-video pipeline (concept → sheets → shot list → storyboards → Seedance → ffmpeg + Whisper captions); fold into BookTokk as a video module in M6+ per architecture §14; NOT to be deleted |
 | kinetic | ✅ In this folder (NO git — never committed) | ✅ | **DELETE / rebuild** — static HTML + stubbed API endpoints, no working app |
 | quadrants | ✅ In this folder (own dir, no `.git`) | ✅ | **KEEPER** — 6-step BookTok carousel factory; few-shot caption prompt + 2×2 quadrant renderer |
 | reposter | ✅ In this folder (own git repo) | ✅ | **KEEPER** — most hardened PB client in fleet; TikTok scrape → R2 → staggered re-post; winners module |
@@ -63,7 +63,15 @@ Remaining blockers (details in [Blockers](#blockers--questions--need-answers-bef
 
 ### Other GitHub repos visible in your account (not on the list, not cloned)
 
-`video-generator`, `book-boyfriend`, `book-writer-app`, `bookpulls-runbook`. Tell me if any should be in scope.
+| Project | Verdict |
+|---|---|
+| book-boyfriend | **IN SCOPE (needs audit pass)** — social-media posting app, own git repo, not yet inspected |
+| blurter | **KEEPER (out of scope)** — manuscript editor / writing tool, NOT a social-media app; do not touch |
+| book-writer-app | **KEEPER (out of scope)** — writing tool prototype, NOT a social-media app; do not touch |
+| video-generator | **KEEPER (out of scope)** — standalone video tool, NOT a social-media posting app; do not touch |
+| bookpulls-runbook | **KEEPER (reference)** — the runbook for slideshow-creator/generator, its own repo; do not touch |
+
+**Do-not-touch invariant:** every app the user is currently using — social-media posting apps that are live, personal tools like blurter/book-writer-app/dictabook/authorbids, and reference repos like bookpulls-runbook — stays untouched for the life of BookTokk. BookTokk is additive. Migration and decommissioning are per-app, user-directed decisions, never assumed.
 
 ---
 

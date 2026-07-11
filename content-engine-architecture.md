@@ -884,6 +884,7 @@ Per AUDIT §"Build order" step 6:
 - Top-N module.
 - Memes module.
 - Storyforge / narrated-story module.
+- Character-video module — sources: `ccas77/aimoviebot` (Seedance + workflow, dialogue-in-audio) and `ccas77/book-boyfriend` (Higgsfield DOP still→video, pose extraction, character consistency). Evaluate both approaches before committing to one; both source apps stay running as-is.
 - Competitive-cloning ingest (tslides) — owner decision (§16 open).
 
 Ordering is a suggestion; each module is independent under the §11 contract, so priorities can shift as the owner chooses.
@@ -927,6 +928,8 @@ Where each old app's crown jewels land. This section is a summary of AUDIT §"Ex
 | storyforge | Gemini image gen + character consistency + drift QC + ffmpeg xfade/loudnorm + karaoke cues | `services/ai/image-gen.ts` character routing, `services/ai/qa/identity-consistency.ts`, `services/rendering/video.ts` (deferred) |
 | book-social-media | book-marketing post prompt + platform guidelines + 10 content types + Post Bridge stagger | `services/ai/prompts/`, `services/scheduling/` |
 | tropesite | grounded no-fabrication copy + JSON repair/backfill (SEO surface out of scope) | `services/ai/prompts/` |
+| aimoviebot | Gateway image fallback impl + MCP OAuth+PKCE for Higgsfield + ffmpeg concat + ASS captions (Whisper) + dialogue-as-data through pipeline + Workflow FatalError credit-burn guard | `services/ai/image-gen.ts`, `services/ai/mcp-client.ts`, `services/rendering/video.ts`, `services/rendering/captions/` — deferred to M6+ video module |
+| book-boyfriend | pose-extraction prompt (strips outfit/props) + setting-extraction prompt + Higgsfield DOP still→video polling + character-consistency via ref-repeat + appearance description | `services/ai/vision/pose-extract.ts`, `services/ai/character-routing.ts`, `inngest/functions/higgsfield-poll.ts` — deferred to M6+ character-video module |
 
 ### 15.2 Explicitly not carried
 
@@ -948,7 +951,6 @@ Where each old app's crown jewels land. This section is a summary of AUDIT §"Ex
 
 ### 15.3 Deletion candidates
 
-- Vercel project `aimoviebot` — the placeholder repo `ccas77/aimoviebot` exists but has no product. Delete the Vercel project.
 - Vercel project `siggy` — insecure prototype flagged in AUDIT §URGENT SECURITY-adjacent. Delete before an internet crawler finds the endpoint.
 - Vercel project `bookslide` and `public` — unreachable source; owner call.
 - `kinetic` local folder — no `.git`, no working app; delete or rebuild under a new name.
