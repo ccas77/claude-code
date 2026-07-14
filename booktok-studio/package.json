@@ -1,0 +1,7 @@
+{
+  "name": "booktok-studio",
+  "private": true,
+  "scripts": { "build": "next build", "start": "next start", "dev": "next dev" },
+  "dependencies": { "next": "16.2.10", "react": "19.2.0", "react-dom": "19.2.0" },
+  "devDependencies": { "typescript": "5.7.3", "@types/node": "22.10.5", "@types/react": "19.2.0", "@types/react-dom": "19.2.0" }
+}
